@@ -32,6 +32,8 @@ export default function Home() {
   const [showSignOutModal, setShowSignOutModal] = useState(false);
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
   const [showClearHistoryModal, setShowClearHistoryModal] = useState(false);
+  const [showDeleteSingleHistoryModal, setShowDeleteSingleHistoryModal] = useState(false);
+  const [historyItemToDelete, setHistoryItemToDelete] = useState(null);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') || 'dark';
@@ -89,9 +91,16 @@ export default function Home() {
 
   const deleteHistoryItem = async (e, id) => {
     e.stopPropagation();
-    setHistory(prev => prev.filter(item => item.id !== id));
-    if (session?.user && id) {
-      fetch(`/api/history?id=${id}`, { method: 'DELETE' }).catch(console.error);
+    setHistoryItemToDelete(id);
+    setShowDeleteSingleHistoryModal(true);
+  };
+
+  const confirmDeleteSingleHistory = async () => {
+    if (!historyItemToDelete) return;
+    setHistory(prev => prev.filter(item => item.id !== historyItemToDelete));
+    setShowDeleteSingleHistoryModal(false);
+    if (session?.user && historyItemToDelete) {
+      fetch(`/api/history?id=${historyItemToDelete}`, { method: 'DELETE' }).catch(console.error);
     }
   };
 
@@ -536,40 +545,40 @@ export default function Home() {
           </p>
         </div>
 
-        {/* Global YouTube Player */}
+        {/* Global YouTube Player Modal */}
         {currentTrack && (
-          <div className="player-bar" style={{ position: 'absolute', bottom: 'auto', top: '16px', zIndex: 100 }}>
-            <div style={{ backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '12px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <div>
-                  <h4 style={{ fontWeight: '600', fontSize: '0.9rem', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                    {currentTrack.title}
-                  </h4>
-                </div>
-                <button onClick={closePlayer} style={{ color: 'var(--text-secondary)' }}><X size={20} /></button>
+          <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1050, padding: '20px' }}>
+            <div className="glass-panel animate-fade-in" style={{ backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '20px', width: '100%', maxWidth: '800px', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <h4 style={{ fontWeight: '600', fontSize: '1.2rem', color: 'var(--text-primary)', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                  {currentTrack.title}
+                </h4>
+                <button onClick={closePlayer} style={{ color: 'var(--text-primary)', backgroundColor: 'var(--bg-main)', borderRadius: '50%', padding: '6px', border: '1px solid var(--border-color)', cursor: 'pointer', transition: 'background-color 0.2s' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-main)'}>
+                  <X size={20} />
+                </button>
               </div>
-              <div className="iframe-container">
+              <div style={{ position: 'relative', width: '100%', paddingTop: '56.25%', borderRadius: '12px', overflow: 'hidden', background: 'black', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
                 {currentTrack.id === 'loading' ? (
-                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', position: 'absolute', top: 0, left: 0, width: '100%', background: 'black' }}>
-                    <Loader2 className="animate-spin" size={32} color="var(--text-primary)" />
+                  <div style={{ position: 'absolute', inset: 0, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                    <Loader2 className="animate-spin" size={48} color="white" />
                   </div>
                 ) : (
-                  <iframe src={`https://www.youtube-nocookie.com/embed/${currentTrack.id}?autoplay=1`} title="YouTube video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen></iframe>
+                  <iframe style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }} src={`https://www.youtube-nocookie.com/embed/${currentTrack.id}?autoplay=1`} title="YouTube video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen></iframe>
                 )}
               </div>
             </div>
           </div>
         )}
 
-              {/* Sign Out Modal */}
+              {/* Log Out Modal */}
       {showSignOutModal && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
           <div className="glass-panel animate-fade-in" style={{ backgroundColor: 'var(--bg-main)', padding: '24px', width: '100%', maxWidth: '400px', borderRadius: '16px' }}>
-            <h2 style={{ fontSize: '1.2rem', marginBottom: '8px', color: 'var(--text-primary)' }}>Sign out?</h2>
-            <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '0.95rem' }}>Are you sure you want to sign out of Beatzy?</p>
+            <h2 style={{ fontSize: '1.2rem', marginBottom: '8px', color: 'var(--text-primary)' }}>Log out?</h2>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '0.95rem' }}>Are you sure you want to log out of Beatzy?</p>
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
               <button onClick={() => setShowSignOutModal(false)} style={{ padding: '8px 16px', color: 'var(--text-primary)', borderRadius: '8px', border: '1px solid var(--border-color)', fontWeight: '600' }}>Cancel</button>
-              <button onClick={() => signOut()} style={{ padding: '8px 16px', backgroundColor: '#ff4d4f', color: 'white', borderRadius: '8px', fontWeight: '600' }}>Sign out</button>
+              <button onClick={() => signOut()} style={{ padding: '8px 16px', backgroundColor: '#ff4d4f', color: 'white', borderRadius: '8px', fontWeight: '600' }}>Log out</button>
             </div>
           </div>
         </div>
@@ -584,6 +593,20 @@ export default function Home() {
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
               <button onClick={() => setShowDeleteAccountModal(false)} style={{ padding: '8px 16px', color: 'var(--text-primary)', borderRadius: '8px', border: '1px solid var(--border-color)', fontWeight: '600' }}>Cancel</button>
               <button onClick={confirmDeleteAccount} style={{ padding: '8px 16px', backgroundColor: '#ff4d4f', color: 'white', borderRadius: '8px', fontWeight: '600' }}>Delete forever</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+            {/* Delete Single History Modal */}
+      {showDeleteSingleHistoryModal && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
+          <div className="glass-panel animate-fade-in" style={{ backgroundColor: 'var(--bg-main)', padding: '24px', width: '100%', maxWidth: '400px', borderRadius: '16px' }}>
+            <h2 style={{ fontSize: '1.2rem', marginBottom: '8px', color: 'var(--text-primary)' }}>Delete search?</h2>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '0.95rem' }}>This item will be permanently removed from your history.</p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button onClick={() => setShowDeleteSingleHistoryModal(false)} style={{ padding: '8px 16px', color: 'var(--text-primary)', borderRadius: '8px', border: '1px solid var(--border-color)', fontWeight: '600' }}>Cancel</button>
+              <button onClick={confirmDeleteSingleHistory} style={{ padding: '8px 16px', backgroundColor: '#ff4d4f', color: 'white', borderRadius: '8px', fontWeight: '600' }}>Delete</button>
             </div>
           </div>
         </div>
