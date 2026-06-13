@@ -1,6 +1,14 @@
 import { NextResponse } from 'next/server';
-import play from 'play-dl';
+import { Innertube, UniversalCache } from 'youtubei.js';
 import ytdl from '@distube/ytdl-core';
+
+let innertube = null;
+async function getInnertube() {
+  if (!innertube) {
+    innertube = await Innertube.create({ cache: new UniversalCache(false) });
+  }
+  return innertube;
+}
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
@@ -11,18 +19,17 @@ export async function GET(request) {
   }
 
   try {
-    // 1. Search for the song on YouTube
-    const r = await play.search(query + ' audio', { limit: 1 });
-    const video = r[0];
+    const yt = await getInnertube();
+    const search = await yt.search(query + ' audio', { type: 'video' });
+    const video = search.videos[0];
     
     if (!video) {
       return NextResponse.json({ error: 'No matching audio found' }, { status: 404 });
     }
 
-    // 2. Stream the audio using ytdl-core
-    const stream = ytdl(video.url, { filter: 'audioonly', quality: 'highestaudio' });
+    const videoUrl = 'https://www.youtube.com/watch?v=' + video.id;
+    const stream = ytdl(videoUrl, { filter: 'audioonly', quality: 'highestaudio' });
     
-    // 3. Convert Node.js stream to Web ReadableStream for Next.js response
     const readable = new ReadableStream({
       start(controller) {
         stream.on('data', (chunk) => controller.enqueue(chunk));
@@ -40,11 +47,9 @@ export async function GET(request) {
     const headers = new Headers();
     headers.set('Content-Type', 'audio/mpeg');
     
-    // If it's a download request, add Content-Disposition header
     const download = searchParams.get('download');
     if (download === 'true') {
-      // Clean filename
-      const filename = video.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+      const filename = (video.title?.text || video.title || 'song').replace(/[^a-z0-9]/gi, '_').toLowerCase();
       headers.set('Content-Disposition', `attachment; filename="${filename}.mp3"`);
     }
 
