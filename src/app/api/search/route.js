@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import ytSearch from 'yt-search';
+import play from 'play-dl';
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
@@ -10,19 +10,29 @@ export async function GET(request) {
   }
 
   try {
-    const r = await ytSearch(query);
-    // Filter to only get videos (songs) and return the top 10
-    const videos = r.videos.slice(0, 10).map(v => ({
-      id: v.videoId,
+    // Wrap search in an 8-second timeout to prevent Vercel 10s HTML timeout page
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Search timed out')), 8000)
+    );
+
+    const searchPromise = play.search(query, { limit: 10 });
+    
+    const results = await Promise.race([searchPromise, timeoutPromise]);
+
+    const videos = results.map(v => ({
+      id: v.id,
       title: v.title,
-      thumbnail: v.thumbnail,
-      artist: v.author.name,
-      duration: v.timestamp
+      thumbnail: v.thumbnails[0]?.url || '',
+      artist: v.channel?.name || 'Unknown Artist',
+      duration: v.durationRaw
     }));
 
     return NextResponse.json(videos);
   } catch (error) {
     console.error('Search API error:', error);
+    if (error.message === 'Search timed out') {
+      return NextResponse.json({ error: 'YouTube search timed out. Try a more specific query.' }, { status: 504 });
+    }
     return NextResponse.json({ error: 'Failed to search for music' }, { status: 500 });
   }
 }
