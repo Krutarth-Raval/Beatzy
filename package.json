@@ -10,18 +10,15 @@
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.2",
-    "@distube/ytdl-core": "^4.16.12",
     "@prisma/client": "^5.22.0",
     "lucide-react": "^1.18.0",
     "next": "16.2.9",
     "next-auth": "^4.24.14",
-    "play-dl": "^1.9.7",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "spotify-url-info": "^3.3.0",
     "youtube-dl-exec": "^3.1.7",
     "youtube-sr": "^4.3.12",
-    "youtubei.js": "^17.0.1",
     "yt-search": "^2.13.1"
   },
   "devDependencies": {
