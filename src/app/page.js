@@ -84,8 +84,16 @@ export default function Home() {
     setLoading(true); setError(''); setResults([]); setAlbumData(null);
     try {
       const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      
+      let data;
+      try {
+        data = await res.json();
+      } catch (err) {
+        throw new Error('Server returned an invalid response (HTML instead of JSON). This usually means the server crashed.');
+      }
+
+      if (!res.ok) throw new Error(data?.error || 'Unknown server error');
+      
       setResults(data);
       addToHistory({ type: 'search', query, title: query });
     } catch (err) {
@@ -107,8 +115,16 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url })
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+
+      let data;
+      try {
+        data = await res.json();
+      } catch (err) {
+        throw new Error('Server returned an invalid response (HTML instead of JSON). This usually means the server crashed.');
+      }
+
+      if (!res.ok) throw new Error(data?.error || 'Unknown server error');
+      
       setAlbumData(data);
       addToHistory({ type: 'spotify', query: url, title: data.title || url });
     } catch (err) {
