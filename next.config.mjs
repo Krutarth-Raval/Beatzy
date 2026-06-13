@@ -1,6 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  /* config options here */
+  experimental: {
+    serverComponentsExternalPackages: ['youtube-dl-exec'],
+    outputFileTracingIncludes: {
+      '/api/**/*': ['./node_modules/youtube-dl-exec/bin/**/*']
+    }
+  }
 };
 
 export default nextConfig;
