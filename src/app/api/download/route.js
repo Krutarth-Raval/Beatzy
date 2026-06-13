@@ -44,10 +44,17 @@ export async function GET(request) {
 
     const output = JSON.parse(stdout);
 
-    // Find the best audio format (highest bitrate, m4a or mp3 usually)
+    // Find the best audio format. We prefer audio-only (vcodec === 'none'), 
+    // but Android client spoofing sometimes only returns muxed mp4s (video+audio).
     const audioFormats = output.formats
-      .filter(f => f.acodec !== 'none' && f.vcodec === 'none')
-      .sort((a, b) => (b.abr || 0) - (a.abr || 0));
+      .filter(f => f.acodec && f.acodec !== 'none')
+      .sort((a, b) => {
+        // Prefer pure audio streams first
+        if (a.vcodec === 'none' && b.vcodec !== 'none') return -1;
+        if (a.vcodec !== 'none' && b.vcodec === 'none') return 1;
+        // Then sort by audio bitrate
+        return (b.abr || 0) - (a.abr || 0);
+      });
 
     if (audioFormats.length > 0) {
       return NextResponse.json({ 
