@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSession, signIn, signOut } from 'next-auth/react';
-import { Search, Play, Download, LogOut, Music, Loader2, X, Disc3, Menu, MessageSquare, Plus } from 'lucide-react';
+import { Search, Play, Download, LogOut, Music, Loader2, X, Disc3, Menu, MessageSquare, Plus, Settings, Trash2, Moon, Sun, AlertTriangle } from 'lucide-react';
 
 export default function Home() {
   const { data: session, status } = useSession();
@@ -27,6 +27,27 @@ export default function Home() {
   // Sidebar and History State
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [history, setHistory] = useState([]);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [theme, setTheme] = useState('dark');
+  const [showSignOutModal, setShowSignOutModal] = useState(false);
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    setTheme(savedTheme);
+    if (savedTheme === 'light') document.body.classList.add('light-theme');
+  }, []);
+
+  const toggleTheme = () => {
+    const newTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(newTheme);
+    localStorage.setItem('theme', newTheme);
+    if (newTheme === 'light') {
+      document.body.classList.add('light-theme');
+    } else {
+      document.body.classList.remove('light-theme');
+    }
+  };
 
   const fetchHistory = async () => {
     if (!session?.user) return;
@@ -62,6 +83,35 @@ export default function Home() {
       } catch (err) {
         console.error('Failed to save history to DB', err);
       }
+    }
+  };
+
+  const deleteHistoryItem = async (e, id) => {
+    e.stopPropagation();
+    setHistory(prev => prev.filter(item => item.id !== id));
+    if (session?.user && id) {
+      fetch(`/api/history?id=${id}`, { method: 'DELETE' }).catch(console.error);
+    }
+  };
+
+  const clearAllHistory = async () => {
+    if (!window.confirm("Are you sure you want to clear all history?")) return;
+    setHistory([]);
+    setSettingsOpen(false);
+    if (session?.user) {
+      fetch('/api/history', { method: 'DELETE' }).catch(console.error);
+    }
+  };
+
+  const deleteAccount = async () => {
+    setSettingsOpen(false);
+    setShowDeleteAccountModal(true);
+  };
+
+  const confirmDeleteAccount = async () => {
+    if (session?.user) {
+      await fetch('/api/account', { method: 'DELETE' });
+      signOut();
     }
   };
 
@@ -272,7 +322,16 @@ export default function Home() {
           {history.map((item, i) => (
             <div key={i} className="history-item" onClick={() => loadHistoryItem(item)}>
               <MessageSquare size={16} style={{ flexShrink: 0, opacity: 0.7 }} />
-              <span style={{ fontSize: '0.9rem' }}>{item.title}</span>
+              <span style={{ fontSize: '0.9rem', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.title}</span>
+              <div className="history-item-actions">
+                <Trash2 
+                  size={14} 
+                  style={{ opacity: 0.5, cursor: 'pointer' }} 
+                  onClick={(e) => deleteHistoryItem(e, item.id)}
+                  onMouseOver={(e) => e.currentTarget.style.opacity = 1}
+                  onMouseOut={(e) => e.currentTarget.style.opacity = 0.5}
+                />
+              </div>
             </div>
           ))}
           {history.length === 0 && (
@@ -281,18 +340,43 @@ export default function Home() {
         </div>
 
         {/* User Profile Area */}
-        <div style={{ padding: '12px', borderTop: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', overflow: 'hidden' }}>
-            <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--bg-input)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold' }}>
-              {session.user.name?.charAt(0) || 'U'}
+                <div style={{ padding: '12px', borderTop: '1px solid var(--border-color)', position: 'relative' }}>
+          <div 
+            onClick={() => setSettingsOpen(!settingsOpen)}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', padding: '8px', borderRadius: '8px', transition: 'background-color 0.2s' }}
+            onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
+            onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', overflow: 'hidden' }}>
+              <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--bg-main)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-primary)', fontWeight: 'bold', border: '1px solid var(--border-color)' }}>
+                {session.user.name?.charAt(0) || 'U'}
+              </div>
+              <span style={{ color: 'var(--text-primary)', fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {session.user.name}
+              </span>
             </div>
-            <span style={{ color: 'white', fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {session.user.name}
-            </span>
+            <Settings size={16} color="var(--text-secondary)" />
           </div>
-          <button onClick={() => { if (window.confirm("Are you sure you want to sign out?")) signOut(); }} style={{ color: 'var(--text-secondary)', padding: '8px' }}>
-            <LogOut size={18} />
-          </button>
+
+          {settingsOpen && (
+            <div className="settings-popup">
+              <div className="settings-item" onClick={clearAllHistory}>
+                <Trash2 size={16} /> Clear history
+              </div>
+              <div className="settings-item" onClick={toggleTheme}>
+                {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />} 
+                {theme === 'dark' ? 'Light mode' : 'Dark mode'}
+              </div>
+              <div className="settings-divider"></div>
+              <div className="settings-item" onClick={() => { setSettingsOpen(false); setShowSignOutModal(true); }}>
+                <LogOut size={16} /> Log out
+              </div>
+              <div className="settings-divider"></div>
+              <div className="settings-item danger" onClick={deleteAccount}>
+                <AlertTriangle size={16} /> Delete account
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

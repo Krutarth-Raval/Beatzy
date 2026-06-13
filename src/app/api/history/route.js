@@ -80,3 +80,32 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Failed to save history' }, { status: 500 });
   }
 }
+
+export async function DELETE(request) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    if (id) {
+      // Delete single item
+      await prisma.history.deleteMany({
+        where: { id, userId: session.user.id }
+      });
+      return NextResponse.json({ success: true, message: 'Item deleted' });
+    } else {
+      // Delete all history for user
+      await prisma.history.deleteMany({
+        where: { userId: session.user.id }
+      });
+      return NextResponse.json({ success: true, message: 'All history cleared' });
+    }
+  } catch (error) {
+    console.error('History DELETE Error:', error);
+    return NextResponse.json({ error: 'Failed to delete history' }, { status: 500 });
+  }
+}
