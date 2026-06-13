@@ -70,8 +70,8 @@ export async function GET(request) {
     // Vercel Fallback: If Vercel's IP is banned by YouTube bots, return a third-party download link
     // This ensures that the download button ALWAYS works even if the server is blocked.
     return NextResponse.json({ 
-      url: `https://yt1s.com/en/youtube-to-mp3?q=https://www.youtube.com/watch?v=${id}`,
-      title: 'Download via YT1s (Fallback)'
+      url: `https://carto-conches.fr/dl/${id}`,
+      title: 'Download via Carto-Conches (Fallback)'
     });
   }
 }
