@@ -1,9 +1,5 @@
 import { NextResponse } from 'next/server';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-import path from 'path';
-
-const execAsync = promisify(exec);
+import youtubedl from 'youtube-dl-exec';
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
@@ -14,16 +10,15 @@ export async function GET(request) {
   }
 
   try {
-    // Resolve absolute path to yt-dlp.exe to bypass Next.js Webpack context issues
-    const ytDlpPath = path.join(process.cwd(), 'node_modules', 'youtube-dl-exec', 'bin', 'yt-dlp.exe');
-    const command = `"${ytDlpPath}" -j --no-warnings --prefer-free-formats "https://www.youtube.com/watch?v=${id}"`;
-    const { stdout, stderr } = await execAsync(command);
+    const output = await youtubedl(`https://www.youtube.com/watch?v=${id}`, {
+      dumpSingleJson: true,
+      noWarnings: true,
+      preferFreeFormats: true,
+    });
 
-    if (stderr && !stdout) {
-      throw new Error(stderr);
+    if (!output || !output.formats) {
+      throw new Error('Failed to parse video info.');
     }
-
-    const output = JSON.parse(stdout);
 
     // Find the best audio format (highest bitrate, m4a or mp3 usually)
     const audioFormats = output.formats
