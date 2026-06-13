@@ -3,7 +3,7 @@
 Beatzy is an extraordinary, modern web application designed to seamlessly extract, stream, and download music from YouTube and Spotify. Built with Next.js and Prisma, Beatzy offers a sleek, dark-themed, "ChatGPT-style" interface that puts powerful music extraction right at your fingertips.
 
 ## 🚀 Live Demo
-[Live Demo Link Here] <!-- Add your live demo link here -->
+beatzy-muzic.vercel.app
 
 ## ✨ Features
 
