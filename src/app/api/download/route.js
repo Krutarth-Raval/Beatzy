@@ -1,5 +1,11 @@
 import { NextResponse } from 'next/server';
-import youtubedl from 'youtube-dl-exec';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import path from 'path';
+import fs from 'fs';
+import os from 'os';
+
+const execAsync = promisify(exec);
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
@@ -10,15 +16,37 @@ export async function GET(request) {
   }
 
   try {
-    const output = await youtubedl(`https://www.youtube.com/watch?v=${id}`, {
-      dumpSingleJson: true,
-      noWarnings: true,
-      preferFreeFormats: true,
-    });
-
-    if (!output || !output.formats) {
-      throw new Error('Failed to parse video info.');
+    const isWindows = os.platform() === 'win32';
+    const binaryName = isWindows ? 'yt-dlp.exe' : 'yt-dlp';
+    
+    // Original path created during Vercel build / local npm install
+    let ytDlpPath = path.join(process.cwd(), 'node_modules', 'youtube-dl-exec', 'bin', binaryName);
+    
+    // Vercel Serverless environment workaround
+    // Vercel mounts /var/task as read-only. The yt-dlp binary often loses its +x executable flag during deployment.
+    // To fix this, we must copy the binary to the writable /tmp directory and give it execution permissions.
+    if (!isWindows) {
+      const tmpPath = path.join('/tmp', 'yt-dlp');
+      if (!fs.existsSync(tmpPath)) {
+        if (fs.existsSync(ytDlpPath)) {
+          fs.copyFileSync(ytDlpPath, tmpPath);
+          fs.chmodSync(tmpPath, 0o777);
+        } else {
+          // Fallback if Vercel tree-shaking removed node_modules
+          throw new Error('yt-dlp binary not found in deployment package.');
+        }
+      }
+      ytDlpPath = tmpPath;
     }
+
+    const command = `"${ytDlpPath}" -j --no-warnings --prefer-free-formats "https://www.youtube.com/watch?v=${id}"`;
+    const { stdout, stderr } = await execAsync(command);
+
+    if (stderr && !stdout) {
+      throw new Error(stderr);
+    }
+
+    const output = JSON.parse(stdout);
 
     // Find the best audio format (highest bitrate, m4a or mp3 usually)
     const audioFormats = output.formats
