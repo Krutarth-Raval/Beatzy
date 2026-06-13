@@ -259,16 +259,16 @@ export default function Home() {
   if (status === 'loading') {
     return (
       <div style={{ display: 'flex', height: '100dvh', justifyContent: 'center', alignItems: 'center', backgroundColor: '#212121' }}>
-        <Loader2 className="animate-spin" size={48} color="white" />
+        <Loader2 className="animate-spin" size={48} color="var(--text-primary)" />
       </div>
     );
   }
 
   if (!session) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '2rem', backgroundColor: '#212121', color: 'white' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '2rem', backgroundColor: '#212121', color: 'var(--text-primary)' }}>
         <div style={{ padding: '3rem', maxWidth: '500px', width: '100%' }}>
-          <Disc3 size={64} color="white" style={{ marginBottom: '1.5rem' }} className="animate-spin" />
+          <Disc3 size={64} color="var(--text-primary)" style={{ marginBottom: '1.5rem' }} className="animate-spin" />
           <h1 style={{ fontSize: '2.5rem', marginBottom: '1rem', fontWeight: '700' }}>Beatzy</h1>
           <p style={{ color: '#ececec', marginBottom: '2.5rem', fontSize: '1.1rem' }}>
             Extract albums, search songs, and download MP3s effortlessly.
@@ -276,8 +276,7 @@ export default function Home() {
           <button
             onClick={() => signIn('google')}
             style={{
-              backgroundColor: 'white',
-              color: 'black',
+              backgroundColor: 'var(--text-primary)', color: 'var(--bg-main)',
               padding: '12px 32px',
               borderRadius: '8px',
               fontSize: '1.1rem',
@@ -304,18 +303,18 @@ export default function Home() {
       {/* Sidebar */}
       <div className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
         <div style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <Disc3 size={24} color="white" className="animate-spin" />
-          <span style={{ color: 'white', fontWeight: '700', fontSize: '1.2rem', letterSpacing: '0.5px' }}>Beatzy</span>
+          <Disc3 size={24} color="var(--text-primary)" className="animate-spin" />
+          <span style={{ color: 'var(--text-primary)', fontWeight: '700', fontSize: '1.2rem', letterSpacing: '0.5px' }}>Beatzy</span>
         </div>
         <div style={{ padding: '12px' }}>
           <button
             onClick={resetState}
             style={{
               width: '100%', display: 'flex', alignItems: 'center', gap: '12px', padding: '12px',
-              backgroundColor: 'transparent', color: 'white', border: '1px solid rgba(255,255,255,0.1)',
+              backgroundColor: 'transparent', color: 'var(--text-primary)', border: '1px solid var(--border-color)',
               borderRadius: '8px', cursor: 'pointer', transition: 'background-color 0.2s'
             }}
-            onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)'}
+            onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
             onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
           >
             <Plus size={18} /> <span style={{ fontWeight: '600' }}>New Extraction</span>
@@ -389,12 +388,12 @@ export default function Home() {
       <div className="main-area">
         {/* Mobile Header */}
         <div className="mobile-header">
-          <button onClick={() => setSidebarOpen(true)} style={{ color: 'white', marginRight: '16px' }}>
+          <button onClick={() => setSidebarOpen(true)} style={{ color: 'var(--text-primary)', marginRight: '16px' }}>
             <Menu size={24} />
           </button>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Disc3 size={20} color="white" className="animate-spin" />
-            <span style={{ color: 'white', fontWeight: '600' }}>Beatzy</span>
+            <Disc3 size={20} color="var(--text-primary)" className="animate-spin" />
+            <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>Beatzy</span>
           </div>
         </div>
 
@@ -403,7 +402,7 @@ export default function Home() {
           {!albumData && results.length === 0 && !loading && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60%', color: 'var(--text-secondary)' }}>
               <Disc3 size={64} className="animate-spin" style={{ marginBottom: '24px', opacity: 0.5, }} />
-              <h2 style={{ fontSize: '2rem', fontWeight: '600', color: 'white', marginBottom: '12px' }}>How can I help you today?</h2>
+              <h2 style={{ fontSize: '2rem', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '12px' }}>How can I help you today?</h2>
               <p>Extract unlimited YouTube playlists, Spotify albums, or search for a song.</p>
             </div>
           )}
@@ -447,10 +446,10 @@ export default function Home() {
                     </div>
 
                     <div style={{ display: 'flex', gap: '8px' }}>
-                      <button onClick={() => playTrack(track)} style={{ width: '36px', height: '36px', borderRadius: '8px', backgroundColor: 'var(--bg-input)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
+                      <button onClick={() => playTrack(track)} style={{ width: '36px', height: '36px', borderRadius: '8px', backgroundColor: 'var(--bg-input)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-primary)' }}>
                         <Play size={16} />
                       </button>
-                      <button onClick={() => downloadTrack(track)} style={{ width: '36px', height: '36px', borderRadius: '8px', backgroundColor: 'var(--bg-input)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
+                      <button onClick={() => downloadTrack(track)} style={{ width: '36px', height: '36px', borderRadius: '8px', backgroundColor: 'var(--bg-input)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-primary)' }}>
                         <Download size={16} />
                       </button>
                     </div>
@@ -480,7 +479,7 @@ export default function Home() {
                         <button onClick={() => playYTTrack(track)} style={{ flex: 1, padding: '8px', borderRadius: '8px', backgroundColor: 'var(--primary-color)', color: 'black', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: '600', fontSize: '0.9rem' }}>
                           <Play size={16} /> Play
                         </button>
-                        <button onClick={() => handleDownloadYT(track)} style={{ flex: 1, padding: '8px', borderRadius: '8px', backgroundColor: 'var(--bg-main)', border: '1px solid var(--border-color)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: '600', fontSize: '0.9rem' }}>
+                        <button onClick={() => handleDownloadYT(track)} style={{ flex: 1, padding: '8px', borderRadius: '8px', backgroundColor: 'var(--bg-main)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: '600', fontSize: '0.9rem' }}>
                           <Download size={16} /> MP3
                         </button>
                       </div>
@@ -500,12 +499,12 @@ export default function Home() {
             <div style={{ display: 'flex', gap: '12px', marginBottom: '8px', paddingBottom: '8px', borderBottom: '1px solid var(--border-color)' }}>
               <button
                 onClick={() => setMode('spotify')}
-                style={{ fontSize: '0.9rem', fontWeight: '600', color: mode === 'spotify' ? 'white' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                style={{ fontSize: '0.9rem', fontWeight: '600', color: mode === 'spotify' ? 'var(--text-primary)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 Extraction Mode
               </button>
               <button
                 onClick={() => setMode('search')}
-                style={{ fontSize: '0.9rem', fontWeight: '600', color: mode === 'search' ? 'white' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                style={{ fontSize: '0.9rem', fontWeight: '600', color: mode === 'search' ? 'var(--text-primary)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 Search Mode
               </button>
             </div>
@@ -523,8 +522,8 @@ export default function Home() {
                 type="submit"
                 disabled={loading || (mode === 'spotify' ? !spotifyUrl : !searchQuery)}
                 style={{
-                  backgroundColor: loading || (mode === 'spotify' ? !spotifyUrl : !searchQuery) ? 'transparent' : 'white',
-                  color: 'black', padding: '8px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  backgroundColor: loading || (mode === 'spotify' ? !spotifyUrl : !searchQuery) ? 'transparent' : 'var(--text-primary)',
+                  color: 'var(--bg-main)', padding: '8px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center',
                   opacity: loading ? 0.5 : 1, transition: 'background-color 0.2s'
                 }}
               >
@@ -552,7 +551,7 @@ export default function Home() {
               <div className="iframe-container">
                 {currentTrack.id === 'loading' ? (
                   <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', position: 'absolute', top: 0, left: 0, width: '100%', background: 'black' }}>
-                    <Loader2 className="animate-spin" size={32} color="white" />
+                    <Loader2 className="animate-spin" size={32} color="var(--text-primary)" />
                   </div>
                 ) : (
                   <iframe src={`https://www.youtube-nocookie.com/embed/${currentTrack.id}?autoplay=1`} title="YouTube video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen></iframe>
@@ -615,13 +614,13 @@ export default function Home() {
               <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem', fontSize: '0.9rem', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{dlPopup.title}</p>
               {dlPopup.loading && (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
-                  <Loader2 className="animate-spin" size={32} color="white" />
+                  <Loader2 className="animate-spin" size={32} color="var(--text-primary)" />
                   <p>Extracting High Quality Link...</p>
                 </div>
               )}
               {dlPopup.error && (<div style={{ color: '#ff6b6b' }}><p>{dlPopup.error}</p></div>)}
               {dlPopup.url && (
-                <a href={dlPopup.url} target="_blank" rel="noopener noreferrer" download onClick={() => setTimeout(() => setDlPopup(prev => ({ ...prev, show: false })), 500)} style={{ display: 'inline-flex', backgroundColor: 'white', color: 'black', padding: '12px 32px', borderRadius: '8px', fontSize: '1.1rem', fontWeight: '600', alignItems: 'center', gap: '10px' }}>
+                <a href={dlPopup.url} target="_blank" rel="noopener noreferrer" download onClick={() => setTimeout(() => setDlPopup(prev => ({ ...prev, show: false })), 500)} style={{ display: 'inline-flex', backgroundColor: 'var(--text-primary)', color: 'var(--bg-main)', padding: '12px 32px', borderRadius: '8px', fontSize: '1.1rem', fontWeight: '600', alignItems: 'center', gap: '10px' }}>
                   <Download size={20} /> Download Now
                 </a>
               )}
