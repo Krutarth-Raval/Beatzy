@@ -2,11 +2,19 @@ import { NextResponse } from 'next/server';
 
 export async function POST(request) {
   try {
-    const { url } = await request.json();
+    let { url } = await request.json();
     
-    if (!url || (!url.includes('youtube.com/playlist') && !url.includes('youtu.be'))) {
+    if (!url || (!url.includes('youtube.com/playlist') && !url.includes('youtu.be') && !url.includes('youtube.com/watch'))) {
       return NextResponse.json({ error: 'Invalid YouTube Playlist URL' }, { status: 400 });
     }
+
+    const listIdMatch = url.match(/[?&]list=([^&]+)/);
+    if (!listIdMatch) {
+      return NextResponse.json({ error: 'No playlist ID found in URL' }, { status: 400 });
+    }
+
+    // Always fetch the standard desktop playlist page to ensure consistent ytInitialData structure
+    url = `https://www.youtube.com/playlist?list=${listIdMatch[1]}`;
 
     // Fetch the raw HTML of the YouTube Playlist
     const response = await fetch(url, {
