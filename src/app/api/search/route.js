@@ -10,29 +10,19 @@ export async function GET(request) {
   }
 
   try {
-    // Wrap search in an 8-second timeout to prevent Vercel 10s HTML timeout page
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Search timed out')), 8000)
-    );
-
-    const searchPromise = play.search(query, { limit: 10 });
+    const r = await play.search(query, { limit: 10 });
     
-    const results = await Promise.race([searchPromise, timeoutPromise]);
-
-    const videos = results.map(v => ({
+    const videos = r.map(v => ({
       id: v.id,
       title: v.title,
       thumbnail: v.thumbnails[0]?.url || '',
-      artist: v.channel?.name || 'Unknown Artist',
-      duration: v.durationRaw
+      artist: v.channel?.name || 'Unknown',
+      duration: v.durationRaw || ''
     }));
 
     return NextResponse.json(videos);
   } catch (error) {
     console.error('Search API error:', error);
-    if (error.message === 'Search timed out') {
-      return NextResponse.json({ error: 'YouTube search timed out. Try a more specific query.' }, { status: 504 });
-    }
     return NextResponse.json({ error: 'Failed to search for music' }, { status: 500 });
   }
 }

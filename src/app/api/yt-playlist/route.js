@@ -13,7 +13,9 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Invalid YouTube Playlist URL' }, { status: 400 });
     }
 
-    const ytDlpPath = path.join(process.cwd(), 'node_modules', 'youtube-dl-exec', 'bin', 'yt-dlp.exe');
+    const isWindows = process.platform === 'win32';
+    const binaryName = isWindows ? 'yt-dlp.exe' : 'yt-dlp';
+    const ytDlpPath = path.join(process.cwd(), 'node_modules', 'youtube-dl-exec', 'bin', binaryName);
     // --flat-playlist extracts the list without downloading
     // -J dumps it as JSON
     const command = `"${ytDlpPath}" --flat-playlist -J "${url}"`;

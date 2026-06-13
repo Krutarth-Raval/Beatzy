@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import ytSearch from 'yt-search';
+import play from 'play-dl';
 import ytdl from '@distube/ytdl-core';
 
 export async function GET(request) {
@@ -12,8 +12,8 @@ export async function GET(request) {
 
   try {
     // 1. Search for the song on YouTube
-    const r = await ytSearch(query + ' audio');
-    const video = r.videos[0];
+    const r = await play.search(query + ' audio', { limit: 1 });
+    const video = r[0];
     
     if (!video) {
       return NextResponse.json({ error: 'No matching audio found' }, { status: 404 });
