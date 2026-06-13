@@ -12,26 +12,59 @@ export async function GET(request) {
   const id = searchParams.get('id');
 
   if (!id) {
-    return NextResponse.json({ error: 'Video ID is required' }, { status: 400 });
+    return NextResponse.json({ error: 'Missing video ID' }, { status: 400 });
   }
 
   try {
-    const isWindows = os.platform() === 'win32';
-    const tmpPath = path.join(os.tmpdir(), 'yt-dlp');
+    // ==========================================
+    // METHOD 1: RAPID API (Vercel Production)
+    // ==========================================
+    if (process.env.RAPIDAPI_KEY) {
+      console.log('Using RapidAPI for extraction...');
+      
+      // Using the popular 'youtube-mp36' API from RapidAPI
+      const response = await fetch(`https://youtube-mp36.p.rapidapi.com/dl?id=${id}`, {
+        method: 'GET',
+        headers: {
+          'X-RapidAPI-Key': process.env.RAPIDAPI_KEY,
+          'X-RapidAPI-Host': 'youtube-mp36.p.rapidapi.com'
+        }
+      });
+      
+      const data = await response.json();
+      
+      // If the API successfully returns a download link, return it immediately
+      if (data && (data.link || data.url)) {
+        return NextResponse.json({ 
+          url: data.link || data.url, 
+          title: data.title || 'Downloaded Audio',
+          ext: 'mp3'
+        });
+      }
+      console.warn('RapidAPI extraction failed. Falling back to local yt-dlp...', data);
+    }
 
-    let ytDlpPath = isWindows 
-      ? path.join(process.cwd(), 'node_modules', 'youtube-dl-exec', 'bin', 'yt-dlp.exe') 
-      : tmpPath;
+    // ==========================================
+    // METHOD 2: YT-DLP (Local Fallback)
+    // ==========================================
+    console.log('Using local yt-dlp fallback...');
+    let ytDlpPath;
+    const isVercel = process.env.VERCEL === '1';
 
-    // Vercel Serverless environment lacks python3. We must download the standalone Linux binary
-    if (!isWindows) {
-      if (!fs.existsSync(tmpPath)) {
-        console.log('Downloading standalone yt-dlp_linux to /tmp...');
-        const res = await fetch('https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux');
-        const buffer = await res.arrayBuffer();
-        fs.writeFileSync(tmpPath, Buffer.from(buffer));
-        fs.chmodSync(tmpPath, 0o777);
-        console.log('Successfully downloaded and made executable.');
+    if (isVercel) {
+      // Vercel execution (will likely fail due to Captcha, but we try anyway)
+      const vercelBinPath = path.join(process.cwd(), 'node_modules', 'youtube-dl-exec', 'bin', 'yt-dlp');
+      ytDlpPath = path.join(os.tmpdir(), 'yt-dlp');
+      
+      if (!fs.existsSync(ytDlpPath)) {
+        fs.copyFileSync(vercelBinPath, ytDlpPath);
+        fs.chmodSync(ytDlpPath, 0o777);
+      }
+    } else {
+      // Local Windows/Mac execution
+      ytDlpPath = path.join(process.cwd(), 'node_modules', 'youtube-dl-exec', 'bin', 'yt-dlp.exe');
+      if (!fs.existsSync(ytDlpPath)) {
+        ytDlpPath = path.join(process.cwd(), 'node_modules', 'youtube-dl-exec', 'bin', 'yt-dlp');
       }
     }
 
