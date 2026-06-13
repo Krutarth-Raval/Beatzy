@@ -35,7 +35,7 @@ export async function GET(request) {
       }
     }
 
-    const command = `"${ytDlpPath}" -j --no-warnings --prefer-free-formats "https://www.youtube.com/watch?v=${id}"`;
+    const command = `"${ytDlpPath}" -j --no-warnings --prefer-free-formats --extractor-args "youtube:player-client=android" "https://www.youtube.com/watch?v=${id}"`;
     const { stdout, stderr } = await execAsync(command);
 
     if (stderr && !stdout) {
