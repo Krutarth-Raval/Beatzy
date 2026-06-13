@@ -24,7 +24,7 @@ body {
   background-color: var(--bg-main);
   color: var(--text-primary);
   line-height: 1.6;
-  height: 100vh;
+  height: 100dvh;
   overflow: hidden; /* App takes full screen, internal scrolling */
 }
 
@@ -74,7 +74,7 @@ button {
 /* Layout Components */
 .app-layout {
   display: flex;
-  height: 100vh;
+  height: 100dvh;
   width: 100vw;
   overflow: hidden;
 }
@@ -83,7 +83,7 @@ button {
 .sidebar {
   width: 260px;
   background-color: var(--bg-sidebar);
-  height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   transition: transform 0.3s ease;
@@ -134,7 +134,7 @@ button {
   display: flex;
   flex-direction: column;
   position: relative;
-  height: 100vh;
+  height: 100dvh;
   overflow: hidden;
 }
 

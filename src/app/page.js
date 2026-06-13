@@ -187,7 +187,7 @@ export default function Home() {
 
   if (status === 'loading') {
     return (
-      <div style={{ display: 'flex', height: '100vh', justifyContent: 'center', alignItems: 'center', backgroundColor: '#212121' }}>
+      <div style={{ display: 'flex', height: '100dvh', justifyContent: 'center', alignItems: 'center', backgroundColor: '#212121' }}>
         <Loader2 className="animate-spin" size={48} color="white" />
       </div>
     );
@@ -195,9 +195,9 @@ export default function Home() {
 
   if (!session) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '2rem', backgroundColor: '#212121', color: 'white' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '2rem', backgroundColor: '#212121', color: 'white' }}>
         <div style={{ padding: '3rem', maxWidth: '500px', width: '100%' }}>
-          <Disc3 size={64} color="white" style={{ marginBottom: '1.5rem' }} />
+          <Disc3 size={64} color="white" style={{ marginBottom: '1.5rem' }} className="animate-spin" />
           <h1 style={{ fontSize: '2.5rem', marginBottom: '1rem', fontWeight: '700' }}>Beatzy</h1>
           <p style={{ color: '#ececec', marginBottom: '2.5rem', fontSize: '1.1rem' }}>
             Extract albums, search songs, and download MP3s effortlessly.
@@ -274,7 +274,7 @@ export default function Home() {
               {session.user.name}
             </span>
           </div>
-          <button onClick={() => signOut()} style={{ color: 'var(--text-secondary)', padding: '8px' }}>
+          <button onClick={() => { if (window.confirm("Are you sure you want to sign out?")) signOut(); }} style={{ color: 'var(--text-secondary)', padding: '8px' }}>
             <LogOut size={18} />
           </button>
         </div>
