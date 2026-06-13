@@ -17,26 +17,22 @@ export async function GET(request) {
 
   try {
     const isWindows = os.platform() === 'win32';
-    const binaryName = isWindows ? 'yt-dlp.exe' : 'yt-dlp';
-    
-    // Original path created during Vercel build / local npm install
-    let ytDlpPath = path.join(process.cwd(), 'node_modules', 'youtube-dl-exec', 'bin', binaryName);
-    
-    // Vercel Serverless environment workaround
-    // Vercel mounts /var/task as read-only. The yt-dlp binary often loses its +x executable flag during deployment.
-    // To fix this, we must copy the binary to the writable /tmp directory and give it execution permissions.
+    const tmpPath = path.join(os.tmpdir(), 'yt-dlp');
+
+    let ytDlpPath = isWindows 
+      ? path.join(process.cwd(), 'node_modules', 'youtube-dl-exec', 'bin', 'yt-dlp.exe') 
+      : tmpPath;
+
+    // Vercel Serverless environment lacks python3. We must download the standalone Linux binary
     if (!isWindows) {
-      const tmpPath = path.join('/tmp', 'yt-dlp');
       if (!fs.existsSync(tmpPath)) {
-        if (fs.existsSync(ytDlpPath)) {
-          fs.copyFileSync(ytDlpPath, tmpPath);
-          fs.chmodSync(tmpPath, 0o777);
-        } else {
-          // Fallback if Vercel tree-shaking removed node_modules
-          throw new Error('yt-dlp binary not found in deployment package.');
-        }
+        console.log('Downloading standalone yt-dlp_linux to /tmp...');
+        const res = await fetch('https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux');
+        const buffer = await res.arrayBuffer();
+        fs.writeFileSync(tmpPath, Buffer.from(buffer));
+        fs.chmodSync(tmpPath, 0o777);
+        console.log('Successfully downloaded and made executable.');
       }
-      ytDlpPath = tmpPath;
     }
 
     const command = `"${ytDlpPath}" -j --no-warnings --prefer-free-formats "https://www.youtube.com/watch?v=${id}"`;
