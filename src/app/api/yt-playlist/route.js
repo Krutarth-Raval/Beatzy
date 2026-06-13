@@ -1,51 +1,56 @@
 import { NextResponse } from 'next/server';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-import path from 'path';
+import { Innertube, UniversalCache } from 'youtubei.js';
 
-const execAsync = promisify(exec);
+let innertube = null;
+async function getInnertube() {
+  if (!innertube) {
+    innertube = await Innertube.create({ cache: new UniversalCache(false) });
+  }
+  return innertube;
+}
 
 export async function POST(request) {
   try {
     const { url } = await request.json();
     
-    if (!url || !url.includes('youtube.com/playlist')) {
+    if (!url || (!url.includes('youtube.com/playlist') && !url.includes('youtu.be'))) {
       return NextResponse.json({ error: 'Invalid YouTube Playlist URL' }, { status: 400 });
     }
 
-    const isWindows = process.platform === 'win32';
-    const binaryName = isWindows ? 'yt-dlp.exe' : 'yt-dlp';
-    const ytDlpPath = path.join(process.cwd(), 'node_modules', 'youtube-dl-exec', 'bin', binaryName);
-    // --flat-playlist extracts the list without downloading
-    // -J dumps it as JSON
-    const command = `"${ytDlpPath}" --flat-playlist -J "${url}"`;
-    const { stdout, stderr } = await execAsync(command, { maxBuffer: 1024 * 1024 * 50 }); // 50MB buffer for huge playlists
-
-    if (!stdout) {
-      throw new Error(stderr || 'Failed to extract playlist');
+    let listId;
+    try {
+      const urlObj = new URL(url);
+      listId = urlObj.searchParams.get('list');
+    } catch (e) {
+      return NextResponse.json({ error: 'Malformed URL' }, { status: 400 });
     }
 
-    const data = JSON.parse(stdout);
+    if (!listId) {
+      return NextResponse.json({ error: 'Could not find Playlist ID in URL' }, { status: 400 });
+    }
 
-    if (!data.entries) {
+    const yt = await getInnertube();
+    const playlist = await yt.getPlaylist(listId);
+
+    if (!playlist || !playlist.items) {
       throw new Error('No tracks found in playlist.');
     }
 
-    const formattedTracks = data.entries.map(track => ({
+    const formattedTracks = playlist.items.map(track => ({
       id: track.id,
-      name: track.title,
-      artists: track.uploader || 'Unknown Artist',
+      name: track.title?.text || track.title || 'Unknown Title',
+      artists: track.author?.name || 'Unknown Artist',
     }));
 
     return NextResponse.json({
-      title: data.title || 'YouTube Playlist',
+      title: playlist.info?.title || 'YouTube Playlist',
       type: 'Playlist',
-      coverArt: 'https://www.youtube.com/img/desktop/yt_1200.png', // Generic fallback
+      coverArt: playlist.info?.thumbnails?.[0]?.url || 'https://www.youtube.com/img/desktop/yt_1200.png',
       tracks: formattedTracks,
     });
 
   } catch (error) {
     console.error('YouTube Playlist extraction error:', error);
-    return NextResponse.json({ error: 'Failed to extract YouTube Playlist.' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to extract YouTube Playlist. Ensure the playlist is public.' }, { status: 500 });
   }
 }
