@@ -31,6 +31,7 @@ export default function Home() {
   const [theme, setTheme] = useState('dark');
   const [showSignOutModal, setShowSignOutModal] = useState(false);
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
+  const [showClearHistoryModal, setShowClearHistoryModal] = useState(false);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') || 'dark';
@@ -94,10 +95,14 @@ export default function Home() {
     }
   };
 
-  const clearAllHistory = async () => {
-    if (!window.confirm("Are you sure you want to clear all history?")) return;
-    setHistory([]);
+  const promptClearAllHistory = () => {
     setSettingsOpen(false);
+    setShowClearHistoryModal(true);
+  };
+
+  const confirmClearAllHistory = async () => {
+    setHistory([]);
+    setShowClearHistoryModal(false);
     if (session?.user) {
       fetch('/api/history', { method: 'DELETE' }).catch(console.error);
     }
@@ -298,7 +303,7 @@ export default function Home() {
 
       {/* Sidebar */}
       <div className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
-        <div style={{ padding: '16px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
           <Disc3 size={24} color="white" className="animate-spin" />
           <span style={{ color: 'white', fontWeight: '700', fontSize: '1.2rem', letterSpacing: '0.5px' }}>Beatzy</span>
         </div>
@@ -360,7 +365,7 @@ export default function Home() {
 
           {settingsOpen && (
             <div className="settings-popup">
-              <div className="settings-item" onClick={clearAllHistory}>
+              <div className="settings-item" onClick={promptClearAllHistory}>
                 <Trash2 size={16} /> Clear history
               </div>
               <div className="settings-item" onClick={toggleTheme}>
@@ -557,7 +562,49 @@ export default function Home() {
           </div>
         )}
 
-        {/* Direct Download Popup Modal */}
+              {/* Sign Out Modal */}
+      {showSignOutModal && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
+          <div className="glass-panel animate-fade-in" style={{ backgroundColor: 'var(--bg-main)', padding: '24px', width: '100%', maxWidth: '400px', borderRadius: '16px' }}>
+            <h2 style={{ fontSize: '1.2rem', marginBottom: '8px', color: 'var(--text-primary)' }}>Sign out?</h2>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '0.95rem' }}>Are you sure you want to sign out of Beatzy?</p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button onClick={() => setShowSignOutModal(false)} style={{ padding: '8px 16px', color: 'var(--text-primary)', borderRadius: '8px', border: '1px solid var(--border-color)', fontWeight: '600' }}>Cancel</button>
+              <button onClick={() => signOut()} style={{ padding: '8px 16px', backgroundColor: '#ff4d4f', color: 'white', borderRadius: '8px', fontWeight: '600' }}>Sign out</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Account Modal */}
+      {showDeleteAccountModal && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
+          <div className="glass-panel animate-fade-in" style={{ backgroundColor: 'var(--bg-main)', padding: '24px', width: '100%', maxWidth: '400px', borderRadius: '16px' }}>
+            <h2 style={{ fontSize: '1.2rem', marginBottom: '8px', color: '#ff4d4f' }}>Delete Account?</h2>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '0.95rem' }}>This action is permanent. All your search history will be deleted. Are you absolutely sure?</p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button onClick={() => setShowDeleteAccountModal(false)} style={{ padding: '8px 16px', color: 'var(--text-primary)', borderRadius: '8px', border: '1px solid var(--border-color)', fontWeight: '600' }}>Cancel</button>
+              <button onClick={confirmDeleteAccount} style={{ padding: '8px 16px', backgroundColor: '#ff4d4f', color: 'white', borderRadius: '8px', fontWeight: '600' }}>Delete forever</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Clear History Modal */}
+      {showClearHistoryModal && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
+          <div className="glass-panel animate-fade-in" style={{ backgroundColor: 'var(--bg-main)', padding: '24px', width: '100%', maxWidth: '400px', borderRadius: '16px' }}>
+            <h2 style={{ fontSize: '1.2rem', marginBottom: '8px', color: 'var(--text-primary)' }}>Clear all history?</h2>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '0.95rem' }}>This will permanently remove all your recent searches from all devices.</p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button onClick={() => setShowClearHistoryModal(false)} style={{ padding: '8px 16px', color: 'var(--text-primary)', borderRadius: '8px', border: '1px solid var(--border-color)', fontWeight: '600' }}>Cancel</button>
+              <button onClick={confirmClearAllHistory} style={{ padding: '8px 16px', backgroundColor: '#ff4d4f', color: 'white', borderRadius: '8px', fontWeight: '600' }}>Clear all</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Direct Download Popup Modal */}
         {dlPopup.show && (
           <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 999, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '1rem' }}>
             <div style={{ backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-color)', width: '100%', maxWidth: '400px', padding: '2rem', borderRadius: '16px', position: 'relative', textAlign: 'center' }}>

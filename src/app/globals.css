@@ -102,6 +102,7 @@ button {
   transition: transform 0.3s ease;
   z-index: 50;
   flex-shrink: 0;
+  border-right: 1px solid var(--border-color);
 }
 
 .history-list {
@@ -156,7 +157,7 @@ button {
 /* Settings Popup */
 .settings-popup {
   position: absolute;
-  bottom: 70px;
+  bottom: calc(100% + 10px);
   left: 12px;
   width: calc(100% - 24px);
   background-color: var(--bg-input);
