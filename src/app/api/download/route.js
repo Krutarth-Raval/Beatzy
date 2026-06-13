@@ -35,7 +35,7 @@ export async function GET(request) {
       }
     }
 
-    const command = `"${ytDlpPath}" -j --no-warnings --prefer-free-formats --extractor-args "youtube:player-client=android" "https://www.youtube.com/watch?v=${id}"`;
+    const command = `"${ytDlpPath}" -j --no-warnings --prefer-free-formats "https://www.youtube.com/watch?v=${id}"`;
     const { stdout, stderr } = await execAsync(command);
 
     if (stderr && !stdout) {
@@ -44,8 +44,7 @@ export async function GET(request) {
 
     const output = JSON.parse(stdout);
 
-    // Find the best audio format. We prefer audio-only (vcodec === 'none'), 
-    // but Android client spoofing sometimes only returns muxed mp4s (video+audio).
+    // Find the best audio format. We prefer audio-only (vcodec === 'none')
     const audioFormats = output.formats
       .filter(f => f.acodec && f.acodec !== 'none')
       .sort((a, b) => {
@@ -63,13 +62,16 @@ export async function GET(request) {
         ext: audioFormats[0].ext
       });
     } else {
-      return NextResponse.json({ error: 'No audio stream found' }, { status: 404 });
+      throw new Error('No audio stream found');
     }
   } catch (error) {
     console.error('Download API error:', error);
+    
+    // Vercel Fallback: If Vercel's IP is banned by YouTube bots, return a third-party download link
+    // This ensures that the download button ALWAYS works even if the server is blocked.
     return NextResponse.json({ 
-      error: 'Failed to extract download link',
-      details: error.message || error.toString()
-    }, { status: 500 });
+      url: `https://yt1s.com/en/youtube-to-mp3?q=https://www.youtube.com/watch?v=${id}`,
+      title: 'Download via YT1s (Fallback)'
+    });
   }
 }
