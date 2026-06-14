@@ -301,8 +301,8 @@ export default function Home() {
         console.error("Speech recognition error:", event.error);
         if (event.error === 'not-allowed') {
           setError("Microphone access denied. Please check your permissions.");
-        } else if (event.error === 'no-speech') {
-          // ignore or show temporary message
+        } else if (event.error === 'no-speech' || event.error === 'aborted') {
+          // ignore
         } else {
           setError(`Voice search error: ${event.error}`);
         }
@@ -561,23 +561,23 @@ export default function Home() {
           {error && <p style={{ color: '#ff6b6b', marginBottom: '12px', fontSize: '0.9rem' }}>{error}</p>}
 
           <div style={{ width: '100%', maxWidth: '800px', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', backgroundColor: 'var(--bg-main)', padding: '6px', borderRadius: '12px', width: 'fit-content', border: '1px solid var(--border-color)' }}>
+            <div style={{ display: 'flex', gap: '4px', marginBottom: '2px', backgroundColor: 'var(--bg-main)', padding: '4px', borderRadius: '10px', width: 'fit-content', border: '1px solid var(--border-color)' }}>
               <button
                 type="button"
                 onClick={() => setMode('spotify')}
-                style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '0.9rem', fontWeight: '600', backgroundColor: mode === 'spotify' ? 'var(--bg-hover)' : 'transparent', color: mode === 'spotify' ? 'var(--text-primary)' : 'var(--text-secondary)', transition: 'all 0.2s', border: 'none', cursor: 'pointer' }}>
+                style={{ padding: '6px 12px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: '600', backgroundColor: mode === 'spotify' ? 'var(--bg-hover)' : 'transparent', color: mode === 'spotify' ? 'var(--text-primary)' : 'var(--text-secondary)', transition: 'all 0.2s', border: 'none', cursor: 'pointer' }}>
                 Extraction Mode
               </button>
               <button
                 type="button"
                 onClick={() => setMode('search')}
-                style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '0.9rem', fontWeight: '600', backgroundColor: mode === 'search' ? 'var(--bg-hover)' : 'transparent', color: mode === 'search' ? 'var(--text-primary)' : 'var(--text-secondary)', transition: 'all 0.2s', border: 'none', cursor: 'pointer' }}>
+                style={{ padding: '6px 12px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: '600', backgroundColor: mode === 'search' ? 'var(--bg-hover)' : 'transparent', color: mode === 'search' ? 'var(--text-primary)' : 'var(--text-secondary)', transition: 'all 0.2s', border: 'none', cursor: 'pointer' }}>
                 Search Mode
               </button>
             </div>
 
-            <div className="input-box-container" style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <form onSubmit={mode === 'spotify' ? handleExtract : handleSearch} style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%' }}>
+            <div className="input-box-container" style={{ flexDirection: 'row', alignItems: 'center', padding: '4px 12px' }}>
+              <form onSubmit={mode === 'spotify' ? handleExtract : handleSearch} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%' }}>
                 <input
                   type="text"
                   className="search-input"
@@ -599,7 +599,7 @@ export default function Home() {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      padding: '8px',
+                      padding: '4px',
                       transition: 'color 0.2s',
                       animation: isListening ? 'pulse 1.5s infinite' : 'none'
                     }}
