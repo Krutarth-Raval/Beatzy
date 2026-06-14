@@ -54,6 +54,10 @@ export async function POST(request) {
       if (items) break;
     }
 
+    if (items && items.length === 1 && items[0].playlistVideoListRenderer?.contents) {
+      items = items[0].playlistVideoListRenderer.contents;
+    }
+
     if (!items || !items.length) {
       throw new Error('No tracks found in playlist.');
     }
