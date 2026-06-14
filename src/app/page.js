@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useSession, signIn, signOut } from 'next-auth/react';
-import { Search, Play, Download, LogOut, Music, Loader2, X, Disc3, Menu, MessageSquare, Plus, Settings, Trash2, Moon, Sun, AlertTriangle, Home as HomeIcon, Mic, Library, ChevronDown, ChevronRight } from 'lucide-react';
+import { Search, Play, Download, LogOut, Music, Loader2, X, Disc3, Menu, MessageSquare, Plus, Settings, Trash2, Moon, Sun, AlertTriangle, Home as HomeIcon, Mic, Library, ChevronDown, ChevronRight, Info } from 'lucide-react';
 
 export default function Home() {
   const { data: session, status } = useSession();
@@ -475,6 +475,10 @@ export default function Home() {
                 {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />} 
                 {theme === 'dark' ? 'Light mode' : 'Dark mode'}
               </div>
+              <div className="settings-divider"></div>
+              <a href="/about" className="settings-item" style={{ textDecoration: 'none', color: 'inherit' }}>
+                <Info size={16} /> About Beatzy
+              </a>
               <div className="settings-divider"></div>
               <div className="settings-item" onClick={() => { setSettingsOpen(false); setShowSignOutModal(true); }}>
                 <LogOut size={16} /> Log out
