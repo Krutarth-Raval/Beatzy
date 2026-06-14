@@ -456,7 +456,7 @@ export default function Home() {
         <div style={{ padding: '16px 12px 24px 12px', borderTop: '1px solid var(--border-color)', position: 'relative' }}>
           <div
             onClick={() => setSettingsOpen(!settingsOpen)}
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', padding: '8px', borderRadius: '8px', transition: 'background-color 0.2s' }}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', padding: '8px 12px', borderRadius: '8px', transition: 'background-color 0.2s' }}
             onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
             onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
           >
@@ -596,7 +596,7 @@ export default function Home() {
                       <h4 style={{ fontWeight: '600', marginBottom: '4px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{track.title}</h4>
                       <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '16px' }}>{track.artist}</p>
                       <div style={{ display: 'flex', gap: '12px', marginTop: 'auto' }}>
-                        <button onClick={() => playYTTrack(track)} style={{ flex: 1, padding: '8px', borderRadius: '8px', backgroundColor: 'var(--primary-color)', color: 'black', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: '600', fontSize: '0.9rem' }}>
+                        <button onClick={() => playYTTrack(track)} style={{ flex: 1, padding: '8px', borderRadius: '8px', backgroundColor: 'var(--text-primary)', color: 'var(--bg-main)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: '600', fontSize: '0.9rem' }}>
                           <Play size={16} /> Play
                         </button>
                         <button onClick={() => handleDownloadYT(track)} style={{ flex: 1, padding: '8px', borderRadius: '8px', backgroundColor: 'var(--bg-main)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: '600', fontSize: '0.9rem' }}>
