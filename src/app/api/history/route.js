@@ -37,20 +37,8 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
     }
 
-    // Optional: avoid inserting immediate duplicates
-    const existing = await prisma.history.findFirst({
-      where: { userId: session.user.id, query },
-      orderBy: { createdAt: 'desc' }
-    });
+    // Always create a new history entry for manual searches
 
-    if (existing) {
-      // Just update timestamp
-      const updated = await prisma.history.update({
-        where: { id: existing.id },
-        data: { createdAt: new Date() }
-      });
-      return NextResponse.json(updated);
-    }
 
     const newHistory = await prisma.history.create({
       data: {
