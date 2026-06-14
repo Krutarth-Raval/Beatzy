@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSession, signIn, signOut } from 'next-auth/react';
 import { Search, Play, Download, LogOut, Music, Loader2, X, Disc3, Menu, MessageSquare, Plus, Settings, Trash2, Moon, Sun, AlertTriangle, Home as HomeIcon, Mic } from 'lucide-react';
 
@@ -30,6 +30,7 @@ export default function Home() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [theme, setTheme] = useState('dark');
   const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef(null);
   const [showSignOutModal, setShowSignOutModal] = useState(false);
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
   const [showClearHistoryModal, setShowClearHistoryModal] = useState(false);
@@ -267,36 +268,57 @@ export default function Home() {
   };
 
   const handleVoiceSearch = () => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert("Your browser does not support voice search. Try Google Chrome or Edge.");
+    if (isListening && recognitionRef.current) {
+      recognitionRef.current.abort();
+      setIsListening(false);
       return;
     }
 
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'en-US';
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setError("Your browser does not support voice search (Web Speech API).");
+      return;
+    }
 
-    recognition.onstart = () => {
-      setIsListening(true);
-    };
+    try {
+      const recognition = new SpeechRecognition();
+      recognitionRef.current = recognition;
+      recognition.lang = 'en-US';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
 
-    recognition.onresult = (event) => {
-      const transcript = event.results[0][0].transcript;
-      setSearchQuery(transcript);
-    };
+      recognition.onstart = () => {
+        setIsListening(true);
+        setError(''); // clear previous errors
+      };
 
-    recognition.onerror = (event) => {
-      console.error("Speech recognition error", event.error);
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        setSearchQuery(transcript);
+      };
+
+      recognition.onerror = (event) => {
+        console.error("Speech recognition error:", event.error);
+        if (event.error === 'not-allowed') {
+          setError("Microphone access denied. Please check your permissions.");
+        } else if (event.error === 'no-speech') {
+          // ignore or show temporary message
+        } else {
+          setError(`Voice search error: ${event.error}`);
+        }
+        setIsListening(false);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      recognition.start();
+    } catch (err) {
+      console.error("Failed to start speech recognition:", err);
+      setError("Voice search couldn't be started on this device/browser.");
       setIsListening(false);
-    };
-
-    recognition.onend = () => {
-      setIsListening(false);
-    };
-
-    recognition.start();
+    }
   };
 
   if (status === 'loading') {
@@ -582,7 +604,7 @@ export default function Home() {
                       animation: isListening ? 'pulse 1.5s infinite' : 'none'
                     }}
                   >
-                    <Mic size={20} />
+                    {isListening ? <X size={20} /> : <Mic size={20} />}
                   </button>
                 )}
 
