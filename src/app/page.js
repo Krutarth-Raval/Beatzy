@@ -72,8 +72,6 @@ export default function Home() {
   }, [session]);
 
   const addToHistory = async (item) => {
-    if (history.some(i => i.query === item.query)) return;
-
     // Optimistic update locally
     setHistory(prev => [item, ...prev].slice(0, 50));
 
@@ -135,20 +133,19 @@ export default function Home() {
     if (item.type === 'search') {
       setMode('search');
       setSearchQuery(item.query);
-      // Wait for state to update, then trigger search
-      setTimeout(() => triggerSearch(item.query), 0);
+      setTimeout(() => triggerSearch(item.query, true), 0);
     } else {
       setMode('spotify');
       setSpotifyUrl(item.query);
-      setTimeout(() => triggerExtract(item.query), 0);
+      setTimeout(() => triggerExtract(item.query, true), 0);
     }
   };
 
-  const triggerSearch = async (query) => {
-    if (!query) return;
+  const triggerSearch = async (queryToSearch, fromHistory = false) => {
+    if (!queryToSearch) return;
     setLoading(true); setError(''); setResults([]); setAlbumData(null);
     try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+      const res = await fetch(`/api/search?q=${encodeURIComponent(queryToSearch)}`);
       
       let data;
       try {
@@ -160,7 +157,9 @@ export default function Home() {
       if (!res.ok) throw new Error(data?.error || 'Unknown server error');
       
       setResults(data);
-      addToHistory({ type: 'search', query, title: query });
+      if (!fromHistory) {
+        addToHistory({ type: 'search', query: queryToSearch, title: queryToSearch });
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -168,7 +167,7 @@ export default function Home() {
     }
   };
 
-  const triggerExtract = async (url) => {
+  const triggerExtract = async (url, fromHistory = false) => {
     if (!url) return;
     setLoading(true); setError(''); setAlbumData(null); setResults([]);
     try {
@@ -191,7 +190,9 @@ export default function Home() {
       if (!res.ok) throw new Error(data?.error || 'Unknown server error');
       
       setAlbumData(data);
-      addToHistory({ type: 'spotify', query: url, title: data.title || url });
+      if (!fromHistory) {
+        addToHistory({ type: 'spotify', query: url, title: data.title || url });
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -452,14 +453,19 @@ export default function Home() {
       {/* Main Content Area */}
       <div className="main-area">
         {/* Mobile Header */}
-        <div className="mobile-header">
-          <button onClick={() => setSidebarOpen(true)} style={{ color: 'var(--text-primary)', marginRight: '16px' }}>
-            <Menu size={28} />
-          </button>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Disc3 size={24} color="var(--text-primary)" className="animate-spin" />
-            <span style={{ color: 'var(--text-primary)', fontWeight: '700', fontSize: '1.2rem', letterSpacing: '0.5px' }}>Beatzy</span>
+        <div className="mobile-header" style={{ justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <button onClick={() => setSidebarOpen(true)} style={{ color: 'var(--text-primary)', marginRight: '16px' }}>
+              <Menu size={28} />
+            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Disc3 size={24} color="var(--text-primary)" className="animate-spin" />
+              <span style={{ color: 'var(--text-primary)', fontWeight: '700', fontSize: '1.2rem', letterSpacing: '0.5px' }}>Beatzy</span>
+            </div>
           </div>
+          <button onClick={resetState} style={{ color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px' }}>
+            <Plus size={28} />
+          </button>
         </div>
 
         {/* Scrollable Content */}
