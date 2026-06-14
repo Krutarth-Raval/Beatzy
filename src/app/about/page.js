@@ -42,10 +42,10 @@ export default function AboutPage() {
       <div style={{ maxWidth: '800px', margin: '0 auto', padding: '40px 24px', paddingBottom: '100px' }} className="animate-fade-in-up">
         
         {/* Back Button */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '32px' }}>
-          <Link href="/" style={{ color: 'var(--text-secondary)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', backgroundColor: 'var(--bg-input)', borderRadius: '8px', border: '1px solid var(--border-color)', transition: 'background-color 0.2s', fontWeight: '500' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-input)'}>
+        <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '24px' }}>
+          <Link href="/" style={{ color: 'var(--text-secondary)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px', transition: 'color 0.2s', fontWeight: '500', fontSize: '0.95rem' }} onMouseOver={(e) => e.currentTarget.style.color = 'var(--text-primary)'} onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}>
             <ArrowLeft size={18} />
-            <span>Back to Home</span>
+            <span>Back</span>
           </Link>
         </div>
 
