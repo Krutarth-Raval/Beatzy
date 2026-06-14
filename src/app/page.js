@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useSession, signIn, signOut } from 'next-auth/react';
-import { Search, Play, Download, LogOut, Music, Loader2, X, Disc3, Menu, MessageSquare, Plus, Settings, Trash2, Moon, Sun, AlertTriangle, Home as HomeIcon, Mic } from 'lucide-react';
+import { Search, Play, Download, LogOut, Music, Loader2, X, Disc3, Menu, MessageSquare, Plus, Settings, Trash2, Moon, Sun, AlertTriangle, Home as HomeIcon, Mic, Library } from 'lucide-react';
 
 export default function Home() {
   const { data: session, status } = useSession();
@@ -393,7 +393,7 @@ export default function Home() {
           <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', padding: '8px 12px', marginTop: '12px' }}>Recent</p>
           {history.map((item, i) => (
             <div key={i} className="history-item" onClick={() => loadHistoryItem(item)}>
-              {item.type === 'spotify' ? <Disc3 size={16} style={{ flexShrink: 0, opacity: 0.7 }} /> : <Music size={16} style={{ flexShrink: 0, opacity: 0.7 }} />}
+              {item.type === 'spotify' ? <Library size={16} style={{ flexShrink: 0, opacity: 0.7 }} /> : <Music size={16} style={{ flexShrink: 0, opacity: 0.7 }} />}
               <span style={{ fontSize: '0.9rem', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.title}</span>
               <div className="history-item-actions">
                 <Trash2 
