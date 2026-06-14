@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSession, signIn, signOut } from 'next-auth/react';
-import { Search, Play, Download, LogOut, Music, Loader2, X, Disc3, Menu, MessageSquare, Plus, Settings, Trash2, Moon, Sun, AlertTriangle } from 'lucide-react';
+import { Search, Play, Download, LogOut, Music, Loader2, X, Disc3, Menu, MessageSquare, Plus, Settings, Trash2, Moon, Sun, AlertTriangle, Home as HomeIcon, Mic } from 'lucide-react';
 
 export default function Home() {
   const { data: session, status } = useSession();
@@ -29,6 +29,7 @@ export default function Home() {
   const [history, setHistory] = useState([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [theme, setTheme] = useState('dark');
+  const [isListening, setIsListening] = useState(false);
   const [showSignOutModal, setShowSignOutModal] = useState(false);
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
   const [showClearHistoryModal, setShowClearHistoryModal] = useState(false);
@@ -70,11 +71,10 @@ export default function Home() {
   }, [session]);
 
   const addToHistory = async (item) => {
+    if (history.some(i => i.query === item.query)) return;
+
     // Optimistic update locally
-    setHistory(prev => {
-      const newHistory = [item, ...prev.filter(i => i.query !== item.query)].slice(0, 50);
-      return newHistory;
-    });
+    setHistory(prev => [item, ...prev].slice(0, 50));
 
     if (session?.user) {
       try {
@@ -263,6 +263,40 @@ export default function Home() {
     setSearchQuery('');
     setSpotifyUrl('');
     setSidebarOpen(false);
+    setIsListening(false);
+  };
+
+  const handleVoiceSearch = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Your browser does not support voice search. Try Google Chrome or Edge.");
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => {
+      setIsListening(true);
+    };
+
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      setSearchQuery(transcript);
+    };
+
+    recognition.onerror = (event) => {
+      console.error("Speech recognition error", event.error);
+      setIsListening(false);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    recognition.start();
   };
 
   if (status === 'loading') {
@@ -326,7 +360,7 @@ export default function Home() {
             onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
             onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
           >
-            <Plus size={18} /> <span style={{ fontWeight: '600' }}>New Extraction</span>
+            <Plus size={18} /> <span style={{ fontWeight: '600' }}>New Search</span>
           </button>
         </div>
 
@@ -334,7 +368,7 @@ export default function Home() {
           <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', padding: '8px 12px', marginTop: '12px' }}>Recent</p>
           {history.map((item, i) => (
             <div key={i} className="history-item" onClick={() => loadHistoryItem(item)}>
-              <MessageSquare size={16} style={{ flexShrink: 0, opacity: 0.7 }} />
+              {item.type === 'spotify' ? <Disc3 size={16} style={{ flexShrink: 0, opacity: 0.7 }} /> : <Music size={16} style={{ flexShrink: 0, opacity: 0.7 }} />}
               <span style={{ fontSize: '0.9rem', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.title}</span>
               <div className="history-item-actions">
                 <Trash2 
@@ -353,7 +387,7 @@ export default function Home() {
         </div>
 
         {/* User Profile Area */}
-                <div style={{ padding: '12px', borderTop: '1px solid var(--border-color)', position: 'relative' }}>
+        <div style={{ padding: '16px 12px 24px 12px', borderTop: '1px solid var(--border-color)', position: 'relative' }}>
           <div 
             onClick={() => setSettingsOpen(!settingsOpen)}
             style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', padding: '8px', borderRadius: '8px', transition: 'background-color 0.2s' }}
@@ -398,11 +432,11 @@ export default function Home() {
         {/* Mobile Header */}
         <div className="mobile-header">
           <button onClick={() => setSidebarOpen(true)} style={{ color: 'var(--text-primary)', marginRight: '16px' }}>
-            <Menu size={24} />
+            <Menu size={28} />
           </button>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Disc3 size={20} color="var(--text-primary)" className="animate-spin" />
-            <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>Beatzy</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Disc3 size={24} color="var(--text-primary)" className="animate-spin" />
+            <span style={{ color: 'var(--text-primary)', fontWeight: '700', fontSize: '1.2rem', letterSpacing: '0.5px' }}>Beatzy</span>
           </div>
         </div>
 
@@ -504,41 +538,68 @@ export default function Home() {
         <div className="input-area-wrapper">
           {error && <p style={{ color: '#ff6b6b', marginBottom: '12px', fontSize: '0.9rem' }}>{error}</p>}
 
-          <div className="input-box-container">
-            <div style={{ display: 'flex', gap: '12px', marginBottom: '8px', paddingBottom: '8px', borderBottom: '1px solid var(--border-color)' }}>
+          <div style={{ width: '100%', maxWidth: '800px', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', backgroundColor: 'var(--bg-main)', padding: '6px', borderRadius: '12px', width: 'fit-content', border: '1px solid var(--border-color)' }}>
               <button
+                type="button"
                 onClick={() => setMode('spotify')}
-                style={{ fontSize: '0.9rem', fontWeight: '600', color: mode === 'spotify' ? 'var(--text-primary)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '0.9rem', fontWeight: '600', backgroundColor: mode === 'spotify' ? 'var(--bg-hover)' : 'transparent', color: mode === 'spotify' ? 'var(--text-primary)' : 'var(--text-secondary)', transition: 'all 0.2s', border: 'none', cursor: 'pointer' }}>
                 Extraction Mode
               </button>
               <button
+                type="button"
                 onClick={() => setMode('search')}
-                style={{ fontSize: '0.9rem', fontWeight: '600', color: mode === 'search' ? 'var(--text-primary)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '0.9rem', fontWeight: '600', backgroundColor: mode === 'search' ? 'var(--bg-hover)' : 'transparent', color: mode === 'search' ? 'var(--text-primary)' : 'var(--text-secondary)', transition: 'all 0.2s', border: 'none', cursor: 'pointer' }}>
                 Search Mode
               </button>
             </div>
 
-            <form onSubmit={mode === 'spotify' ? handleExtract : handleSearch} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <Search size={20} style={{ color: 'var(--text-secondary)' }} />
-              <input
-                type="text"
-                className="search-input"
-                placeholder={mode === 'spotify' ? "Paste YouTube Playlist or Spotify Link..." : "Search for a song (e.g. Ed Sheeran Shape of You)..."}
-                value={mode === 'spotify' ? spotifyUrl : searchQuery}
-                onChange={(e) => mode === 'spotify' ? setSpotifyUrl(e.target.value) : setSearchQuery(e.target.value)}
-              />
-              <button
-                type="submit"
-                disabled={loading || (mode === 'spotify' ? !spotifyUrl : !searchQuery)}
-                style={{
-                  backgroundColor: loading || (mode === 'spotify' ? !spotifyUrl : !searchQuery) ? 'transparent' : 'var(--text-primary)',
-                  color: 'var(--bg-main)', padding: '8px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  opacity: loading ? 0.5 : 1, transition: 'background-color 0.2s'
-                }}
-              >
-                {loading ? <Loader2 className="animate-spin" size={20} color="var(--text-secondary)" /> : <Search size={20} />}
-              </button>
-            </form>
+            <div className="input-box-container" style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <form onSubmit={mode === 'spotify' ? handleExtract : handleSearch} style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%' }}>
+                <input
+                  type="text"
+                  className="search-input"
+                  placeholder={mode === 'spotify' ? "Paste Playlist or Spotify Link..." : "Search for a song..."}
+                  value={mode === 'spotify' ? spotifyUrl : searchQuery}
+                  onChange={(e) => mode === 'spotify' ? setSpotifyUrl(e.target.value) : setSearchQuery(e.target.value)}
+                  style={{ flex: 1 }}
+                />
+                
+                {mode === 'search' && (
+                  <button
+                    type="button"
+                    onClick={handleVoiceSearch}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: isListening ? '#ff4d4f' : 'var(--text-secondary)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '8px',
+                      transition: 'color 0.2s',
+                      animation: isListening ? 'pulse 1.5s infinite' : 'none'
+                    }}
+                  >
+                    <Mic size={20} />
+                  </button>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loading || (mode === 'spotify' ? !spotifyUrl : !searchQuery)}
+                  style={{
+                    backgroundColor: loading || (mode === 'spotify' ? !spotifyUrl : !searchQuery) ? 'var(--bg-hover)' : 'var(--text-primary)',
+                    color: loading || (mode === 'spotify' ? !spotifyUrl : !searchQuery) ? 'var(--text-secondary)' : 'var(--bg-main)', 
+                    padding: '10px 14px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'all 0.2s', border: 'none', cursor: loading || (mode === 'spotify' ? !spotifyUrl : !searchQuery) ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  {loading ? <Loader2 className="animate-spin" size={20} /> : <Search size={20} />}
+                </button>
+              </form>
+            </div>
           </div>
           <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '12px' }}>
             Unlimited high-quality downloads. Spotify is capped at 100 songs. Use YouTube Playlists for unlimited tracks.
