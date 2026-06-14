@@ -1,8 +1,23 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ArrowLeft, Disc3, Github, Instagram, Mail, Sparkles, Code2, Headphones } from 'lucide-react';
+import { ArrowLeft, Disc3, Mail, Sparkles, Code2, Headphones, Mic } from 'lucide-react';
 import Link from 'next/link';
+
+// Inline SVGs for brand icons
+const GithubIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.02c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A4.8 4.8 0 0 0 8 18v4"></path>
+  </svg>
+);
+
+const InstagramIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect width="20" height="20" x="2" y="2" rx="5" ry="5"></rect>
+    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+    <line x1="17.5" x2="17.51" y1="6.5" y2="6.5"></line>
+  </svg>
+);
 
 export default function AboutPage() {
   const [theme, setTheme] = useState('dark');
@@ -92,12 +107,12 @@ export default function AboutPage() {
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
             <a href="https://github.com/Krutarth-Raval" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', backgroundColor: 'var(--bg-input)', borderRadius: '8px', color: 'var(--text-primary)', textDecoration: 'none', fontWeight: '500', border: '1px solid var(--border-color)', transition: 'background-color 0.2s' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-input)'}>
-              <Github size={18} />
+              <GithubIcon />
               GitHub
             </a>
             
             <a href="https://instagram.com/raval_krutarth" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', backgroundColor: 'var(--bg-input)', borderRadius: '8px', color: 'var(--text-primary)', textDecoration: 'none', fontWeight: '500', border: '1px solid var(--border-color)', transition: 'background-color 0.2s' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-input)'}>
-              <Instagram size={18} />
+              <InstagramIcon />
               Instagram
             </a>
           </div>
