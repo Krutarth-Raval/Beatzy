@@ -419,7 +419,7 @@ export default function Home() {
             onClick={() => setIsHistoryExpanded(!isHistoryExpanded)}
             style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', padding: '8px 12px', marginTop: '8px', userSelect: 'none' }}
           >
-            <p style={{ fontSize: '0.85rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)', flex: 1 }}>Recent</p>
+            <p style={{ fontSize: '0.85rem', fontWeight: '700', letterSpacing: '0.5px', color: 'var(--text-secondary)', flex: 1 }}>Recents</p>
             {isHistoryExpanded ? <ChevronDown size={14} color="var(--text-secondary)" /> : <ChevronRight size={14} color="var(--text-secondary)" />}
           </div>
 
