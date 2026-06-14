@@ -126,6 +126,10 @@ button {
   border-right: 1px solid var(--border-color);
 }
 
+.mobile-close-btn {
+  display: none;
+}
+
 .history-list {
   flex: 1 1 auto;
   height: 0;
@@ -315,6 +319,7 @@ button {
   .sidebar {
     position: fixed;
     transform: translateX(-100%);
+    width: 100%;
   }
   
   .sidebar.open {
@@ -326,6 +331,10 @@ button {
     inset: 0;
     background: rgba(0,0,0,0.5);
     z-index: 40;
+  }
+  
+  .mobile-close-btn {
+    display: flex !important;
   }
   
   .content-scroll {

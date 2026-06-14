@@ -167,7 +167,7 @@ export default function Home() {
     setLoading(true); setError(''); setResults([]); setAlbumData(null);
     try {
       const res = await fetch(`/api/search?q=${encodeURIComponent(queryToSearch)}`);
-      
+
       let data;
       try {
         data = await res.json();
@@ -176,7 +176,7 @@ export default function Home() {
       }
 
       if (!res.ok) throw new Error(data?.error || 'Unknown server error');
-      
+
       setResults(data);
       if (!fromHistory) {
         addToHistory({ type: 'search', query: queryToSearch, title: queryToSearch });
@@ -209,7 +209,7 @@ export default function Home() {
       }
 
       if (!res.ok) throw new Error(data?.error || 'Unknown server error');
-      
+
       setAlbumData(data);
       if (!fromHistory) {
         addToHistory({ type: 'spotify', query: url, title: data.title || url });
@@ -390,9 +390,14 @@ export default function Home() {
 
       {/* Sidebar */}
       <div className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
-        <div style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <Disc3 size={24} color="var(--text-primary)" className="animate-spin" />
-          <span style={{ color: 'var(--text-primary)', fontWeight: '700', fontSize: '1.2rem', letterSpacing: '0.5px' }}>Beatzy</span>
+        <div style={{ padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <Disc3 size={24} color="var(--text-primary)" className="animate-spin" />
+            <span style={{ color: 'var(--text-primary)', fontWeight: '700', fontSize: '1.2rem', letterSpacing: '0.5px' }}>Beatzy</span>
+          </div>
+          <button className="mobile-close-btn" onClick={() => setSidebarOpen(false)} style={{ color: 'var(--text-primary)', background: 'none', border: 'none', cursor: 'pointer', alignItems: 'center', justifyContent: 'center' }}>
+            <X size={24} />
+          </button>
         </div>
         <div style={{ padding: '12px' }}>
           <button
@@ -410,14 +415,14 @@ export default function Home() {
         </div>
 
         <div className="history-list" onScroll={handleScrollHistory}>
-          <div 
+          <div
             onClick={() => setIsHistoryExpanded(!isHistoryExpanded)}
             style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', padding: '8px 12px', marginTop: '8px', userSelect: 'none' }}
           >
             <p style={{ fontSize: '0.85rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)', flex: 1 }}>Recent</p>
             {isHistoryExpanded ? <ChevronDown size={14} color="var(--text-secondary)" /> : <ChevronRight size={14} color="var(--text-secondary)" />}
           </div>
-          
+
           {isHistoryExpanded && (
             <>
               {history.map((item, i) => (
@@ -425,9 +430,9 @@ export default function Home() {
                   {item.type === 'spotify' ? <Library size={16} style={{ flexShrink: 0, opacity: 0.7 }} /> : <Music size={16} style={{ flexShrink: 0, opacity: 0.7 }} />}
                   <span style={{ fontSize: '0.9rem', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.title}</span>
                   <div className="history-item-actions">
-                    <Trash2 
-                      size={14} 
-                      style={{ opacity: 0.5, cursor: 'pointer' }} 
+                    <Trash2
+                      size={14}
+                      style={{ opacity: 0.5, cursor: 'pointer' }}
                       onClick={(e) => deleteHistoryItem(e, item.id)}
                       onMouseOver={(e) => e.currentTarget.style.opacity = 1}
                       onMouseOut={(e) => e.currentTarget.style.opacity = 0.5}
@@ -449,7 +454,7 @@ export default function Home() {
 
         {/* User Profile Area */}
         <div style={{ padding: '16px 12px 24px 12px', borderTop: '1px solid var(--border-color)', position: 'relative' }}>
-          <div 
+          <div
             onClick={() => setSettingsOpen(!settingsOpen)}
             style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', padding: '8px', borderRadius: '8px', transition: 'background-color 0.2s' }}
             onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
@@ -472,7 +477,7 @@ export default function Home() {
                 <Trash2 size={16} /> Clear history
               </div>
               <div className="settings-item" onClick={toggleTheme}>
-                {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />} 
+                {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
                 {theme === 'dark' ? 'Light mode' : 'Dark mode'}
               </div>
               <div className="settings-divider"></div>
@@ -636,7 +641,7 @@ export default function Home() {
                   onChange={(e) => mode === 'spotify' ? setSpotifyUrl(e.target.value) : setSearchQuery(e.target.value)}
                   style={{ flex: 1 }}
                 />
-                
+
                 {mode === 'search' && (
                   <button
                     type="button"
@@ -663,7 +668,7 @@ export default function Home() {
                   disabled={loading || (mode === 'spotify' ? !spotifyUrl : !searchQuery)}
                   style={{
                     backgroundColor: loading || (mode === 'spotify' ? !spotifyUrl : !searchQuery) ? 'var(--bg-hover)' : 'var(--text-primary)',
-                    color: loading || (mode === 'spotify' ? !spotifyUrl : !searchQuery) ? 'var(--text-secondary)' : 'var(--bg-main)', 
+                    color: loading || (mode === 'spotify' ? !spotifyUrl : !searchQuery) ? 'var(--text-secondary)' : 'var(--bg-main)',
                     padding: '10px 14px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     transition: 'all 0.2s', border: 'none', cursor: loading || (mode === 'spotify' ? !spotifyUrl : !searchQuery) ? 'not-allowed' : 'pointer'
                   }}
@@ -703,63 +708,63 @@ export default function Home() {
           </div>
         )}
 
-              {/* Log Out Modal */}
-      {showSignOutModal && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
-          <div className="glass-panel animate-fade-in" style={{ backgroundColor: 'var(--bg-main)', padding: '24px', width: '100%', maxWidth: '400px', borderRadius: '16px' }}>
-            <h2 style={{ fontSize: '1.2rem', marginBottom: '8px', color: 'var(--text-primary)' }}>Log out?</h2>
-            <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '0.95rem' }}>Are you sure you want to log out of Beatzy?</p>
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <button onClick={() => setShowSignOutModal(false)} style={{ padding: '8px 16px', color: 'var(--text-primary)', borderRadius: '8px', border: '1px solid var(--border-color)', fontWeight: '600' }}>Cancel</button>
-              <button onClick={() => signOut()} style={{ padding: '8px 16px', backgroundColor: '#ff4d4f', color: 'white', borderRadius: '8px', fontWeight: '600' }}>Log out</button>
+        {/* Log Out Modal */}
+        {showSignOutModal && (
+          <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
+            <div className="glass-panel animate-fade-in" style={{ backgroundColor: 'var(--bg-main)', padding: '24px', width: '100%', maxWidth: '400px', borderRadius: '16px' }}>
+              <h2 style={{ fontSize: '1.2rem', marginBottom: '8px', color: 'var(--text-primary)' }}>Log out?</h2>
+              <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '0.95rem' }}>Are you sure you want to log out of Beatzy?</p>
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                <button onClick={() => setShowSignOutModal(false)} style={{ padding: '8px 16px', color: 'var(--text-primary)', borderRadius: '8px', border: '1px solid var(--border-color)', fontWeight: '600' }}>Cancel</button>
+                <button onClick={() => signOut()} style={{ padding: '8px 16px', backgroundColor: '#ff4d4f', color: 'white', borderRadius: '8px', fontWeight: '600' }}>Log out</button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Delete Account Modal */}
-      {showDeleteAccountModal && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
-          <div className="glass-panel animate-fade-in" style={{ backgroundColor: 'var(--bg-main)', padding: '24px', width: '100%', maxWidth: '400px', borderRadius: '16px' }}>
-            <h2 style={{ fontSize: '1.2rem', marginBottom: '8px', color: '#ff4d4f' }}>Delete Account?</h2>
-            <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '0.95rem' }}>This action is permanent. All your search history will be deleted. Are you absolutely sure?</p>
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <button onClick={() => setShowDeleteAccountModal(false)} style={{ padding: '8px 16px', color: 'var(--text-primary)', borderRadius: '8px', border: '1px solid var(--border-color)', fontWeight: '600' }}>Cancel</button>
-              <button onClick={confirmDeleteAccount} style={{ padding: '8px 16px', backgroundColor: '#ff4d4f', color: 'white', borderRadius: '8px', fontWeight: '600' }}>Delete forever</button>
+        {/* Delete Account Modal */}
+        {showDeleteAccountModal && (
+          <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
+            <div className="glass-panel animate-fade-in" style={{ backgroundColor: 'var(--bg-main)', padding: '24px', width: '100%', maxWidth: '400px', borderRadius: '16px' }}>
+              <h2 style={{ fontSize: '1.2rem', marginBottom: '8px', color: '#ff4d4f' }}>Delete Account?</h2>
+              <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '0.95rem' }}>This action is permanent. All your search history will be deleted. Are you absolutely sure?</p>
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                <button onClick={() => setShowDeleteAccountModal(false)} style={{ padding: '8px 16px', color: 'var(--text-primary)', borderRadius: '8px', border: '1px solid var(--border-color)', fontWeight: '600' }}>Cancel</button>
+                <button onClick={confirmDeleteAccount} style={{ padding: '8px 16px', backgroundColor: '#ff4d4f', color: 'white', borderRadius: '8px', fontWeight: '600' }}>Delete forever</button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-            {/* Delete Single History Modal */}
-      {showDeleteSingleHistoryModal && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
-          <div className="glass-panel animate-fade-in" style={{ backgroundColor: 'var(--bg-main)', padding: '24px', width: '100%', maxWidth: '400px', borderRadius: '16px' }}>
-            <h2 style={{ fontSize: '1.2rem', marginBottom: '8px', color: 'var(--text-primary)' }}>Delete search?</h2>
-            <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '0.95rem' }}>This item will be permanently removed from your history.</p>
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <button onClick={() => setShowDeleteSingleHistoryModal(false)} style={{ padding: '8px 16px', color: 'var(--text-primary)', borderRadius: '8px', border: '1px solid var(--border-color)', fontWeight: '600' }}>Cancel</button>
-              <button onClick={confirmDeleteSingleHistory} style={{ padding: '8px 16px', backgroundColor: '#ff4d4f', color: 'white', borderRadius: '8px', fontWeight: '600' }}>Delete</button>
+        {/* Delete Single History Modal */}
+        {showDeleteSingleHistoryModal && (
+          <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
+            <div className="glass-panel animate-fade-in" style={{ backgroundColor: 'var(--bg-main)', padding: '24px', width: '100%', maxWidth: '400px', borderRadius: '16px' }}>
+              <h2 style={{ fontSize: '1.2rem', marginBottom: '8px', color: 'var(--text-primary)' }}>Delete search?</h2>
+              <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '0.95rem' }}>This item will be permanently removed from your history.</p>
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                <button onClick={() => setShowDeleteSingleHistoryModal(false)} style={{ padding: '8px 16px', color: 'var(--text-primary)', borderRadius: '8px', border: '1px solid var(--border-color)', fontWeight: '600' }}>Cancel</button>
+                <button onClick={confirmDeleteSingleHistory} style={{ padding: '8px 16px', backgroundColor: '#ff4d4f', color: 'white', borderRadius: '8px', fontWeight: '600' }}>Delete</button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Clear History Modal */}
-      {showClearHistoryModal && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
-          <div className="glass-panel animate-fade-in" style={{ backgroundColor: 'var(--bg-main)', padding: '24px', width: '100%', maxWidth: '400px', borderRadius: '16px' }}>
-            <h2 style={{ fontSize: '1.2rem', marginBottom: '8px', color: 'var(--text-primary)' }}>Clear all history?</h2>
-            <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '0.95rem' }}>This will permanently remove all your recent searches from all devices.</p>
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <button onClick={() => setShowClearHistoryModal(false)} style={{ padding: '8px 16px', color: 'var(--text-primary)', borderRadius: '8px', border: '1px solid var(--border-color)', fontWeight: '600' }}>Cancel</button>
-              <button onClick={confirmClearAllHistory} style={{ padding: '8px 16px', backgroundColor: '#ff4d4f', color: 'white', borderRadius: '8px', fontWeight: '600' }}>Clear all</button>
+        {/* Clear History Modal */}
+        {showClearHistoryModal && (
+          <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
+            <div className="glass-panel animate-fade-in" style={{ backgroundColor: 'var(--bg-main)', padding: '24px', width: '100%', maxWidth: '400px', borderRadius: '16px' }}>
+              <h2 style={{ fontSize: '1.2rem', marginBottom: '8px', color: 'var(--text-primary)' }}>Clear all history?</h2>
+              <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '0.95rem' }}>This will permanently remove all your recent searches from all devices.</p>
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                <button onClick={() => setShowClearHistoryModal(false)} style={{ padding: '8px 16px', color: 'var(--text-primary)', borderRadius: '8px', border: '1px solid var(--border-color)', fontWeight: '600' }}>Cancel</button>
+                <button onClick={confirmClearAllHistory} style={{ padding: '8px 16px', backgroundColor: '#ff4d4f', color: 'white', borderRadius: '8px', fontWeight: '600' }}>Clear all</button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Direct Download Popup Modal */}
+        {/* Direct Download Popup Modal */}
         {dlPopup.show && (
           <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 999, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '1rem' }}>
             <div style={{ backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-color)', width: '100%', maxWidth: '400px', padding: '2rem', borderRadius: '16px', position: 'relative', textAlign: 'center' }}>
