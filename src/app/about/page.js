@@ -30,22 +30,25 @@ export default function AboutPage() {
 
   return (
     <div className="app-layout" style={{ overflowY: 'auto', display: 'block', backgroundColor: 'var(--bg-main)' }}>
-      
+
       {/* Header */}
       <div style={{ padding: '24px', display: 'flex', alignItems: 'center', borderBottom: '1px solid var(--border-color)', position: 'sticky', top: 0, backgroundColor: 'var(--bg-sidebar)', zIndex: 10 }}>
-        <Link href="/" style={{ color: 'var(--text-primary)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px', marginRight: 'auto' }}>
-          <ArrowLeft size={20} />
-          <span style={{ fontWeight: '600' }}>Back</span>
-        </Link>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginRight: 'auto' }}>
           <Disc3 size={24} color="var(--primary-color)" className="animate-spin" />
           <span style={{ color: 'var(--text-primary)', fontWeight: '700', fontSize: '1.2rem', letterSpacing: '0.5px' }}>Beatzy</span>
         </div>
-        <div style={{ width: '60px' }}></div> {/* Spacer for centering */}
       </div>
 
       <div style={{ maxWidth: '800px', margin: '0 auto', padding: '40px 24px', paddingBottom: '100px' }} className="animate-fade-in-up">
         
+        {/* Back Button */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '32px' }}>
+          <Link href="/" style={{ color: 'var(--text-secondary)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', backgroundColor: 'var(--bg-input)', borderRadius: '8px', border: '1px solid var(--border-color)', transition: 'background-color 0.2s', fontWeight: '500' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-input)'}>
+            <ArrowLeft size={18} />
+            <span>Back to Home</span>
+          </Link>
+        </div>
+
         {/* Title */}
         <div style={{ textAlign: 'center', marginBottom: '40px' }}>
           <h1 style={{ fontSize: '2.5rem', fontWeight: '800', marginBottom: '16px', color: 'var(--text-primary)' }}>About Beatzy</h1>
@@ -60,7 +63,7 @@ export default function AboutPage() {
             <Sparkles size={24} color="var(--primary-color)" />
             <h2 style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--text-primary)' }}>What's New</h2>
           </div>
-          
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div style={{ display: 'flex', gap: '16px' }}>
               <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: 'var(--bg-input)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -81,7 +84,7 @@ export default function AboutPage() {
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: '1.5' }}>Just click the mic icon and say what you want to hear! The intelligent voice recognition will search for your favorite tracks hands-free.</p>
               </div>
             </div>
-            
+
             <div style={{ display: 'flex', gap: '16px' }}>
               <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: 'var(--bg-input)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <Disc3 size={20} color="var(--text-primary)" />
@@ -100,9 +103,9 @@ export default function AboutPage() {
             <Code2 size={24} color="var(--primary-color)" />
             <h2 style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--text-primary)' }}>Developer Info</h2>
           </div>
-          
+
           <p style={{ color: 'var(--text-secondary)', fontSize: '1rem', lineHeight: '1.6', marginBottom: '24px' }}>
-            Beatzy is proudly developed by <strong>Raval Krutarth</strong>. It was built with a passion for creating seamless, beautiful, and accessible music experiences for everyone. Constantly evolving and improving, Beatzy is designed to be the only music hub you need.
+            Beatzy is proudly developed by <strong>Krutarth Raval</strong>. It was built with a passion for creating seamless, beautiful, and accessible music experiences for everyone. Constantly evolving and improving, Beatzy is designed to be the only music hub you need.
           </p>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
@@ -110,7 +113,7 @@ export default function AboutPage() {
               <GithubIcon />
               GitHub
             </a>
-            
+
             <a href="https://instagram.com/raval_krutarth" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', backgroundColor: 'var(--bg-input)', borderRadius: '8px', color: 'var(--text-primary)', textDecoration: 'none', fontWeight: '500', border: '1px solid var(--border-color)', transition: 'background-color 0.2s' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-input)'}>
               <InstagramIcon />
               Instagram
@@ -127,7 +130,7 @@ export default function AboutPage() {
           <p style={{ color: 'var(--text-secondary)', fontSize: '1rem', marginBottom: '24px' }}>
             Have a question, found a bug, or want to request a new feature? I'd love to hear from you.
           </p>
-          
+
           <a href="mailto:ravalkrutarth95@gmail.com" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 24px', backgroundColor: 'var(--text-primary)', color: 'var(--bg-main)', borderRadius: '8px', textDecoration: 'none', fontWeight: '600', fontSize: '1rem' }}>
             <Mail size={18} />
             ravalkrutarth95@gmail.com
