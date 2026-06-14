@@ -463,9 +463,11 @@ export default function Home() {
               <span style={{ color: 'var(--text-primary)', fontWeight: '700', fontSize: '1.2rem', letterSpacing: '0.5px' }}>Beatzy</span>
             </div>
           </div>
-          <button onClick={resetState} style={{ color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px' }}>
-            <Plus size={28} />
-          </button>
+          {(results.length > 0 || albumData) && (
+            <button onClick={resetState} style={{ color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px' }}>
+              <Plus size={28} />
+            </button>
+          )}
         </div>
 
         {/* Scrollable Content */}
