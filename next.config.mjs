@@ -1,10 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    serverComponentsExternalPackages: ['youtube-dl-exec'],
-    outputFileTracingIncludes: {
-      '/api/**/*': ['./node_modules/youtube-dl-exec/bin/**/*']
-    }
+  serverExternalPackages: ['youtube-dl-exec'],
+  outputFileTracingIncludes: {
+    '/api/**/*': ['./node_modules/youtube-dl-exec/bin/**/*']
   }
 };
 

@@ -208,8 +208,8 @@ export default function Home() {
   const playTrack = async (track) => {
     setCurrentTrack({ id: 'loading', title: 'Searching YouTube...' });
     try {
-      const query = `${track.name} ${track.artists}`;
-      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+      const query = `${track.name} ${track.artists.split(',')[0].trim()}`;
+      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&type=music`);
       const data = await res.json();
       if (data && data.length > 0) {
         setCurrentTrack({ id: data[0].id, title: track.name });
@@ -226,8 +226,8 @@ export default function Home() {
   const downloadTrack = async (track) => {
     setDlPopup({ show: true, loading: true, url: null, error: null, title: track.name });
     try {
-      const query = `${track.name} ${track.artists}`;
-      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+      const query = `${track.name} ${track.artists.split(',')[0].trim()}`;
+      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&type=music`);
       const data = await res.json();
       if (data && data.length > 0) {
         fetchDirectDownload(data[0].id, track.name);
