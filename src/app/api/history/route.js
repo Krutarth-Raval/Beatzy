@@ -10,13 +10,22 @@ export async function GET(request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '0', 10);
+    const take = 20;
+    const skip = page * take;
+
     const history = await prisma.history.findMany({
       where: { userId: session.user.id },
       orderBy: { createdAt: 'desc' },
-      take: 50,
+      take,
+      skip,
     });
 
-    return NextResponse.json(history);
+    return NextResponse.json({
+      items: history,
+      hasMore: history.length === take
+    });
   } catch (error) {
     console.error('History GET Error:', error);
     return NextResponse.json({ error: 'Failed to fetch history' }, { status: 500 });

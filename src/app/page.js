@@ -31,6 +31,9 @@ export default function Home() {
   const [theme, setTheme] = useState('dark');
   const [isListening, setIsListening] = useState(false);
   const [resetCount, setResetCount] = useState(0);
+  const [historyPage, setHistoryPage] = useState(0);
+  const [hasMoreHistory, setHasMoreHistory] = useState(false);
+  const [loadingMoreHistory, setLoadingMoreHistory] = useState(false);
   const recognitionRef = useRef(null);
   const [showSignOutModal, setShowSignOutModal] = useState(false);
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
@@ -55,26 +58,42 @@ export default function Home() {
     }
   };
 
-  const fetchHistory = async () => {
+  const fetchHistory = async (page = 0) => {
     if (!session?.user) return;
     try {
-      const res = await fetch('/api/history');
+      if (page > 0) setLoadingMoreHistory(true);
+      const res = await fetch(`/api/history?page=${page}`);
       if (res.ok) {
         const data = await res.json();
-        setHistory(data);
+        setHasMoreHistory(data.hasMore);
+        if (page === 0) {
+          setHistory(data.items);
+        } else {
+          setHistory(prev => [...prev, ...data.items]);
+        }
+        setHistoryPage(page);
       }
     } catch (err) {
       console.error('Failed to load history', err);
+    } finally {
+      if (page > 0) setLoadingMoreHistory(false);
+    }
+  };
+
+  const handleScrollHistory = (e) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    if (scrollHeight - scrollTop <= clientHeight + 50 && hasMoreHistory && !loadingMoreHistory) {
+      fetchHistory(historyPage + 1);
     }
   };
 
   useEffect(() => {
-    fetchHistory();
+    fetchHistory(0);
   }, [session]);
 
   const addToHistory = async (item) => {
     // Optimistic update locally
-    setHistory(prev => [item, ...prev].slice(0, 50));
+    setHistory(prev => [item, ...prev]);
 
     if (session?.user) {
       try {
@@ -389,7 +408,7 @@ export default function Home() {
           </button>
         </div>
 
-        <div className="history-list">
+        <div className="history-list" onScroll={handleScrollHistory}>
           <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', padding: '8px 12px', marginTop: '12px' }}>Recent</p>
           {history.map((item, i) => (
             <div key={i} className="history-item" onClick={() => loadHistoryItem(item)}>
@@ -408,6 +427,11 @@ export default function Home() {
           ))}
           {history.length === 0 && (
             <p style={{ padding: '12px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>No history yet.</p>
+          )}
+          {loadingMoreHistory && (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '12px' }}>
+              <Loader2 className="animate-spin" size={16} color="var(--text-secondary)" />
+            </div>
           )}
         </div>
 
