@@ -30,6 +30,7 @@ export default function Home() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [theme, setTheme] = useState('dark');
   const [isListening, setIsListening] = useState(false);
+  const [resetCount, setResetCount] = useState(0);
   const recognitionRef = useRef(null);
   const [showSignOutModal, setShowSignOutModal] = useState(false);
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
@@ -266,6 +267,7 @@ export default function Home() {
     setSpotifyUrl('');
     setSidebarOpen(false);
     setIsListening(false);
+    setResetCount(prev => prev + 1);
   };
 
   const handleVoiceSearch = () => {
@@ -473,7 +475,7 @@ export default function Home() {
         {/* Scrollable Content */}
         <div className="content-scroll">
           {!albumData && results.length === 0 && !loading && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60%', color: 'var(--text-secondary)' }}>
+            <div key={resetCount} className="animate-fade-in-up" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, color: 'var(--text-secondary)' }}>
               <Disc3 size={64} className="animate-spin" style={{ marginBottom: '24px', opacity: 0.5, }} />
               <h2 style={{ fontSize: '2rem', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '12px' }}>How can I help you today?</h2>
               <p>Extract unlimited YouTube playlists, Spotify albums, or search for a song.</p>
