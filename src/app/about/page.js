@@ -40,7 +40,7 @@ export default function AboutPage() {
       </div>
 
       <div style={{ maxWidth: '800px', margin: '0 auto', padding: '40px 24px', paddingBottom: '100px' }} className="animate-fade-in-up">
-        
+
         {/* Back Button */}
         <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '24px' }}>
           <Link href="/" style={{ color: 'var(--text-secondary)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px', transition: 'color 0.2s', fontWeight: '500', fontSize: '0.95rem' }} onMouseOver={(e) => e.currentTarget.style.color = 'var(--text-primary)'} onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}>
@@ -51,7 +51,11 @@ export default function AboutPage() {
 
         {/* Title */}
         <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-          <h1 style={{ fontSize: '2.5rem', fontWeight: '800', marginBottom: '16px', color: 'var(--text-primary)' }}>About Beatzy</h1>
+          <h1 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: '12px', fontSize: 'clamp(2rem, 6vw, 2.8rem)', fontWeight: '800', marginBottom: '16px', color: 'var(--text-primary)', lineHeight: '1.2' }}>
+            About
+            <Disc3 size={40} color="var(--primary-color)" className="animate-spin" style={{ flexShrink: 0 }} />
+            Beatzy
+          </h1>
           <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', maxWidth: '600px', margin: '0 auto' }}>
             Your ultimate hub for searching, streaming, and extracting high-quality audio seamlessly.
           </p>
