@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useSession, signIn, signOut } from 'next-auth/react';
-import { Search, Play, Download, LogOut, Music, Loader2, X, Disc3, Menu, MessageSquare, Plus, Settings, Trash2, Moon, Sun, AlertTriangle, Home as HomeIcon, Mic, Library } from 'lucide-react';
+import { Search, Play, Download, LogOut, Music, Loader2, X, Disc3, Menu, MessageSquare, Plus, Settings, Trash2, Moon, Sun, AlertTriangle, Home as HomeIcon, Mic, Library, ChevronDown, ChevronRight } from 'lucide-react';
 
 export default function Home() {
   const { data: session, status } = useSession();
@@ -34,6 +34,7 @@ export default function Home() {
   const [historyPage, setHistoryPage] = useState(0);
   const [hasMoreHistory, setHasMoreHistory] = useState(false);
   const [loadingMoreHistory, setLoadingMoreHistory] = useState(false);
+  const [isHistoryExpanded, setIsHistoryExpanded] = useState(true);
   const recognitionRef = useRef(null);
   const [showSignOutModal, setShowSignOutModal] = useState(false);
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
@@ -409,29 +410,40 @@ export default function Home() {
         </div>
 
         <div className="history-list" onScroll={handleScrollHistory}>
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', padding: '8px 12px', marginTop: '12px' }}>Recent</p>
-          {history.map((item, i) => (
-            <div key={i} className="history-item" onClick={() => loadHistoryItem(item)}>
-              {item.type === 'spotify' ? <Library size={16} style={{ flexShrink: 0, opacity: 0.7 }} /> : <Music size={16} style={{ flexShrink: 0, opacity: 0.7 }} />}
-              <span style={{ fontSize: '0.9rem', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.title}</span>
-              <div className="history-item-actions">
-                <Trash2 
-                  size={14} 
-                  style={{ opacity: 0.5, cursor: 'pointer' }} 
-                  onClick={(e) => deleteHistoryItem(e, item.id)}
-                  onMouseOver={(e) => e.currentTarget.style.opacity = 1}
-                  onMouseOut={(e) => e.currentTarget.style.opacity = 0.5}
-                />
-              </div>
-            </div>
-          ))}
-          {history.length === 0 && (
-            <p style={{ padding: '12px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>No history yet.</p>
-          )}
-          {loadingMoreHistory && (
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '12px' }}>
-              <Loader2 className="animate-spin" size={16} color="var(--text-secondary)" />
-            </div>
+          <div 
+            onClick={() => setIsHistoryExpanded(!isHistoryExpanded)}
+            style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', padding: '8px 12px', marginTop: '8px', userSelect: 'none' }}
+          >
+            <p style={{ fontSize: '0.85rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)', flex: 1 }}>Recent</p>
+            {isHistoryExpanded ? <ChevronDown size={14} color="var(--text-secondary)" /> : <ChevronRight size={14} color="var(--text-secondary)" />}
+          </div>
+          
+          {isHistoryExpanded && (
+            <>
+              {history.map((item, i) => (
+                <div key={i} className="history-item" onClick={() => loadHistoryItem(item)}>
+                  {item.type === 'spotify' ? <Library size={16} style={{ flexShrink: 0, opacity: 0.7 }} /> : <Music size={16} style={{ flexShrink: 0, opacity: 0.7 }} />}
+                  <span style={{ fontSize: '0.9rem', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.title}</span>
+                  <div className="history-item-actions">
+                    <Trash2 
+                      size={14} 
+                      style={{ opacity: 0.5, cursor: 'pointer' }} 
+                      onClick={(e) => deleteHistoryItem(e, item.id)}
+                      onMouseOver={(e) => e.currentTarget.style.opacity = 1}
+                      onMouseOut={(e) => e.currentTarget.style.opacity = 0.5}
+                    />
+                  </div>
+                </div>
+              ))}
+              {history.length === 0 && (
+                <p style={{ padding: '12px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>No history yet.</p>
+              )}
+              {loadingMoreHistory && (
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '12px' }}>
+                  <Loader2 className="animate-spin" size={16} color="var(--text-secondary)" />
+                </div>
+              )}
+            </>
           )}
         </div>
 

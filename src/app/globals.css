@@ -135,22 +135,14 @@ button {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  scrollbar-width: thin; /* Firefox */
-  scrollbar-color: var(--border-color) transparent;
+  /* Hide scrollbar for IE, Edge and Firefox */
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
 }
 
-/* Minimal sleek scrollbar for history */
+/* Hide scrollbar completely for Chrome, Safari and Opera */
 .history-list::-webkit-scrollbar {
-  width: 3px;
-}
-
-.history-list::-webkit-scrollbar-thumb {
-  background-color: var(--border-color);
-  border-radius: 10px;
-}
-
-.history-list::-webkit-scrollbar-track {
-  background: transparent;
+  display: none;
 }
 
 .history-item {
