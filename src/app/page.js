@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useSession, signIn, signOut } from 'next-auth/react';
-import { Search, Play, Download, LogOut, Music, Loader2, X, Disc3, Menu, MessageSquare, Plus, Settings, Trash2, Moon, Sun, AlertTriangle, Home as HomeIcon, Mic, Library, ChevronDown, ChevronRight, Info } from 'lucide-react';
+import { Search, Play, Download, LogOut, Music, Loader2, X, Disc3, Menu, MessageSquare, Plus, Settings, Trash2, Moon, Sun, AlertTriangle, Home as HomeIcon, Mic, Library, ChevronDown, ChevronRight, Info, Camera } from 'lucide-react';
+import Tesseract from 'tesseract.js';
 
 export default function Home() {
   const { data: session, status } = useSession();
@@ -18,6 +19,7 @@ export default function Home() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isAnalyzingImage, setIsAnalyzingImage] = useState(false);
 
   const [currentTrack, setCurrentTrack] = useState(null); // Requires: id (YT id), title
 
@@ -36,6 +38,7 @@ export default function Home() {
   const [loadingMoreHistory, setLoadingMoreHistory] = useState(false);
   const [isHistoryExpanded, setIsHistoryExpanded] = useState(true);
   const recognitionRef = useRef(null);
+  const fileInputRef = useRef(null);
   const [showSignOutModal, setShowSignOutModal] = useState(false);
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
   const [showClearHistoryModal, setShowClearHistoryModal] = useState(false);
@@ -166,7 +169,7 @@ export default function Home() {
     if (!queryToSearch) return;
     setLoading(true); setError(''); setResults([]); setAlbumData(null);
     try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(queryToSearch)}`);
+      const res = await fetch(`/api/search?q=${encodeURIComponent(queryToSearch)}&type=music`);
 
       let data;
       try {
@@ -344,6 +347,40 @@ export default function Home() {
     }
   };
 
+  const handleImageUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    setMode('search');
+    setIsAnalyzingImage(true);
+    setSearchQuery('Reading lyrics from image...');
+    
+    try {
+      const { data: { text } } = await Tesseract.recognize(
+        file,
+        'eng',
+        { logger: m => console.log(m) }
+      );
+      
+      const cleanedText = text.trim().replace(/\n/g, ' ');
+      setSearchQuery(cleanedText);
+      if (cleanedText) {
+        triggerSearch(cleanedText);
+      } else {
+        setError("Couldn't read any text from the image.");
+        setSearchQuery('');
+      }
+    } catch (err) {
+      console.error(err);
+      setError("Failed to process image.");
+      setSearchQuery('');
+    } finally {
+      setIsAnalyzingImage(false);
+      // Reset input so the same file can be selected again
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   if (status === 'loading') {
     return (
       <div style={{ display: 'flex', height: '100dvh', justifyContent: 'center', alignItems: 'center', backgroundColor: '#212121' }}>
@@ -481,6 +518,14 @@ export default function Home() {
                 {theme === 'dark' ? 'Light mode' : 'Dark mode'}
               </div>
               <div className="settings-divider"></div>
+              {session?.user?.role === 'ADMIN' && (
+                <>
+                  <a href="/admin" className="settings-item" style={{ textDecoration: 'none', color: 'inherit' }}>
+                    <Settings size={16} /> Admin Dashboard
+                  </a>
+                  <div className="settings-divider"></div>
+                </>
+              )}
               <a href="/about" className="settings-item" style={{ textDecoration: 'none', color: 'inherit' }}>
                 <Info size={16} /> About Beatzy
               </a>
@@ -641,6 +686,36 @@ export default function Home() {
                   onChange={(e) => mode === 'spotify' ? setSpotifyUrl(e.target.value) : setSearchQuery(e.target.value)}
                   style={{ flex: 1 }}
                 />
+
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  ref={fileInputRef}
+                  style={{ display: 'none' }}
+                  onChange={handleImageUpload}
+                />
+
+                {mode === 'search' && (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isAnalyzingImage}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: isAnalyzingImage ? 'var(--text-primary)' : 'var(--text-secondary)',
+                      cursor: isAnalyzingImage ? 'wait' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '4px',
+                      transition: 'color 0.2s',
+                    }}
+                  >
+                    {isAnalyzingImage ? <Loader2 className="animate-spin" size={20} /> : <Camera size={20} />}
+                  </button>
+                )}
 
                 {mode === 'search' && (
                   <button

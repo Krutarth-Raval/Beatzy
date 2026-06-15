@@ -18,6 +18,11 @@ export const authOptions = {
     async session({ session, token }) {
       if (session?.user) {
         session.user.id = token.sub;
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.sub },
+          select: { role: true }
+        });
+        session.user.role = dbUser?.role || 'USER';
       }
       return session;
     },

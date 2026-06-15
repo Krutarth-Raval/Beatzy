@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ArrowLeft, Disc3, Mail, Sparkles, Code2, Headphones, Mic } from 'lucide-react';
+import { ArrowLeft, Disc3, Mail, Sparkles, Code2, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import DynamicIcon from '@/components/DynamicIcon';
 
 const InstagramIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -14,11 +15,21 @@ const InstagramIcon = () => (
 
 export default function AboutPage() {
   const [theme, setTheme] = useState('dark');
+  const [updates, setUpdates] = useState([]);
+  const [loadingUpdates, setLoadingUpdates] = useState(true);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') || 'dark';
     setTheme(savedTheme);
     if (savedTheme === 'light') document.body.classList.add('light-theme');
+
+    fetch('/api/updates')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setUpdates(data);
+      })
+      .catch(console.error)
+      .finally(() => setLoadingUpdates(false));
   }, []);
 
   return (
@@ -62,35 +73,25 @@ export default function AboutPage() {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <div style={{ display: 'flex', gap: '16px' }}>
-              <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: 'var(--bg-input)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <Headphones size={20} color="var(--text-primary)" />
+            {loadingUpdates ? (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem' }}>
+                <Loader2 className="animate-spin" size={24} color="var(--text-secondary)" />
               </div>
-              <div>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '4px' }}>Spotify Playlist Extraction</h3>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: '1.5' }}>You can now paste any Spotify playlist or album link directly into the search bar to extract and download all the tracks in high quality.</p>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', gap: '16px' }}>
-              <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: 'var(--bg-input)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <Mic size={20} color="var(--text-primary)" />
-              </div>
-              <div>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '4px' }}>Voice Search</h3>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: '1.5' }}>Just click the mic icon and say what you want to hear! The intelligent voice recognition will search for your favorite tracks hands-free.</p>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', gap: '16px' }}>
-              <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: 'var(--bg-input)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <Disc3 size={20} color="var(--text-primary)" />
-              </div>
-              <div>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '4px' }}>Infinite Scrolling History</h3>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: '1.5' }}>Your entire search history is now elegantly saved and can be scrolled infinitely from the sidebar, with a sleek collapsible design.</p>
-              </div>
-            </div>
+            ) : updates.length > 0 ? (
+              updates.map((update) => (
+                <div key={update.id} style={{ display: 'flex', gap: '16px' }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: 'var(--bg-input)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <DynamicIcon name={update.icon} size={20} color="var(--text-primary)" />
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '4px' }}>{update.title}</h3>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: '1.5' }}>{update.description}</p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p style={{ color: 'var(--text-secondary)' }}>No new updates available yet.</p>
+            )}
           </div>
         </section>
 
@@ -117,7 +118,7 @@ export default function AboutPage() {
         {/* Contact Support Section */}
         <section style={{ backgroundColor: 'var(--bg-sidebar)', borderRadius: '16px', padding: '32px', border: '1px solid var(--border-color)', textAlign: 'center' }}>
           <div style={{ width: '48px', height: '48px', borderRadius: '12px', backgroundColor: 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto' }}>
-            <Mail size={24} color="#000" />
+            <Mail size={24} color="var(--bg-main)" />
           </div>
           <h2 style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '8px' }}>Contact Support</h2>
           <p style={{ color: 'var(--text-secondary)', fontSize: '1rem', marginBottom: '24px' }}>
