@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
-import { spawn } from 'child_process';
-import path from 'path';
-import fs from 'fs';
-import os from 'os';
+
+export const runtime = 'edge';
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
@@ -12,75 +10,76 @@ export async function GET(request) {
     return NextResponse.json({ error: 'Missing video ID' }, { status: 400 });
   }
 
-  let ytDlpPath;
-  const isVercel = process.env.VERCEL === '1';
-
-  if (isVercel) {
-    const vercelBinPath = path.join(process.cwd(), 'node_modules', 'youtube-dl-exec', 'bin', 'yt-dlp');
-    ytDlpPath = path.join(os.tmpdir(), 'yt-dlp');
-    if (!fs.existsSync(ytDlpPath)) {
-      try {
-        fs.copyFileSync(vercelBinPath, ytDlpPath);
-        fs.chmodSync(ytDlpPath, 0o777);
-      } catch (e) {
-        console.error("Failed to copy yt-dlp binary to tmp on Vercel", e);
-      }
-    }
-  } else {
-    ytDlpPath = path.join(process.cwd(), 'node_modules', 'youtube-dl-exec', 'bin', 'yt-dlp.exe');
-    if (!fs.existsSync(ytDlpPath)) {
-      ytDlpPath = path.join(process.cwd(), 'node_modules', 'youtube-dl-exec', 'bin', 'yt-dlp');
-    }
-  }
-
   try {
-    // We request the best audio format natively supported everywhere (m4a/mp4)
-    // WebM is NOT supported on iOS/Safari and will throw NotSupportedError!
-    // -o - pipes the output to stdout
-    // -q suppresses logs so they don't corrupt the stdout binary stream
-    const commandArgs = [
-      '-f', 'bestaudio[ext=m4a]/bestaudio[ext=mp3]/bestaudio', 
-      '--no-warnings',
-      '-q',
-      '-o', '-', 
-      `https://www.youtube.com/watch?v=${id}`
-    ];
+    let directUrl = null;
 
-    const ytProcess = spawn(ytDlpPath, commandArgs);
+    // 1. Try Cobalt API for lightning fast extraction
+    try {
+      const cobaltRes = await fetch('https://co.wuk.sh/api/json', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+        },
+        body: JSON.stringify({
+          url: `https://www.youtube.com/watch?v=${id}`,
+          isAudioOnly: true,
+          aFormat: 'mp3'
+        })
+      });
 
-    ytProcess.stderr.on('data', (data) => {
-      console.log(`yt-dlp stream info: ${data}`);
-    });
+      if (cobaltRes.ok) {
+        const cobaltData = await cobaltRes.json();
+        if (cobaltData && cobaltData.url) {
+          directUrl = cobaltData.url;
+        }
+      }
+    } catch (e) {
+      console.warn('Cobalt API failed', e);
+    }
 
-    // Create a ReadableStream from the child process stdout
-    const stream = new ReadableStream({
-      start(controller) {
-        ytProcess.stdout.on('data', (chunk) => {
-          controller.enqueue(chunk);
-        });
-        ytProcess.stdout.on('end', () => {
-          controller.close();
-        });
-        ytProcess.stdout.on('error', (err) => {
-          console.error('yt-dlp stdout error:', err);
-          controller.error(err);
-        });
-        ytProcess.on('close', (code) => {
-          if (code !== 0) {
-            console.error(`yt-dlp process exited with code ${code}`);
+    // 2. Try RapidAPI if Cobalt fails
+    if (!directUrl && process.env.RAPIDAPI_KEY) {
+      try {
+        const rapidRes = await fetch(`https://youtube-mp36.p.rapidapi.com/dl?id=${id}`, {
+          method: 'GET',
+          headers: {
+            'X-RapidAPI-Key': process.env.RAPIDAPI_KEY,
+            'X-RapidAPI-Host': 'youtube-mp36.p.rapidapi.com'
           }
         });
-      },
-      cancel() {
-        ytProcess.kill();
+        const rapidData = await rapidRes.json();
+        if (rapidData && (rapidData.link || rapidData.url)) {
+          directUrl = rapidData.link || rapidData.url;
+        }
+      } catch (e) {
+        console.warn('Rapid API failed', e);
+      }
+    }
+
+    if (!directUrl) {
+      throw new Error('Could not find direct audio stream URL from extractors');
+    }
+
+    // 3. Fetch the actual audio binary stream from the provided URL
+    const audioRes = await fetch(directUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
       }
     });
 
+    if (!audioRes.ok) {
+      throw new Error(`Failed to fetch audio stream: ${audioRes.status}`);
+    }
+
+    // 4. Stream the binary directly to the client
     const headers = new Headers();
+    // Force audio/mp4 so iOS safari can play the downloaded blob natively!
     headers.set('Content-Type', 'audio/mp4');
     headers.set('Access-Control-Allow-Origin', '*');
 
-    return new NextResponse(stream, {
+    return new NextResponse(audioRes.body, {
       status: 200,
       headers
     });
