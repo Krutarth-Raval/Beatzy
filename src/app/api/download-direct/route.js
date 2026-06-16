@@ -34,11 +34,12 @@ export async function GET(request) {
   }
 
   try {
-    // We request the best audio format natively supported everywhere (webm/m4a)
+    // We request the best audio format natively supported everywhere (m4a/mp4)
+    // WebM is NOT supported on iOS/Safari and will throw NotSupportedError!
     // -o - pipes the output to stdout
     // -q suppresses logs so they don't corrupt the stdout binary stream
     const commandArgs = [
-      '-f', 'bestaudio[ext=webm]/bestaudio[ext=m4a]/bestaudio', 
+      '-f', 'bestaudio[ext=m4a]/bestaudio[ext=mp3]/bestaudio', 
       '--no-warnings',
       '-q',
       '-o', '-', 
@@ -76,7 +77,7 @@ export async function GET(request) {
     });
 
     const headers = new Headers();
-    headers.set('Content-Type', 'audio/webm');
+    headers.set('Content-Type', 'audio/mp4');
     headers.set('Access-Control-Allow-Origin', '*');
 
     return new NextResponse(stream, {
