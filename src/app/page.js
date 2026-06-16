@@ -2,11 +2,19 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useSession, signIn, signOut } from 'next-auth/react';
-import { Search, Play, Download, LogOut, Music, Loader2, X, Disc3, Menu, MessageSquare, Plus, Settings, Trash2, Moon, Sun, AlertTriangle, Home as HomeIcon, Mic, Library, ChevronDown, ChevronRight, Info, Camera } from 'lucide-react';
+import { Search, Play, Download, LogOut, Music, Loader2, X, Disc3, Menu, MessageSquare, Plus, Settings, Trash2, Moon, Sun, AlertTriangle, Home as HomeIcon, Mic, Library, ChevronDown, ChevronRight, Info, Camera, History } from 'lucide-react';
 import Tesseract from 'tesseract.js';
+import PlaylistSaveModal from '@/components/PlaylistSaveModal';
+import CreatePlaylistModal from '@/components/CreatePlaylistModal';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import usePlayerStore from '@/store/usePlayerStore';
 
 export default function Home() {
+  const router = useRouter();
   const { data: session, status } = useSession();
+  const { currentTrack: globalTrack } = usePlayerStore();
+  const [showCreatePlaylistModal, setShowCreatePlaylistModal] = useState(false);
 
   // Modes: 'search' or 'spotify'
   const [mode, setMode] = useState('spotify');
@@ -21,6 +29,7 @@ export default function Home() {
   const [error, setError] = useState('');
   const [isAnalyzingImage, setIsAnalyzingImage] = useState(false);
 
+  const [trackToSave, setTrackToSave] = useState(null);
   const [currentTrack, setCurrentTrack] = useState(null); // Requires: id (YT id), title
 
   // Download Popup State
@@ -37,6 +46,8 @@ export default function Home() {
   const [hasMoreHistory, setHasMoreHistory] = useState(false);
   const [loadingMoreHistory, setLoadingMoreHistory] = useState(false);
   const [isHistoryExpanded, setIsHistoryExpanded] = useState(true);
+  const [isPlaylistsExpanded, setIsPlaylistsExpanded] = useState(false);
+  const [playlists, setPlaylists] = useState([]);
   const recognitionRef = useRef(null);
   const fileInputRef = useRef(null);
   const [showSignOutModal, setShowSignOutModal] = useState(false);
@@ -49,7 +60,58 @@ export default function Home() {
     const savedTheme = localStorage.getItem('theme') || 'dark';
     setTheme(savedTheme);
     if (savedTheme === 'light') document.body.classList.add('light-theme');
+
+    const savedHistoryExpanded = localStorage.getItem('isHistoryExpanded');
+    if (savedHistoryExpanded !== null) {
+      setIsHistoryExpanded(savedHistoryExpanded === 'true');
+    }
+
+    const savedPlaylistsExpanded = localStorage.getItem('isPlaylistsExpanded');
+    if (savedPlaylistsExpanded !== null) {
+      setIsPlaylistsExpanded(savedPlaylistsExpanded === 'true');
+    }
   }, []);
+
+  const toggleHistoryExpanded = () => {
+    const newState = !isHistoryExpanded;
+    setIsHistoryExpanded(newState);
+    localStorage.setItem('isHistoryExpanded', newState);
+  };
+
+  const togglePlaylistsExpanded = () => {
+    const newState = !isPlaylistsExpanded;
+    setIsPlaylistsExpanded(newState);
+    localStorage.setItem('isPlaylistsExpanded', newState);
+  };
+
+  const loadSidebarPlaylists = () => {
+    import('@/lib/db').then((db) => {
+      db.getPlaylists().then(setPlaylists).catch(console.error);
+    });
+  };
+
+  useEffect(() => {
+    loadSidebarPlaylists();
+  }, []);
+
+  const handleSidebarCreatePlaylist = () => {
+    setShowCreatePlaylistModal(true);
+  };
+
+  const handlePlayPlaylistDirectly = async (playlistId) => {
+    try {
+      const db = await import('@/lib/db');
+      const t = await db.getTracksForPlaylist(playlistId);
+      if (t.length > 0) {
+        const usePlayerStore = (await import('@/store/usePlayerStore')).default;
+        usePlayerStore.getState().playTrack(t[0], t);
+      } else {
+        alert("This playlist is empty.");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const toggleTheme = () => {
     const newTheme = theme === 'dark' ? 'light' : 'dark';
@@ -96,6 +158,11 @@ export default function Home() {
   }, [session]);
 
   const addToHistory = async (item) => {
+    // Prevent consecutive duplicate entries
+    if (history.length > 0 && history[0].query === item.query && history[0].type === item.type) {
+      return;
+    }
+
     // Optimistic update locally
     setHistory(prev => [item, ...prev]);
 
@@ -249,10 +316,33 @@ export default function Home() {
     }
   };
 
-  const downloadTrack = async (track) => {
+  const downloadTrack = (track) => {
+    setTrackToSave({ 
+      ...track, 
+      type: 'spotify',
+      title: track.title || track.name,
+      artist: track.artist || track.artists,
+      name: track.name || track.title,
+      artists: track.artists || track.artist
+    });
+  };
+
+  const handleDownloadYT = (track) => {
+    setTrackToSave({ 
+      ...track, 
+      type: 'youtube',
+      name: track.name || track.title,
+      artists: track.artists || track.artist,
+      title: track.title || track.name,
+      artist: track.artist || track.artists,
+      coverArt: track.coverArt || track.thumbnail
+    });
+  };
+
+  const downloadTrackDirectly = async (track) => {
     setDlPopup({ show: true, loading: true, url: null, error: null, title: track.name });
     try {
-      const query = `${track.name} ${track.artists.split(',')[0].trim()}`;
+      const query = `${track.name} ${track.artists?.split(',')[0]?.trim() || ''}`;
       const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&type=music`);
       const data = await res.json();
       if (data && data.length > 0) {
@@ -265,9 +355,14 @@ export default function Home() {
     }
   };
 
-  const handleDownloadYT = (track) => {
-    setDlPopup({ show: true, loading: true, url: null, error: null, title: track.title });
-    fetchDirectDownload(track.id, track.title);
+  const handleSaveDirectly = (track) => {
+    setTrackToSave(null);
+    if (track.type === 'spotify') {
+      downloadTrackDirectly(track);
+    } else {
+      setDlPopup({ show: true, loading: true, url: null, error: null, title: track.title || track.name });
+      fetchDirectDownload(track.id, track.title || track.name);
+    }
   };
 
   const fetchDirectDownload = async (id, title) => {
@@ -354,14 +449,14 @@ export default function Home() {
     setMode('search');
     setIsAnalyzingImage(true);
     setSearchQuery('Reading lyrics from image...');
-    
+
     try {
       const { data: { text } } = await Tesseract.recognize(
         file,
         'eng',
         { logger: m => console.log(m) }
       );
-      
+
       const cleanedText = text.trim().replace(/\n/g, ' ');
       setSearchQuery(cleanedText);
       if (cleanedText) {
@@ -422,12 +517,16 @@ export default function Home() {
 
   return (
     <div className="app-layout">
+      <style dangerouslySetInnerHTML={{__html: `
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      `}} />
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)}></div>}
 
       {/* Sidebar */}
-      <div className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
-        <div style={{ padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div className={`sidebar ${sidebarOpen ? 'open' : ''}`} style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{ padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <Disc3 size={24} color="var(--text-primary)" className="animate-spin" />
             <span style={{ color: 'var(--text-primary)', fontWeight: '700', fontSize: '1.2rem', letterSpacing: '0.5px' }}>Beatzy</span>
@@ -436,7 +535,7 @@ export default function Home() {
             <X size={24} />
           </button>
         </div>
-        <div style={{ padding: '12px' }}>
+        <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px', flexShrink: 0 }}>
           <button
             onClick={resetState}
             style={{
@@ -449,19 +548,82 @@ export default function Home() {
           >
             <Plus size={18} /> <span style={{ fontWeight: '600' }}>New Search</span>
           </button>
+          
+          <div
+            onClick={togglePlaylistsExpanded}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px',
+              backgroundColor: 'transparent', color: 'var(--text-primary)', border: '1px solid var(--border-color)',
+              borderRadius: '8px', cursor: 'pointer', transition: 'background-color 0.2s', userSelect: 'none'
+            }}
+            onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
+            onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <Library size={18} /> <span style={{ fontWeight: '600' }}>My Playlists</span>
+            </div>
+            {isPlaylistsExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+          </div>
+
+          {isPlaylistsExpanded && (
+            <div className="hide-scrollbar" style={{ display: 'flex', flexDirection: 'column', gap: '4px', paddingLeft: '8px', marginTop: '4px', overflowY: 'auto', maxHeight: '35vh', flexShrink: 0 }}>
+              {playlists.map(p => {
+                const displayName = p.name.length > 15 ? p.name.slice(0, 15) + '...' : p.name;
+                return (
+                <div 
+                  key={p.id} 
+                  className="history-item"
+                  onClick={() => router.push(`/playlists?id=${p.id}`)}
+                  style={{ color: 'var(--text-secondary)' }}
+                  onMouseOver={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
+                  onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                >
+                  <Library size={16} style={{ flexShrink: 0, opacity: 0.7 }} /> 
+                  <span style={{ fontSize: '0.9rem', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName}</span>
+                </div>
+              )})}
+              <div 
+                className="history-item"
+                onClick={handleSidebarCreatePlaylist}
+                style={{ color: 'var(--primary-color)', fontWeight: '600' }}
+                onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'}
+                onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+              >
+                <Plus size={16} style={{ flexShrink: 0 }} /> Create Playlist
+              </div>
+              <Link 
+                href="/playlists"
+                className="history-item"
+                style={{ color: 'var(--text-secondary)' }}
+                onMouseOver={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
+                onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+              >
+                <Settings size={16} style={{ flexShrink: 0, opacity: 0.7 }} /> Manage Playlists
+              </Link>
+            </div>
+          )}
         </div>
 
-        <div className="history-list" onScroll={handleScrollHistory}>
+        <div className="history-list" style={{ paddingTop: '0', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
           <div
-            onClick={() => setIsHistoryExpanded(!isHistoryExpanded)}
-            style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', padding: '8px 12px', marginTop: '8px', userSelect: 'none' }}
+            onClick={toggleHistoryExpanded}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px',
+              backgroundColor: 'transparent', color: 'var(--text-primary)', border: '1px solid var(--border-color)',
+              borderRadius: '8px', cursor: 'pointer', transition: 'background-color 0.2s', userSelect: 'none',
+              marginTop: '4px', marginBottom: '8px', flexShrink: 0
+            }}
+            onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
+            onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
           >
-            <p style={{ fontSize: '0.85rem', fontWeight: '700', letterSpacing: '0.5px', color: 'var(--text-secondary)', flex: 1 }}>Recents</p>
-            {isHistoryExpanded ? <ChevronDown size={14} color="var(--text-secondary)" /> : <ChevronRight size={14} color="var(--text-secondary)" />}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <History size={18} /> <span style={{ fontWeight: '600' }}>Recents</span>
+            </div>
+            {isHistoryExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
           </div>
 
           {isHistoryExpanded && (
-            <>
+            <div className="hide-scrollbar" onScroll={handleScrollHistory} style={{ paddingLeft: '8px', display: 'flex', flexDirection: 'column', gap: '4px', overflowY: 'auto', flex: 1, paddingBottom: '16px' }}>
               {history.map((item, i) => (
                 <div key={i} className="history-item" onClick={() => loadHistoryItem(item)}>
                   {item.type === 'spotify' ? <Library size={16} style={{ flexShrink: 0, opacity: 0.7 }} /> : <Music size={16} style={{ flexShrink: 0, opacity: 0.7 }} />}
@@ -485,12 +647,12 @@ export default function Home() {
                   <Loader2 className="animate-spin" size={16} color="var(--text-secondary)" />
                 </div>
               )}
-            </>
+            </div>
           )}
         </div>
 
         {/* User Profile Area */}
-        <div style={{ padding: '16px 12px 24px 12px', borderTop: '1px solid var(--border-color)', position: 'relative' }}>
+        <div style={{ padding: '16px 12px 24px 12px', borderTop: '1px solid var(--border-color)', position: 'relative', flexShrink: 0 }}>
           <div
             onClick={() => setSettingsOpen(!settingsOpen)}
             style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', padding: '8px 12px', borderRadius: '8px', transition: 'background-color 0.2s' }}
@@ -681,7 +843,7 @@ export default function Home() {
                 <input
                   type="text"
                   className="search-input"
-                  placeholder={mode === 'spotify' ? "Paste Playlist or Spotify Link..." : "Search for a song..."}
+                  placeholder={mode === 'spotify' ? "Paste YouTube or Spotify playlist link..." : "Find a song by name or lyrics..."}
                   value={mode === 'spotify' ? spotifyUrl : searchQuery}
                   onChange={(e) => mode === 'spotify' ? setSpotifyUrl(e.target.value) : setSearchQuery(e.target.value)}
                   style={{ flex: 1 }}
@@ -690,7 +852,6 @@ export default function Home() {
                 <input
                   type="file"
                   accept="image/*"
-                  capture="environment"
                   ref={fileInputRef}
                   style={{ display: 'none' }}
                   onChange={handleImageUpload}
@@ -742,7 +903,7 @@ export default function Home() {
                   type="submit"
                   disabled={loading || (mode === 'spotify' ? !spotifyUrl : !searchQuery)}
                   style={{
-                    backgroundColor: loading || (mode === 'spotify' ? !spotifyUrl : !searchQuery) ? 'var(--bg-hover)' : 'var(--text-primary)',
+                    backgroundColor: loading || (mode === 'spotify' ? !spotifyUrl : !searchQuery) ? 'var(--border-color)' : 'var(--text-primary)',
                     color: loading || (mode === 'spotify' ? !spotifyUrl : !searchQuery) ? 'var(--text-secondary)' : 'var(--bg-main)',
                     padding: '10px 14px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     transition: 'all 0.2s', border: 'none', cursor: loading || (mode === 'spotify' ? !spotifyUrl : !searchQuery) ? 'not-allowed' : 'pointer'
@@ -862,6 +1023,30 @@ export default function Home() {
               )}
             </div>
           </div>
+        )}
+
+        {trackToSave && (
+          <PlaylistSaveModal 
+            track={trackToSave} 
+            onClose={() => { setTrackToSave(null); loadSidebarPlaylists(); }} 
+            onSaveDirectly={handleSaveDirectly} 
+          />
+        )}
+
+        {showCreatePlaylistModal && (
+          <CreatePlaylistModal 
+            onClose={() => setShowCreatePlaylistModal(false)}
+            onCreate={async (name) => {
+              setShowCreatePlaylistModal(false);
+              try {
+                const db = await import('@/lib/db');
+                await db.createPlaylist(name);
+                loadSidebarPlaylists();
+              } catch (e) {
+                console.error(e);
+              }
+            }}
+          />
         )}
       </div>
     </div>

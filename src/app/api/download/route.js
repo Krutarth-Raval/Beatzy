@@ -41,7 +41,42 @@ export async function GET(request) {
           ext: 'mp3'
         });
       }
-      console.warn('RapidAPI extraction failed. Falling back to local yt-dlp...', data);
+      console.warn('RapidAPI extraction failed. Falling back to next method...', data);
+    }
+
+    // ==========================================
+    // METHOD 1.5: COBALT API (Lightning Fast)
+    // ==========================================
+    console.log('Trying Cobalt API for high-speed unthrottled download...');
+    try {
+      const cobaltRes = await fetch('https://co.wuk.sh/api/json', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        },
+        body: JSON.stringify({
+          url: `https://www.youtube.com/watch?v=${id}`,
+          isAudioOnly: true,
+          aFormat: 'mp3'
+        })
+      });
+
+      if (cobaltRes.ok) {
+        const cobaltData = await cobaltRes.json();
+        if (cobaltData && cobaltData.url) {
+          return NextResponse.json({ 
+            url: cobaltData.url, 
+            title: 'Downloaded Audio',
+            ext: 'mp3'
+          });
+        }
+      } else {
+        console.warn('Cobalt API returned status:', cobaltRes.status);
+      }
+    } catch (e) {
+      console.warn('Cobalt API failed, falling back to local yt-dlp...', e.message);
     }
 
     // ==========================================
@@ -77,14 +112,21 @@ export async function GET(request) {
 
     const output = JSON.parse(stdout);
 
-    // Find the best audio format. We prefer audio-only (vcodec === 'none')
+    // Find the best audio format. We prefer audio-only (vcodec === 'none') and specifically M4A/MP4 for universal browser support.
     const audioFormats = output.formats
       .filter(f => f.acodec && f.acodec !== 'none')
       .sort((a, b) => {
-        // Prefer pure audio streams first
+        // 1. Prefer pure audio streams first
         if (a.vcodec === 'none' && b.vcodec !== 'none') return -1;
         if (a.vcodec !== 'none' && b.vcodec === 'none') return 1;
-        // Then sort by audio bitrate
+        
+        // 2. Strongly prefer universal formats (m4a/mp4/aac) over webm/opus
+        const isAUniversal = a.ext === 'm4a' || a.ext === 'mp4';
+        const isBUniversal = b.ext === 'm4a' || b.ext === 'mp4';
+        if (isAUniversal && !isBUniversal) return -1;
+        if (!isAUniversal && isBUniversal) return 1;
+
+        // 3. Then sort by audio bitrate
         return (b.abr || 0) - (a.abr || 0);
       });
 

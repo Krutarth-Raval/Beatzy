@@ -17,12 +17,15 @@ export const metadata = {
   description: 'Download and stream Spotify and YouTube music effortlessly',
 };
 
+import AudioPlayer from '@/components/AudioPlayer';
+
 export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body>
         <Providers>
           {children}
+          <AudioPlayer />
         </Providers>
       </body>
     </html>

@@ -299,6 +299,11 @@ button {
   outline: none;
 }
 
+/* Global Mobile Visibility */
+.show-on-mobile {
+  display: none !important;
+}
+
 /* Mobile Header */
 .mobile-header {
   display: none;
@@ -360,6 +365,72 @@ button {
 
   .mobile-clickable-row {
     cursor: pointer;
+  }
+
+  /* Playlist Page Overrides */
+  .playlist-page-container {
+    flex-direction: column !important;
+    padding: 16px !important;
+    gap: 0 !important;
+  }
+  
+  .playlist-sidebar-mobile {
+    width: 100% !important;
+    border-right: none !important;
+    padding-right: 0 !important;
+  }
+  
+  .playlist-sidebar-mobile.hidden-on-mobile {
+    display: none !important;
+  }
+  
+  .playlist-content-mobile {
+    width: 100% !important;
+  }
+  
+  .playlist-content-mobile.hidden-on-mobile {
+    display: none !important;
+  }
+  
+  .playlist-header-mobile {
+    flex-direction: row !important;
+    align-items: center !important;
+    text-align: left !important;
+    gap: 16px !important;
+    padding-bottom: 16px !important;
+    margin-bottom: 8px !important;
+  }
+
+  .playlist-image-container {
+    width: 130px !important;
+    height: 130px !important;
+  }
+
+  .playlist-title-mobile {
+    font-size: 1.6rem !important;
+    justify-content: flex-start !important;
+    margin-bottom: 4px !important;
+  }
+
+  .playlist-actions-mobile {
+    justify-content: flex-start !important;
+    margin-top: 8px !important;
+    gap: 12px !important;
+  }
+  
+  .playlist-actions-mobile button:nth-child(1),
+  .playlist-actions-mobile button:nth-child(3) {
+    width: 40px !important;
+    height: 40px !important;
+  }
+  
+  .playlist-actions-mobile button:nth-child(2) {
+    width: 48px !important;
+    height: 48px !important;
+  }
+
+  .playlist-toolbar-mobile {
+    justify-content: flex-start !important;
   }
 }
 

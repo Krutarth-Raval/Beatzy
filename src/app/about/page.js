@@ -66,27 +66,27 @@ export default function AboutPage() {
         </div>
 
         {/* What's New Section */}
-        <section style={{ backgroundColor: 'var(--bg-sidebar)', borderRadius: '16px', padding: '32px', marginBottom: '32px', border: '1px solid var(--border-color)' }}>
+        <section style={{ backgroundColor: 'var(--bg-sidebar)', borderRadius: '16px', padding: '24px', marginBottom: '32px', border: '1px solid var(--border-color)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
             <Sparkles size={24} color="var(--primary-color)" />
-            <h2 style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--text-primary)' }}>What's New</h2>
+            <h2 style={{ fontSize: '1.4rem', fontWeight: '700', color: 'var(--text-primary)', letterSpacing: '-0.3px' }}>What's New</h2>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
             {loadingUpdates ? (
               <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem' }}>
                 <Loader2 className="animate-spin" size={24} color="var(--text-secondary)" />
               </div>
             ) : updates.length > 0 ? (
               updates.map((update) => (
-                <div key={update.id} style={{ display: 'flex', gap: '16px' }}>
-                  <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: 'var(--bg-input)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <DynamicIcon name={update.icon} size={20} color="var(--text-primary)" />
+                <div key={update.id} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: 'var(--bg-input)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: '1px solid var(--border-color)' }}>
+                      <DynamicIcon name={update.icon} size={18} color="var(--text-primary)" />
+                    </div>
+                    <h3 style={{ fontSize: '1.15rem', fontWeight: '700', color: 'var(--text-primary)', lineHeight: '1.2' }}>{update.title}</h3>
                   </div>
-                  <div>
-                    <h3 style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '4px' }}>{update.title}</h3>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: '1.5' }}>{update.description}</p>
-                  </div>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: '1.6' }}>{update.description}</p>
                 </div>
               ))
             ) : (
@@ -96,19 +96,19 @@ export default function AboutPage() {
         </section>
 
         {/* Developer Info Section */}
-        <section style={{ backgroundColor: 'var(--bg-sidebar)', borderRadius: '16px', padding: '32px', marginBottom: '32px', border: '1px solid var(--border-color)' }}>
+        <section style={{ backgroundColor: 'var(--bg-sidebar)', borderRadius: '16px', padding: '24px', marginBottom: '32px', border: '1px solid var(--border-color)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-            <Code2 size={24} color="var(--primary-color)" />
-            <h2 style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--text-primary)' }}>Developer Info</h2>
+            <Code2 size={28} color="var(--primary-color)" />
+            <h2 style={{ fontSize: '1.6rem', fontWeight: '800', color: 'var(--text-primary)', letterSpacing: '-0.5px' }}>Developer Info</h2>
           </div>
 
-          <p style={{ color: 'var(--text-secondary)', fontSize: '1rem', lineHeight: '1.6', marginBottom: '24px' }}>
-            Beatzy is proudly developed by <strong>Krutarth Raval</strong>. It was built with a passion for creating seamless, beautiful, and accessible music experiences for everyone. Constantly evolving and improving, Beatzy is designed to be the only music hub you need.
+          <p style={{ color: 'var(--text-secondary)', fontSize: '1.05rem', lineHeight: '1.6', marginBottom: '24px' }}>
+            Beatzy is developed by <strong>Krutarth Raval</strong>. It was built with a passion for creating seamless, beautiful, and accessible music experiences for everyone. Constantly evolving and improving, Beatzy is designed to be the only music hub you need.
           </p>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
 
-            <a href="https://instagram.com/raval_krutarth" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', backgroundColor: 'var(--bg-input)', borderRadius: '8px', color: 'var(--text-primary)', textDecoration: 'none', fontWeight: '500', border: '1px solid var(--border-color)', transition: 'background-color 0.2s' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-input)'}>
+            <a href="https://instagram.com/raval_krutarth" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 18px', backgroundColor: 'var(--bg-input)', borderRadius: '10px', color: 'var(--text-primary)', textDecoration: 'none', fontWeight: '600', border: '1px solid var(--border-color)', transition: 'all 0.2s', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }} onMouseOver={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-hover)'; e.currentTarget.style.transform = 'translateY(-2px)'; }} onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-input)'; e.currentTarget.style.transform = 'translateY(0)'; }}>
               <InstagramIcon />
               Instagram
             </a>
