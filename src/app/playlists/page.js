@@ -464,7 +464,7 @@ export default function PlaylistsPage() {
               </div>
 
               {/* Toolbar */}
-              <div className="playlist-toolbar-mobile" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: '0px', position: 'relative', zIndex: 1, flexShrink: 0 }}>
+              <div className="playlist-toolbar-mobile" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', width: '100%', marginBottom: '16px', position: 'relative', zIndex: 10, flexShrink: 0 }}>
                 <div style={{ position: 'relative' }}>
                   <button 
                     onClick={() => setShowSortDropdown(!showSortDropdown)}
@@ -495,7 +495,7 @@ export default function PlaylistsPage() {
                   <Loader2 className="animate-spin" size={32} color="var(--text-secondary)" />
                 </div>
               ) : (
-                <div className="hide-scrollbar" style={{ flex: 1, minHeight: 0, overflowY: 'auto', paddingBottom: '160px', display: 'flex', flexDirection: 'column', gap: '8px', position: 'relative', zIndex: 2 }}>
+                <div className="hide-scrollbar" style={{ flex: 1, minHeight: 0, overflowY: 'auto', paddingBottom: '160px', display: 'flex', flexDirection: 'column', gap: '8px', position: 'relative', zIndex: 1 }}>
                   {sortedTracks.length > 0 ? sortedTracks.map((track, index) => {
                     const isCurrentlyPlaying = currentTrack?.id === track.id;
                     const isDragged = draggedItemIndex === index;
