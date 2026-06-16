@@ -18,7 +18,7 @@ export default function PlaylistsPage() {
   const [showCreatePlaylistModal, setShowCreatePlaylistModal] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isPlaylistsExpanded, setIsPlaylistsExpanded] = useState(true);
-  
+
   // Edit mode state
   const [isEditing, setIsEditing] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
@@ -44,10 +44,10 @@ export default function PlaylistsPage() {
     polyfill({
       dragImageTranslateOverride: scrollBehaviourDragImageTranslateOverride
     });
-    
-    const touchmoveListener = () => {};
+
+    const touchmoveListener = () => { };
     window.addEventListener('touchmove', touchmoveListener, { passive: false });
-    
+
     return () => {
       window.removeEventListener('touchmove', touchmoveListener);
     };
@@ -58,7 +58,7 @@ export default function PlaylistsPage() {
     try {
       const p = await getPlaylists();
       setPlaylists(p);
-      
+
       const urlParams = new URLSearchParams(window.location.search);
       const targetId = urlParams.get('id');
 
@@ -106,7 +106,7 @@ export default function PlaylistsPage() {
   const loadPlaylistDetails = async (playlist) => {
     setSelectedPlaylist(playlist);
     setLoadingTracks(true);
-    setIsEditing(false); 
+    setIsEditing(false);
     setIsEditingName(false);
     setShowMoveDropdown(null);
     setShowCopyDropdown(null);
@@ -256,7 +256,7 @@ export default function PlaylistsPage() {
       await copyTrackToPlaylist(copy.trackId, copy.targetPlaylistId);
     }
     await reorderTracks(selectedPlaylist.id, tracks.map(t => t.id));
-    
+
     setPendingChanges({ moves: [], deletes: [], copies: [] });
     setHasUnsavedChanges(false);
     loadPlaylists();
@@ -288,13 +288,14 @@ export default function PlaylistsPage() {
 
   return (
     <div style={{ backgroundColor: 'var(--bg-main)', height: '100dvh', overflow: 'hidden', color: 'var(--text-primary)', display: 'flex', flexDirection: 'column' }}>
-      <style dangerouslySetInnerHTML={{__html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         @media (min-width: 769px) {
           .show-on-mobile { display: none !important; }
         }
       `}} />
       <div className="playlist-page-container" style={{ flex: 1, minHeight: 0, padding: '24px', maxWidth: '1200px', margin: '0 auto', display: 'flex', gap: '32px', width: '100%' }}>
-        
+
         {/* Playlists Sidebar */}
         <div className={`hide-scrollbar playlist-sidebar-mobile ${selectedPlaylist ? 'hidden-on-mobile' : ''}`} style={{ width: '300px', flexShrink: 0, borderRight: '1px solid var(--border-color)', paddingRight: '24px', display: 'flex', flexDirection: 'column', overflowY: 'auto', paddingBottom: '120px' }}>
           <div style={{ marginBottom: '24px' }}>
@@ -302,7 +303,7 @@ export default function PlaylistsPage() {
               <ArrowLeft size={18} /> Back to Search
             </div>
           </div>
-          
+
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
             <h2 style={{ fontSize: '1.8rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '12px', margin: 0 }}>
               <Folder size={28} color="var(--primary-color)" /> My Playlists
@@ -319,13 +320,13 @@ export default function PlaylistsPage() {
           ) : playlists.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {playlists.map(p => (
-                <div 
+                <div
                   key={p.id}
                   onClick={() => handleNavigation(p)}
-                  style={{ 
-                    display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', 
-                    backgroundColor: selectedPlaylist?.id === p.id ? 'var(--bg-hover)' : 'var(--bg-input)', 
-                    borderRadius: '12px', cursor: 'pointer', transition: 'all 0.2s', border: '1px solid var(--border-color)' 
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '12px', padding: '12px',
+                    backgroundColor: selectedPlaylist?.id === p.id ? 'var(--bg-hover)' : 'var(--bg-input)',
+                    borderRadius: '12px', cursor: 'pointer', transition: 'all 0.2s', border: '1px solid var(--border-color)'
                   }}
                 >
                   <div style={{ width: '40px', height: '40px', borderRadius: '8px', backgroundColor: 'var(--bg-main)', overflow: 'hidden', flexShrink: 0 }}>
@@ -336,7 +337,7 @@ export default function PlaylistsPage() {
                     )}
                   </div>
                   <span style={{ fontWeight: '600', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</span>
-                  <button 
+                  <button
                     onClick={(e) => promptDeletePlaylist(e, p.id)}
                     style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', opacity: 0.5 }}
                     onMouseOver={e => e.currentTarget.style.opacity = 1}
@@ -375,7 +376,7 @@ export default function PlaylistsPage() {
                   WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 20%, rgba(0,0,0,0) 100%)',
                   maskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 20%, rgba(0,0,0,0) 100%)'
                 }} />
-                
+
                 {/* Mobile Header Navbar */}
                 <div className="show-on-mobile" style={{ width: '100%', display: 'flex', position: 'relative', zIndex: 1, padding: '0 0 16px 0', justifyContent: 'flex-start' }}>
                   <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -391,103 +392,103 @@ export default function PlaylistsPage() {
 
                 <div className="playlist-header-mobile" style={{ display: 'flex', alignItems: 'flex-end', gap: '24px', position: 'relative', zIndex: 1 }}>
 
-                {/* Playlist Image with Edit overlay */}
-                <div 
-                  className="playlist-image-container"
-                  onClick={() => fileInputRef.current?.click()}
-                  style={{ flexShrink: 0, width: '200px', height: '200px', borderRadius: '16px', backgroundColor: 'var(--bg-input)', overflow: 'hidden', boxShadow: '0 10px 30px rgba(0,0,0,0.3)', position: 'relative', cursor: 'pointer', group: 'hover' }}
-                >
-                  {selectedPlaylist.coverArt ? (
-                    <img src={selectedPlaylist.coverArt} alt="Cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem' }}>🎵</div>
-                  )}
-                  <div className="image-edit-overlay" style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s', color: '#fff' }}>
-                    <Camera size={32} style={{ marginBottom: '8px' }} />
-                    <span style={{ fontWeight: '600', fontSize: '0.9rem' }}>Choose Photo</span>
-                  </div>
-                  <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImageUpload} style={{ display: 'none' }} />
-                </div>
-                
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  
-                  {/* Playlist Name Display */}
-                  <h1 
-                    onClick={() => { setEditNameValue(selectedPlaylist.name); setIsEditingName(true); }}
-                    style={{ fontSize: 'clamp(1.6rem, 6vw, 3rem)', fontWeight: '800', margin: 0, marginBottom: '16px', lineHeight: '1.1', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px' }}
-                    title="Click to rename"
+                  {/* Playlist Image with Edit overlay */}
+                  <div
+                    className="playlist-image-container"
+                    onClick={() => fileInputRef.current?.click()}
+                    style={{ flexShrink: 0, width: '200px', height: '200px', borderRadius: '16px', backgroundColor: 'var(--bg-input)', overflow: 'hidden', boxShadow: '0 10px 30px rgba(0,0,0,0.3)', position: 'relative', cursor: 'pointer', group: 'hover' }}
                   >
-                    {selectedPlaylist.name}
-                  </h1>
-
-                  <p style={{ color: 'var(--text-secondary)' }}>
-                    {tracks.length} track{tracks.length !== 1 ? 's' : ''} • {formatTotalDuration()}
-                  </p>
-                  
-                  {/* Buttons Row */}
-                  <div className="playlist-actions-mobile" style={{ marginTop: '24px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <button 
-                      onClick={() => {
-                        toggleShuffle();
-                        if (!shuffle && tracks.length > 0) {
-                          const shuffled = [...tracks].sort(() => Math.random() - 0.5);
-                          playTrack(shuffled[0], shuffled);
-                        }
-                      }}
-                      disabled={tracks.length === 0}
-                      style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: shuffle ? 'var(--text-primary)' : 'var(--bg-hover)', color: shuffle ? '#000' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: tracks.length === 0 ? 'not-allowed' : 'pointer', opacity: tracks.length === 0 ? 0.5 : 1, transition: 'all 0.2s' }}
-                      title="Toggle Shuffle"
-                    >
-                      <Shuffle size={20} />
-                    </button>
-                    <button 
-                      onClick={handlePlayPlaylist}
-                      disabled={tracks.length === 0}
-                      style={{ width: '56px', height: '56px', borderRadius: '50%', backgroundColor: 'var(--primary-color)', color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: tracks.length === 0 ? 'not-allowed' : 'pointer', opacity: tracks.length === 0 ? 0.5 : 1 }}
-                    >
-                      {currentTrack && tracks.some(t => t.id === currentTrack.id) && isPlaying ? <Pause size={28} fill="currentColor" /> : <Play size={28} fill="currentColor" style={{ marginLeft: '4px' }} />}
-                    </button>
-                    <button 
-                      onClick={async () => {
-                        if (isEditing && hasUnsavedChanges) {
-                          await saveAllChanges();
-                        }
-                        setIsEditing(!isEditing);
-                      }}
-                      style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: isEditing ? 'var(--primary-color)' : 'var(--bg-hover)', color: isEditing ? '#000' : 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', transition: 'all 0.2s' }}
-                      title={isEditing ? "Finish Editing" : "Edit Playlist"}
-                    >
-                      {isEditing ? <Check size={20} /> : <Edit2 size={20} />}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Toolbar */}
-              <div className="playlist-toolbar-mobile" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', width: '100%', marginBottom: '16px', position: 'relative', zIndex: 10, flexShrink: 0 }}>
-                <div style={{ position: 'relative' }}>
-                  <button 
-                    onClick={() => setShowSortDropdown(!showSortDropdown)}
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontWeight: '600' }}
-                  >
-                    Sort: {sortMode} <ChevronDown size={16} />
-                  </button>
-                  {showSortDropdown && (
-                    <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '8px', backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '8px', zIndex: 10, minWidth: '150px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
-                      {['Manual', 'Old to New', 'New to Old'].map(mode => (
-                        <button 
-                          key={mode}
-                          onClick={() => { setSortMode(mode); setShowSortDropdown(false); }}
-                          style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 12px', background: sortMode === mode ? 'var(--bg-hover)' : 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', borderRadius: '4px' }}
-                        >
-                          {mode}
-                        </button>
-                      ))}
+                    {selectedPlaylist.coverArt ? (
+                      <img src={selectedPlaylist.coverArt} alt="Cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem' }}>🎵</div>
+                    )}
+                    <div className="image-edit-overlay" style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s', color: '#fff' }}>
+                      <Camera size={32} style={{ marginBottom: '8px' }} />
+                      <span style={{ fontWeight: '600', fontSize: '0.9rem' }}>Choose Photo</span>
                     </div>
-                  )}
+                    <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImageUpload} style={{ display: 'none' }} />
+                  </div>
+
+                  <div style={{ flex: 1, minWidth: 0 }}>
+
+                    {/* Playlist Name Display */}
+                    <h1
+                      onClick={() => { setEditNameValue(selectedPlaylist.name); setIsEditingName(true); }}
+                      style={{ fontSize: 'clamp(1.6rem, 6vw, 3rem)', fontWeight: '800', margin: 0, marginBottom: '16px', lineHeight: '1.1', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px' }}
+                      title="Click to rename"
+                    >
+                      {selectedPlaylist.name}
+                    </h1>
+
+                    <p style={{ color: 'var(--text-secondary)' }}>
+                      {tracks.length} track{tracks.length !== 1 ? 's' : ''} • {formatTotalDuration()}
+                    </p>
+
+                    {/* Buttons Row */}
+                    <div className="playlist-actions-mobile" style={{ marginTop: '24px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                      <button
+                        onClick={() => {
+                          toggleShuffle();
+                          if (!shuffle && tracks.length > 0) {
+                            const shuffled = [...tracks].sort(() => Math.random() - 0.5);
+                            playTrack(shuffled[0], shuffled);
+                          }
+                        }}
+                        disabled={tracks.length === 0}
+                        style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: shuffle ? 'var(--text-primary)' : 'var(--bg-hover)', color: shuffle ? '#000' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: tracks.length === 0 ? 'not-allowed' : 'pointer', opacity: tracks.length === 0 ? 0.5 : 1, transition: 'all 0.2s' }}
+                        title="Toggle Shuffle"
+                      >
+                        <Shuffle size={20} />
+                      </button>
+                      <button
+                        onClick={handlePlayPlaylist}
+                        disabled={tracks.length === 0}
+                        style={{ width: '56px', height: '56px', borderRadius: '50%', backgroundColor: 'var(--primary-color)', color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: tracks.length === 0 ? 'not-allowed' : 'pointer', opacity: tracks.length === 0 ? 0.5 : 1 }}
+                      >
+                        {currentTrack && tracks.some(t => t.id === currentTrack.id) && isPlaying ? <Pause size={28} fill="currentColor" /> : <Play size={28} fill="currentColor" style={{ marginLeft: '4px' }} />}
+                      </button>
+                      <button
+                        onClick={async () => {
+                          if (isEditing && hasUnsavedChanges) {
+                            await saveAllChanges();
+                          }
+                          setIsEditing(!isEditing);
+                        }}
+                        style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: isEditing ? 'var(--primary-color)' : 'var(--bg-hover)', color: isEditing ? '#000' : 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', transition: 'all 0.2s' }}
+                        title={isEditing ? "Finish Editing" : "Edit Playlist"}
+                      >
+                        {isEditing ? <Check size={20} /> : <Edit2 size={20} />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Toolbar */}
+                <div className="playlist-toolbar-mobile" style={{ display: 'flex', alignItems: 'center', width: '100%', marginBottom: '0px', position: 'relative', zIndex: 10, flexShrink: 0 }}>
+                  <div style={{ position: 'relative', marginLeft: 'auto' }}>
+                    <button
+                      onClick={() => setShowSortDropdown(!showSortDropdown)}
+                      style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontWeight: '600' }}
+                    >
+                      Sort: {sortMode} <ChevronDown size={16} />
+                    </button>
+                    {showSortDropdown && (
+                      <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '8px', backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '8px', zIndex: 10, minWidth: '150px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
+                        {['Manual', 'Old to New', 'New to Old'].map(mode => (
+                          <button
+                            key={mode}
+                            onClick={() => { setSortMode(mode); setShowSortDropdown(false); }}
+                            style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 12px', background: sortMode === mode ? 'var(--bg-hover)' : 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', borderRadius: '4px' }}
+                          >
+                            {mode}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
 
               {/* Track List */}
               {loadingTracks ? (
@@ -499,9 +500,9 @@ export default function PlaylistsPage() {
                   {sortedTracks.length > 0 ? sortedTracks.map((track, index) => {
                     const isCurrentlyPlaying = currentTrack?.id === track.id;
                     const isDragged = draggedItemIndex === index;
-                    
+
                     return (
-                      <div 
+                      <div
                         key={track.id}
                         draggable={isEditing && sortMode === 'Manual'}
                         onDragStart={() => handleDragStart(index)}
@@ -509,10 +510,10 @@ export default function PlaylistsPage() {
                         onDragEnd={handleDragEnd}
                         onDragOver={(e) => e.preventDefault()}
                         onClick={() => !isEditing && handlePlayTrack(track)}
-                        style={{ 
-                          display: 'flex', alignItems: 'center', gap: '16px', padding: '12px 16px', 
-                          backgroundColor: isDragged ? 'var(--bg-hover)' : (isCurrentlyPlaying ? 'rgba(255,255,255,0.05)' : 'transparent'), 
-                          borderRadius: '12px', cursor: isEditing ? 'grab' : 'pointer', 
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '16px', padding: '12px 16px',
+                          backgroundColor: isDragged ? 'var(--bg-hover)' : (isCurrentlyPlaying ? 'rgba(255,255,255,0.05)' : 'transparent'),
+                          borderRadius: '12px', cursor: isEditing ? 'grab' : 'pointer',
                           transition: 'background-color 0.2s', opacity: isDragged ? 0.5 : 1,
                           border: isDragged ? '1px dashed var(--border-color)' : '1px solid transparent'
                         }}
@@ -530,18 +531,18 @@ export default function PlaylistsPage() {
                           <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{track.artists}</span>
                         </div>
                         <span className="hide-on-mobile" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{track.duration}</span>
-                        
+
                         {/* Edit Mode Actions */}
                         {isEditing && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', position: 'relative' }}>
-                            <button 
+                            <button
                               onClick={(e) => { e.stopPropagation(); setShowCopyDropdown(showCopyDropdown === track.id ? null : track.id); setShowMoveDropdown(null); }}
                               style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '8px' }}
                               title="Copy to Playlist"
                             >
                               <Copy size={18} />
                             </button>
-                            
+
                             {showCopyDropdown === track.id && (
                               <div style={{ position: 'absolute', top: '100%', right: '80px', backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '8px', zIndex: 10, minWidth: '200px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
                                 <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', padding: '4px 8px', marginBottom: '4px', borderBottom: '1px solid var(--border-color)' }}>Copy to...</div>
@@ -549,7 +550,7 @@ export default function PlaylistsPage() {
                                   <div style={{ padding: '8px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>No other playlists</div>
                                 )}
                                 {playlists.filter(p => p.id !== selectedPlaylist.id).map(p => (
-                                  <button 
+                                  <button
                                     key={p.id}
                                     onClick={(e) => handleCopyTrack(e, track.id, p.id)}
                                     style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px', background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', borderRadius: '4px' }}
@@ -562,14 +563,14 @@ export default function PlaylistsPage() {
                               </div>
                             )}
 
-                            <button 
+                            <button
                               onClick={(e) => { e.stopPropagation(); setShowMoveDropdown(showMoveDropdown === track.id ? null : track.id); setShowCopyDropdown(null); }}
                               style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '8px' }}
                               title="Move to Playlist"
                             >
                               <Redo2 size={18} />
                             </button>
-                            
+
                             {/* Move Dropdown */}
                             {showMoveDropdown === track.id && (
                               <div style={{ position: 'absolute', top: '100%', right: '40px', backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '8px', zIndex: 10, minWidth: '200px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
@@ -578,7 +579,7 @@ export default function PlaylistsPage() {
                                   <div style={{ padding: '8px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>No other playlists</div>
                                 )}
                                 {playlists.filter(p => p.id !== selectedPlaylist.id).map(p => (
-                                  <button 
+                                  <button
                                     key={p.id}
                                     onClick={(e) => handleMoveTrack(e, track.id, p.id)}
                                     style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px', background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', borderRadius: '4px' }}
@@ -591,7 +592,7 @@ export default function PlaylistsPage() {
                               </div>
                             )}
 
-                            <button 
+                            <button
                               onClick={(e) => handleDeleteTrack(e, track.id)}
                               style={{ background: 'none', border: 'none', color: '#ff4d4f', cursor: 'pointer', padding: '8px' }}
                               title="Delete from device"
@@ -611,7 +612,8 @@ export default function PlaylistsPage() {
           )}
         </div>
       </div>
-      <style dangerouslySetInnerHTML={{__html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         .playlist-image-container:hover .image-edit-overlay {
           opacity: 1 !important;
         }
@@ -630,7 +632,7 @@ export default function PlaylistsPage() {
             <h3 style={{ fontSize: '1.2rem', marginBottom: '16px', fontWeight: '700', color: 'var(--text-primary)' }}>Unsaved Changes</h3>
             <p style={{ color: 'var(--text-secondary)', marginBottom: '24px' }}>You have unsaved changes. Do you want to save before leaving?</p>
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-              <button 
+              <button
                 onClick={() => {
                   setHasUnsavedChanges(false);
                   setPendingChanges({ moves: [], deletes: [], copies: [] });
@@ -642,7 +644,7 @@ export default function PlaylistsPage() {
               >
                 Discard
               </button>
-              <button 
+              <button
                 onClick={async () => {
                   await saveAllChanges();
                   const target = showUnsavedModal;
@@ -659,7 +661,7 @@ export default function PlaylistsPage() {
       )}
 
       {showCreatePlaylistModal && (
-        <CreatePlaylistModal 
+        <CreatePlaylistModal
           onClose={() => setShowCreatePlaylistModal(false)}
           onCreate={async (name) => {
             setShowCreatePlaylistModal(false);
@@ -680,7 +682,7 @@ export default function PlaylistsPage() {
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '24px' }}>
           <div className="animate-fade-in" style={{ backgroundColor: 'var(--bg-input)', padding: '24px', borderRadius: '16px', width: '100%', maxWidth: '400px', boxShadow: '0 10px 40px rgba(0,0,0,0.5)', border: '1px solid var(--border-color)' }}>
             <h3 style={{ margin: '0 0 16px 0', fontSize: '1.2rem', color: 'var(--text-primary)' }}>Rename Playlist</h3>
-            <input 
+            <input
               autoFocus
               value={editNameValue}
               onChange={(e) => setEditNameValue(e.target.value)}
@@ -691,13 +693,13 @@ export default function PlaylistsPage() {
               style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-main)', color: 'var(--text-primary)', fontSize: '1rem', marginBottom: '24px', outline: 'none' }}
             />
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-              <button 
+              <button
                 onClick={() => setIsEditingName(false)}
                 style={{ padding: '10px 16px', borderRadius: '8px', backgroundColor: 'transparent', color: 'var(--text-primary)', border: 'none', cursor: 'pointer', fontWeight: '600' }}
               >
                 Cancel
               </button>
-              <button 
+              <button
                 onClick={handleSaveName}
                 style={{ padding: '10px 16px', borderRadius: '8px', backgroundColor: 'var(--primary-color)', color: '#000', border: 'none', cursor: 'pointer', fontWeight: '600' }}
               >
@@ -747,7 +749,7 @@ export default function PlaylistsPage() {
           >
             <Plus size={18} /> <span style={{ fontWeight: '600' }}>Create Playlist</span>
           </button>
-          
+
           <div
             onClick={() => setIsPlaylistsExpanded(!isPlaylistsExpanded)}
             style={{
@@ -769,29 +771,30 @@ export default function PlaylistsPage() {
               {playlists.map(p => {
                 const displayName = p.name.length > 15 ? p.name.slice(0, 15) + '...' : p.name;
                 return (
-                <div 
-                  key={p.id} 
-                  className="history-item"
-                  onClick={() => { setSidebarOpen(false); handleNavigation(p); }}
-                  style={{ color: 'var(--text-secondary)', padding: '10px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
-                  onMouseOver={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
-                  onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
-                >
-                  <Library size={16} style={{ flexShrink: 0, opacity: 0.7 }} /> 
-                  <span style={{ fontSize: '0.9rem', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName}</span>
-                  <div className="history-item-actions">
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); promptDeletePlaylist(e, p.id); }}
-                      style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
-                      onMouseOver={e => e.currentTarget.style.color = '#ff4d4f'}
-                      onMouseOut={e => e.currentTarget.style.color = 'var(--text-secondary)'}
-                      title="Delete Playlist"
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                  <div
+                    key={p.id}
+                    className="history-item"
+                    onClick={() => { setSidebarOpen(false); handleNavigation(p); }}
+                    style={{ color: 'var(--text-secondary)', padding: '10px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                    onMouseOver={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
+                    onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                  >
+                    <Library size={16} style={{ flexShrink: 0, opacity: 0.7 }} />
+                    <span style={{ fontSize: '0.9rem', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName}</span>
+                    <div className="history-item-actions">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); promptDeletePlaylist(e, p.id); }}
+                        style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
+                        onMouseOver={e => e.currentTarget.style.color = '#ff4d4f'}
+                        onMouseOut={e => e.currentTarget.style.color = 'var(--text-secondary)'}
+                        title="Delete Playlist"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              )})}
+                )
+              })}
             </div>
           )}
         </div>
@@ -806,13 +809,13 @@ export default function PlaylistsPage() {
               Are you sure you want to delete this playlist? This action cannot be undone, and will free up device storage.
             </p>
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <button 
+              <button
                 onClick={() => setPlaylistToDelete(null)}
                 style={{ padding: '10px 16px', borderRadius: '8px', backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)', border: 'none', cursor: 'pointer', fontWeight: '600' }}
               >
                 Cancel
               </button>
-              <button 
+              <button
                 onClick={confirmDeletePlaylist}
                 style={{ padding: '10px 16px', borderRadius: '8px', backgroundColor: '#ff4d4f', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: '600' }}
               >
