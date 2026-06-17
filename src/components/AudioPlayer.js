@@ -4,7 +4,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import usePlayerStore from '@/store/usePlayerStore';
 import { getAudioBlob } from '@/lib/db';
-import { Play, Pause, SkipForward, SkipBack, Shuffle, Repeat, Repeat1, Volume2, VolumeX, ChevronDown } from 'lucide-react';
+import { Play, Pause, SkipForward, SkipBack, Shuffle, Repeat, Repeat1, Volume2, VolumeX, ChevronDown, List } from 'lucide-react';
+import { FastAverageColor } from 'fast-average-color';
 import Image from 'next/image';
 
 export default function AudioPlayer() {
@@ -12,9 +13,13 @@ export default function AudioPlayer() {
   const [audioUrl, setAudioUrl] = useState(null);
   const [isBlobLoading, setIsBlobLoading] = useState(false);
   const [isMobileExpanded, setIsMobileExpanded] = useState(false);
+  const [bgColor, setBgColor] = useState('var(--bg-main)');
+  const [dragProgress, setDragProgress] = useState(null);
+  const [isDraggingProgress, setIsDraggingProgress] = useState(false);
 
   const {
     currentTrack,
+    queueName,
     isPlaying,
     progress,
     duration,
@@ -87,13 +92,15 @@ export default function AudioPlayer() {
     };
   }, [currentTrack]);
 
+  // Dominant color extraction has been removed to prevent 429 Too Many Requests errors from CDNs.
+
   // Handle Media Session API (Lock Screen controls)
   useEffect(() => {
     if ('mediaSession' in navigator && currentTrack) {
       navigator.mediaSession.metadata = new window.MediaMetadata({
         title: currentTrack.title,
         artist: currentTrack.artists,
-        album: currentTrack.album || 'Beatzy Playlist',
+        album: queueName || currentTrack.album || 'Beatzy Playlist',
         artwork: [
           { src: currentTrack.coverArt || '/placeholder-cover.jpg', sizes: '512x512', type: 'image/jpeg' }
         ]
@@ -115,7 +122,7 @@ export default function AudioPlayer() {
         }
       });
     }
-  }, [currentTrack, isPlaying]);
+  }, [currentTrack, isPlaying, queueName]);
 
   // Autoplay when url loads or play state changes
   useEffect(() => {
@@ -135,6 +142,14 @@ export default function AudioPlayer() {
   const handleLoadedMetadata = () => {
     if (audioRef.current) {
       setDuration(audioRef.current.duration);
+      
+      const storeState = usePlayerStore.getState();
+      audioRef.current.volume = storeState.volume;
+      audioRef.current.muted = storeState.isMuted;
+      
+      if (storeState.progress > 0 && audioRef.current.currentTime === 0) {
+        audioRef.current.currentTime = storeState.progress;
+      }
     }
   };
 
@@ -173,25 +188,81 @@ export default function AudioPlayer() {
   };
   const safeDuration = getSafeDuration();
 
+  const dragProgressRef = useRef(null);
+  const currentDisplayProgress = dragProgress !== null ? dragProgress : progress;
+
+  const updateProgressFromPointer = (rect, clientX, clientY, prevProgress) => {
+    const x = clientX - rect.left - rect.width / 2;
+    const y = clientY - rect.top - rect.height / 2;
+    let angle = Math.atan2(y, x) + Math.PI / 2;
+    if (angle < 0) angle += 2 * Math.PI;
+    let percentage = angle / (2 * Math.PI);
+
+    if (prevProgress !== null) {
+      const prevPercentage = prevProgress / safeDuration;
+      // Prevent jumping from near 100% to near 0% when crossing 12 o'clock clockwise
+      if (prevPercentage > 0.75 && percentage < 0.25) {
+        percentage = 1;
+      }
+      // Prevent jumping from near 0% to near 100% when crossing 12 o'clock anti-clockwise
+      else if (prevPercentage < 0.25 && percentage > 0.75) {
+        percentage = 0;
+      }
+    }
+
+    return Math.max(0, Math.min(1, percentage)) * safeDuration;
+  };
+
+  const handlePointerDown = (e) => {
+    setIsDraggingProgress(true);
+    const rect = e.currentTarget.getBoundingClientRect();
+    // On initial touch, allow jumping anywhere by passing null for prevProgress
+    const newProgress = updateProgressFromPointer(rect, e.clientX, e.clientY, null);
+    dragProgressRef.current = newProgress;
+    setDragProgress(newProgress);
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const handlePointerMove = (e) => {
+    if (isDraggingProgress) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const newProgress = updateProgressFromPointer(rect, e.clientX, e.clientY, dragProgressRef.current);
+      dragProgressRef.current = newProgress;
+      setDragProgress(newProgress);
+    }
+  };
+
+  const handlePointerUp = (e) => {
+    if (isDraggingProgress) {
+      setIsDraggingProgress(false);
+      const rect = e.currentTarget.getBoundingClientRect();
+      const finalProgress = updateProgressFromPointer(rect, e.clientX, e.clientY, dragProgressRef.current);
+      dragProgressRef.current = null;
+      setDragProgress(null);
+      seek(finalProgress);
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+  };
+
   const pathname = usePathname();
 
   if (!currentTrack) return null; // Don't render anything if no track is queued
 
   if (isMobileExpanded) {
     return (
-      <div className="audio-player-mobile-expanded" style={{
+      <div className="audio-player-mobile-expanded animate-fade-in" style={{
         position: 'fixed',
         top: 0,
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: 'var(--bg-main)',
+        background: bgColor,
         zIndex: 2000,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'center',
-        padding: '24px'
+        padding: '24px',
+        overflowY: 'auto'
       }}>
         {/* Hidden Audio Element */}
         <audio
@@ -202,74 +273,103 @@ export default function AudioPlayer() {
           onEnded={handleEnded}
         />
 
-        <button
-          onClick={() => setIsMobileExpanded(false)}
-          style={{ position: 'absolute', top: '24px', left: '24px', background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer' }}
-        >
-          <ChevronDown size={32} />
-        </button>
+        {/* Top Bar */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: '40px' }}>
+          <button
+            onClick={() => setIsMobileExpanded(false)}
+            style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer' }}
+          >
+            <ChevronDown size={28} />
+          </button>
+          {/* 
+          <span style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--text-primary)', letterSpacing: '0.5px' }}>
+            {queueName || currentTrack.album || 'Beatzy Playlist'}
+          </span>
 
-        {/* Big Track Info */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px', marginBottom: '32px', width: '100%', maxWidth: '400px' }}>
-          <div style={{ width: '250px', height: '250px', borderRadius: '16px', overflow: 'hidden', backgroundColor: 'var(--bg-input)', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
-            {currentTrack.coverArt ? (
-              <img src={currentTrack.coverArt} alt="Cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            ) : (
-              <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '4rem' }}>🎵</div>
-            )}
-          </div>
-          <div style={{ textAlign: 'center', width: '100%' }}>
-            <h2 style={{ color: 'var(--text-primary)', margin: 0, fontSize: '1.5rem', fontWeight: '800', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <button
+            onClick={() => setIsMobileExpanded(false)}
+            style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer' }}
+          >
+            <List size={24} />
+          </button> */}
+        </div>
+
+        {/* Main Content Flexible */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', width: '100%' }}>
+
+          {/* Track Info (Top) */}
+          <div style={{ textAlign: 'center', width: '100%', marginTop: '10px' }}>
+            <h2 style={{ color: 'var(--text-primary)', margin: 0, fontSize: '1.8rem', fontWeight: '800', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {currentTrack.title}
             </h2>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '1rem', margin: '4px 0 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem', margin: '8px 0 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {currentTrack.artists}
             </p>
           </div>
-        </div>
 
-        {/* Progress */}
-        <div style={{ display: 'flex', flexDirection: 'column', width: '100%', maxWidth: '400px', gap: '8px', marginBottom: '32px' }}>
-          <input
-            type="range"
-            min={0}
-            max={safeDuration}
-            step="any"
-            value={progress}
-            onChange={handleProgressChange}
-            style={{ width: '100%', height: '6px', accentColor: 'var(--primary-color)', cursor: 'pointer' }}
-          />
-          <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
-            <span>{formatTime(progress)}</span>
-            <span>{formatTime(safeDuration)}</span>
+          {/* Square Cover Art */}
+          <div style={{ width: '100%', maxWidth: '350px', aspectRatio: '1/1', margin: '24px auto', borderRadius: '12px', overflow: 'hidden', backgroundColor: 'var(--bg-input)', boxShadow: '0 15px 35px rgba(0,0,0,0.6)' }}>
+            {currentTrack.coverArt ? (
+              <img src={currentTrack.coverArt} alt="Cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '5rem' }}>🎵</div>
+            )}
           </div>
-        </div>
 
-        {/* Controls */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', maxWidth: '300px' }}>
-          <button onClick={toggleShuffle} style={{ background: 'none', border: 'none', color: shuffle ? 'var(--primary-color)' : 'var(--text-secondary)', cursor: 'pointer' }}>
-            <Shuffle size={24} />
-          </button>
+          {/* Flexible Space */}
+          <div style={{ flex: 1, minHeight: '5px' }}></div>
 
-          <button onClick={playPrevious} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer' }}>
-            <SkipBack size={32} fill="currentColor" />
-          </button>
+          {/* Bottom Group */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', paddingBottom: '50px' }}>
 
-          <button onClick={togglePlay} disabled={isBlobLoading} style={{
-            width: '72px', height: '72px', borderRadius: '50%', backgroundColor: 'var(--text-primary)', color: '#000',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: isBlobLoading ? 'not-allowed' : 'pointer',
-            opacity: isBlobLoading ? 0.5 : 1
-          }}>
-            {isPlaying ? <Pause size={32} fill="currentColor" /> : <Play size={32} fill="currentColor" style={{ marginLeft: '4px' }} />}
-          </button>
+            {/* Linear Progress */}
+            <div style={{ width: '100%', maxWidth: '350px', display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '30px' }}>
+              <input
+                type="range"
+                min={0}
+                max={safeDuration}
+                step="any"
+                value={progress}
+                onChange={handleProgressChange}
+                className="custom-range"
+                style={{
+                  width: '100%',
+                  background: `linear-gradient(to right, var(--primary-color) ${(progress / safeDuration) * 100}%, var(--bg-hover) ${(progress / safeDuration) * 100}%)`
+                }}
+              />
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: '500' }}>
+                <span>{formatTime(progress)}</span>
+                <span>{formatTime(safeDuration)}</span>
+              </div>
+            </div>
 
-          <button onClick={playNext} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer' }}>
-            <SkipForward size={32} fill="currentColor" />
-          </button>
+            {/* Controls */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', maxWidth: '320px', marginBottom: '20px' }}>
+              <button onClick={toggleShuffle} style={{ background: 'none', border: 'none', color: shuffle ? 'var(--primary-color)' : 'var(--text-secondary)', cursor: 'pointer' }}>
+                <Shuffle size={24} />
+              </button>
 
-          <button onClick={toggleRepeat} style={{ background: 'none', border: 'none', color: repeat !== 'off' ? 'var(--primary-color)' : 'var(--text-secondary)', cursor: 'pointer' }}>
-            {repeat === 'one' ? <Repeat1 size={24} /> : <Repeat size={24} />}
-          </button>
+              <button onClick={playPrevious} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer' }}>
+                <SkipBack size={36} fill="currentColor" />
+              </button>
+
+              <button onClick={togglePlay} disabled={isBlobLoading} style={{
+                width: '80px', height: '80px', borderRadius: '50%', backgroundColor: 'var(--text-primary)', color: 'var(--bg-main)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: isBlobLoading ? 'not-allowed' : 'pointer',
+                opacity: isBlobLoading ? 0.5 : 1, boxShadow: '0 8px 20px rgba(0,0,0,0.3)'
+              }}>
+                {isPlaying ? <Pause size={36} fill="currentColor" /> : <Play size={36} fill="currentColor" style={{ marginLeft: '4px' }} />}
+              </button>
+
+              <button onClick={playNext} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer' }}>
+                <SkipForward size={36} fill="currentColor" />
+              </button>
+
+              <button onClick={toggleRepeat} style={{ background: 'none', border: 'none', color: repeat !== 'off' ? 'var(--primary-color)' : 'var(--text-secondary)', cursor: 'pointer' }}>
+                {repeat === 'one' ? <Repeat1 size={24} /> : <Repeat size={24} />}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -284,7 +384,7 @@ export default function AudioPlayer() {
         bottom: 0,
         left: 0,
         right: 0,
-        backgroundColor: 'rgba(20, 20, 20, 0.95)',
+        backgroundColor: 'var(--glass-bg)',
         backdropFilter: 'blur(10px)',
         borderTop: '1px solid var(--border-color)',
         padding: '12px 24px',
@@ -313,7 +413,7 @@ export default function AudioPlayer() {
             <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🎵</div>
           )}
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', }}>
           <h4 style={{ color: 'var(--text-primary)', margin: 0, fontSize: '0.95rem', fontWeight: '600', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {currentTrack.title}
           </h4>
@@ -335,7 +435,7 @@ export default function AudioPlayer() {
           </button>
 
           <button onClick={(e) => { e.stopPropagation(); togglePlay(); }} disabled={isBlobLoading} style={{
-            width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'var(--text-primary)', color: '#000',
+            width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'var(--text-primary)', color: 'var(--bg-main)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: isBlobLoading ? 'not-allowed' : 'pointer',
             opacity: isBlobLoading ? 0.5 : 1
           }}>
@@ -361,7 +461,12 @@ export default function AudioPlayer() {
             value={progress}
             onClick={(e) => e.stopPropagation()}
             onChange={handleProgressChange}
-            style={{ flex: 1, height: '4px', accentColor: 'var(--primary-color)', cursor: 'pointer' }}
+            className="custom-range"
+            style={{
+              flex: 1,
+              cursor: 'pointer',
+              background: `linear-gradient(to right, var(--primary-color) ${(progress / safeDuration) * 100}%, var(--bg-hover) ${(progress / safeDuration) * 100}%)`
+            }}
           />
           <span className="hide-on-mobile" style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', minWidth: '40px' }}>{formatTime(safeDuration)}</span>
         </div>

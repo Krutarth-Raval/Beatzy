@@ -32,6 +32,7 @@ export default function PlaylistsPage() {
   const [showUnsavedModal, setShowUnsavedModal] = useState(null);
   const [playlistToDelete, setPlaylistToDelete] = useState(null);
   const [pendingChanges, setPendingChanges] = useState({ moves: [], deletes: [], copies: [] });
+  const [activeDragHandle, setActiveDragHandle] = useState(null);
 
   const router = useRouter();
   const { playTrack, currentTrack, isPlaying, togglePlay, shuffle, toggleShuffle } = usePlayerStore();
@@ -159,21 +160,21 @@ export default function PlaylistsPage() {
     } else {
       if (shuffle) {
         const shuffled = [...tracks].sort(() => Math.random() - 0.5);
-        playTrack(shuffled[0], shuffled);
+        playTrack(shuffled[0], shuffled, selectedPlaylist?.name);
       } else {
-        playTrack(tracks[0], tracks);
+        playTrack(tracks[0], tracks, selectedPlaylist?.name);
       }
     }
   };
 
   const handlePlayTrack = (track) => {
-    playTrack(track, tracks);
+    playTrack(track, tracks, selectedPlaylist?.name);
   };
 
   const handleShuffle = () => {
     if (tracks.length === 0) return;
     const shuffled = [...tracks].sort(() => Math.random() - 0.5);
-    playTrack(shuffled[0], shuffled);
+    playTrack(shuffled[0], shuffled, selectedPlaylist?.name);
   };
 
   const handleImageUpload = async (e) => {
@@ -421,7 +422,7 @@ export default function PlaylistsPage() {
                       {selectedPlaylist.name}
                     </h1>
 
-                    <p style={{ color: 'var(--text-secondary)' }}>
+                    <p style={{ color: 'var(--text-primary)', opacity: 0.8, fontWeight: '500' }}>
                       {tracks.length} track{tracks.length !== 1 ? 's' : ''} • {formatTotalDuration()}
                     </p>
 
@@ -432,11 +433,11 @@ export default function PlaylistsPage() {
                           toggleShuffle();
                           if (!shuffle && tracks.length > 0) {
                             const shuffled = [...tracks].sort(() => Math.random() - 0.5);
-                            playTrack(shuffled[0], shuffled);
+                            playTrack(shuffled[0], shuffled, selectedPlaylist?.name);
                           }
                         }}
                         disabled={tracks.length === 0}
-                        style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: shuffle ? 'var(--text-primary)' : 'var(--bg-hover)', color: shuffle ? '#000' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: tracks.length === 0 ? 'not-allowed' : 'pointer', opacity: tracks.length === 0 ? 0.5 : 1, transition: 'all 0.2s' }}
+                        style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: shuffle ? 'var(--text-primary)' : 'var(--bg-hover)', color: shuffle ? 'var(--bg-main)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: tracks.length === 0 ? 'not-allowed' : 'pointer', opacity: tracks.length === 0 ? 0.5 : 1, transition: 'all 0.2s' }}
                         title="Toggle Shuffle"
                       >
                         <Shuffle size={20} />
@@ -444,7 +445,7 @@ export default function PlaylistsPage() {
                       <button
                         onClick={handlePlayPlaylist}
                         disabled={tracks.length === 0}
-                        style={{ width: '56px', height: '56px', borderRadius: '50%', backgroundColor: 'var(--primary-color)', color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: tracks.length === 0 ? 'not-allowed' : 'pointer', opacity: tracks.length === 0 ? 0.5 : 1 }}
+                        style={{ width: '56px', height: '56px', borderRadius: '50%', backgroundColor: 'var(--primary-color)', color: 'var(--bg-main)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: tracks.length === 0 ? 'not-allowed' : 'pointer', opacity: tracks.length === 0 ? 0.5 : 1 }}
                       >
                         {currentTrack && tracks.some(t => t.id === currentTrack.id) && isPlaying ? <Pause size={28} fill="currentColor" /> : <Play size={28} fill="currentColor" style={{ marginLeft: '4px' }} />}
                       </button>
@@ -455,7 +456,7 @@ export default function PlaylistsPage() {
                           }
                           setIsEditing(!isEditing);
                         }}
-                        style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: isEditing ? 'var(--primary-color)' : 'var(--bg-hover)', color: isEditing ? '#000' : 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', transition: 'all 0.2s' }}
+                        style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: isEditing ? 'var(--primary-color)' : 'var(--bg-hover)', color: isEditing ? 'var(--bg-main)' : 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', transition: 'all 0.2s' }}
                         title={isEditing ? "Finish Editing" : "Edit Playlist"}
                       >
                         {isEditing ? <Check size={20} /> : <Edit2 size={20} />}
@@ -469,7 +470,7 @@ export default function PlaylistsPage() {
                   <div style={{ position: 'relative', marginLeft: 'auto' }}>
                     <button
                       onClick={() => setShowSortDropdown(!showSortDropdown)}
-                      style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontWeight: '600' }}
+                      style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'none', border: 'none', color: 'var(--text-primary)', opacity: 0.8, cursor: 'pointer', fontWeight: '600' }}
                     >
                       Sort: {sortMode} <ChevronDown size={16} />
                     </button>
@@ -504,7 +505,7 @@ export default function PlaylistsPage() {
                     return (
                       <div
                         key={track.id}
-                        draggable={isEditing && sortMode === 'Manual'}
+                        draggable={isEditing && sortMode === 'Manual' && activeDragHandle === index}
                         onDragStart={() => handleDragStart(index)}
                         onDragEnter={() => handleDragEnter(index)}
                         onDragEnd={handleDragEnd}
@@ -520,8 +521,13 @@ export default function PlaylistsPage() {
                         onMouseOver={e => e.currentTarget.style.backgroundColor = isCurrentlyPlaying || isDragged ? 'rgba(255,255,255,0.05)' : 'var(--bg-hover)'}
                         onMouseOut={e => e.currentTarget.style.backgroundColor = isCurrentlyPlaying || isDragged ? 'rgba(255,255,255,0.05)' : 'transparent'}
                       >
-                        <div style={{ width: '24px', textAlign: 'center', color: isCurrentlyPlaying ? 'var(--primary-color)' : 'var(--text-secondary)', fontWeight: '600' }}>
-                          {isEditing ? <GripVertical size={20} style={{ cursor: 'grab' }} /> : (isCurrentlyPlaying && isPlaying ? <div className="equalizer-anim">...</div> : index + 1)}
+                        <div 
+                          style={{ width: '24px', textAlign: 'center', color: isCurrentlyPlaying ? 'var(--primary-color)' : 'var(--text-secondary)', fontWeight: '600' }}
+                          onPointerDown={() => isEditing && setActiveDragHandle(index)}
+                          onPointerUp={() => setActiveDragHandle(null)}
+                          onPointerLeave={() => setActiveDragHandle(null)}
+                        >
+                          {isEditing ? <GripVertical size={20} style={{ cursor: 'grab', touchAction: 'none' }} /> : (isCurrentlyPlaying && isPlaying ? <div className="equalizer-anim">...</div> : index + 1)}
                         </div>
                         <div style={{ width: '40px', height: '40px', borderRadius: '6px', backgroundColor: 'var(--bg-input)', overflow: 'hidden' }}>
                           {(track.coverArt || track.thumbnail) && <img src={track.coverArt || track.thumbnail} alt="Cover" style={{ width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }} />}

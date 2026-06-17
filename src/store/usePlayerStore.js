@@ -1,8 +1,12 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
-const usePlayerStore = create((set, get) => ({
+const usePlayerStore = create(
+  persist(
+    (set, get) => ({
   currentTrack: null,
   queue: [],
+  queueName: null,
   queueIndex: -1,
   isPlaying: false,
   progress: 0,
@@ -17,13 +21,14 @@ const usePlayerStore = create((set, get) => ({
 
   setAudioRef: (ref) => set({ audioRef: ref }),
 
-  playTrack: (track, newQueue = null) => {
+  playTrack: (track, newQueue = null, queueName = null) => {
     set((state) => {
       const queue = newQueue || state.queue;
       const queueIndex = queue.findIndex(t => t.id === track.id);
       return {
         currentTrack: track,
         queue,
+        queueName: queueName !== null ? queueName : state.queueName,
         queueIndex: queueIndex !== -1 ? queueIndex : 0,
         isPlaying: true,
         progress: 0,
@@ -38,6 +43,11 @@ const usePlayerStore = create((set, get) => ({
     
     if (state.audioRef) {
       if (newIsPlaying) {
+        // If the user scrubbed to the end and clicks play, go to the next song instead of restarting
+        if (state.audioRef.duration && state.audioRef.currentTime >= state.audioRef.duration - 0.5) {
+          get().playNext();
+          return;
+        }
         state.audioRef.play().catch(e => console.error("Playback failed:", e));
       } else {
         state.audioRef.pause();
@@ -150,6 +160,21 @@ const usePlayerStore = create((set, get) => ({
     const nextIndex = (currentIndex + 1) % modes.length;
     return { repeat: modes[nextIndex] };
   }),
-}));
+}),
+{
+  name: 'beatzy-player-storage',
+  partialize: (state) => ({
+    currentTrack: state.currentTrack,
+    queue: state.queue,
+    queueName: state.queueName,
+    queueIndex: state.queueIndex,
+    progress: state.progress,
+    volume: state.volume,
+    isMuted: state.isMuted,
+    shuffle: state.shuffle,
+    repeat: state.repeat
+  }),
+}
+));
 
 export default usePlayerStore;

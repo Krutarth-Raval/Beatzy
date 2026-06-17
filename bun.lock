@@ -7,6 +7,7 @@
       "dependencies": {
         "@auth/prisma-adapter": "^2.11.2",
         "@prisma/client": "^5.22.0",
+        "fast-average-color": "^9.5.2",
         "idb": "^8.0.3",
         "lucide-react": "^1.18.0",
         "mobile-drag-drop": "^3.0.0-rc.0",
@@ -211,6 +212,8 @@
     "entities": ["entities@4.5.0", "", {}, "sha512-V0hjH4dGPh9Ao5p0MoRY6BVqtwCjhz6vI5LT8AJ55H+4g9/4vbHx1I54fS0XuclLhDHArPQCiMjDxjaL8fPxhw=="],
 
     "execa": ["execa@8.0.1", "", { "dependencies": { "cross-spawn": "^7.0.3", "get-stream": "^8.0.1", "human-signals": "^5.0.0", "is-stream": "^3.0.0", "merge-stream": "^2.0.0", "npm-run-path": "^5.1.0", "onetime": "^6.0.0", "signal-exit": "^4.1.0", "strip-final-newline": "^3.0.0" } }, "sha512-VyhnebXciFV2DESc+p6B+y0LjSm0krU4OgJN44qFAhBY0TJ+1V61tYD2+wHusZ6F9n5K+vl8k0sTy7PEfV4qpg=="],
+
+    "fast-average-color": ["fast-average-color@9.5.2", "", {}, "sha512-FbaU8iPTPljP7tmnVhXbCyASNw/zxnmaNDf88gn5pTXlNvejl9w4FapeWMh6UNDwIjhJJU28EPfQWwW032YgPA=="],
 
     "find-versions": ["find-versions@6.0.0", "", { "dependencies": { "semver-regex": "^4.0.5", "super-regex": "^1.0.0" } }, "sha512-2kCCtc+JvcZ86IGAz3Z2Y0A1baIz9fL31pH/0S1IqZr9Iwnjq8izfPtrCyQKO6TLMPELLsQMre7VDqeIKCsHkA=="],
 

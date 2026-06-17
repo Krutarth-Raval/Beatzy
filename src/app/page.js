@@ -55,6 +55,19 @@ export default function Home() {
   const [showClearHistoryModal, setShowClearHistoryModal] = useState(false);
   const [showDeleteSingleHistoryModal, setShowDeleteSingleHistoryModal] = useState(false);
   const [historyItemToDelete, setHistoryItemToDelete] = useState(null);
+  const [isOnline, setIsOnline] = useState(true);
+
+  useEffect(() => {
+    setIsOnline(navigator.onLine);
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') || 'dark';
@@ -726,7 +739,32 @@ export default function Home() {
 
         {/* Scrollable Content */}
         <div className="content-scroll">
-          {!albumData && results.length === 0 && !loading && (
+          {!isOnline ? (
+            <div key="offline-state" className="animate-fade-in-up" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', color: 'var(--text-secondary)', textAlign: 'center' }}>
+              <AlertTriangle size={64} style={{ marginBottom: '24px', opacity: 0.5 }} />
+              <h2 style={{ fontSize: '2rem', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '12px' }}>You are offline</h2>
+              <p style={{ maxWidth: '400px', marginBottom: '32px', lineHeight: '1.5' }}>It looks like you've lost your internet connection. You can still listen to your saved offline playlists.</p>
+              
+              {playlists.length > 0 ? (
+                <button
+                  onClick={() => router.push('/playlists')}
+                  style={{
+                    backgroundColor: 'var(--text-primary)', color: 'var(--bg-main)',
+                    padding: '12px 32px', borderRadius: '8px', fontSize: '1.1rem', fontWeight: '600',
+                    display: 'flex', alignItems: 'center', gap: '10px', border: 'none', cursor: 'pointer', transition: 'opacity 0.2s'
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.opacity = 0.8}
+                  onMouseOut={(e) => e.currentTarget.style.opacity = 1}
+                >
+                  <Library size={20} /> Go to Playlists
+                </button>
+              ) : (
+                <p style={{ color: 'var(--text-secondary)', fontStyle: 'italic', padding: '16px', backgroundColor: 'var(--bg-hover)', borderRadius: '8px' }}>You don't have any offline playlists saved yet.</p>
+              )}
+            </div>
+          ) : (
+            <>
+              {!albumData && results.length === 0 && !loading && (
             <div key={resetCount} className="animate-fade-in-up" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', color: 'var(--text-secondary)' }}>
               <Disc3 size={64} className="animate-spin" style={{ marginBottom: '24px', opacity: 0.5, }} />
               <h2 style={{ fontSize: '2rem', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '12px' }}>How can I help you today?</h2>
@@ -816,10 +854,12 @@ export default function Home() {
               </div>
             </div>
           )}
+            </>
+          )}
         </div>
 
         {/* Bottom Input Area */}
-        <div className="input-area-wrapper">
+        <div className="input-area-wrapper" style={{ opacity: isOnline ? 1 : 0.5, pointerEvents: isOnline ? 'auto' : 'none' }}>
           {error && <p style={{ color: '#ff6b6b', marginBottom: '12px', fontSize: '0.9rem' }}>{error}</p>}
 
           <div style={{ width: '100%', maxWidth: '800px', display: 'flex', flexDirection: 'column' }}>
