@@ -26,6 +26,10 @@
   --glass-border: rgba(0, 0, 0, 0.05);
 }
 
+.light-theme .logo-img {
+  filter: invert(1);
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -489,4 +493,33 @@ button {
   cursor: pointer;
   border: none;
   box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+}
+
+/* Audio Player Bar — responsive layout switching */
+.mobile-mini-bar {
+  display: none;
+  width: 100%;
+}
+
+.desktop-player-bar {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  padding: 12px 24px;
+  gap: 16px;
+}
+
+@media (max-width: 768px) {
+  .mobile-mini-bar {
+    display: flex;
+    align-items: center;
+    padding: 10px 14px;
+    gap: 12px;
+    position: relative;
+    padding-bottom: 12px; /* room for progress bar */
+  }
+
+  .desktop-player-bar {
+    display: none !important;
+  }
 }

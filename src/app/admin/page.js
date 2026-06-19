@@ -137,7 +137,7 @@ export default function AdminDashboard() {
       <div className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
         <div style={{ padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }} onClick={() => router.push('/')}>
-            <Disc3 size={24} color="var(--text-primary)" className="animate-spin" />
+            <img src="/white.png" width={24} height={24} className="logo-img animate-spin" alt="Beatzy Logo" />
             <span style={{ color: 'var(--text-primary)', fontWeight: '700', fontSize: '1.2rem', letterSpacing: '0.5px' }}>Beatzy Admin</span>
           </div>
           <button className="mobile-close-btn" onClick={() => setSidebarOpen(false)} style={{ color: 'var(--text-primary)', background: 'none', border: 'none', cursor: 'pointer', alignItems: 'center', justifyContent: 'center' }}>

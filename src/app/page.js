@@ -314,8 +314,19 @@ export default function Home() {
   const playTrack = async (track) => {
     setCurrentTrack({ id: 'loading', title: 'Searching YouTube...' });
     try {
-      const query = `${track.name} ${track.artists.split(',')[0].trim()}`;
-      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&type=music`);
+      const primaryArtist = track.artist || (track.artists || '').split(',')[0].trim();
+      // Include album name in query when available — helps find the exact version
+      const query = track.album
+        ? `${track.name} ${primaryArtist} ${track.album}`
+        : `${track.name} ${primaryArtist}`;
+      const params = new URLSearchParams({
+        q: query,
+        type: 'music',
+        bestMatch: '1',
+        songName: track.name,
+        artist: primaryArtist,
+      });
+      const res = await fetch(`/api/search?${params}`);
       const data = await res.json();
       if (data && data.length > 0) {
         setCurrentTrack({ id: data[0].id, title: track.name });
@@ -355,8 +366,19 @@ export default function Home() {
   const downloadTrackDirectly = async (track) => {
     setDlPopup({ show: true, loading: true, url: null, error: null, title: track.name });
     try {
-      const query = `${track.name} ${track.artists?.split(',')[0]?.trim() || ''}`;
-      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&type=music`);
+      const primaryArtist = track.artist || (track.artists || '').split(',')[0]?.trim() || '';
+      // Include album name in query when available — helps find the exact version
+      const query = track.album
+        ? `${track.name} ${primaryArtist} ${track.album}`
+        : `${track.name} ${primaryArtist}`;
+      const params = new URLSearchParams({
+        q: query,
+        type: 'music',
+        bestMatch: '1',
+        songName: track.name,
+        artist: primaryArtist,
+      });
+      const res = await fetch(`/api/search?${params}`);
       const data = await res.json();
       if (data && data.length > 0) {
         fetchDirectDownload(data[0].id, track.name);
@@ -501,7 +523,7 @@ export default function Home() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '2rem', backgroundColor: '#212121', color: 'var(--text-primary)' }}>
         <div style={{ padding: '3rem', maxWidth: '500px', width: '100%' }}>
-          <Disc3 size={64} color="var(--text-primary)" style={{ marginBottom: '1.5rem' }} className="animate-spin" />
+          <img src="/white.png" width={64} height={64} className="logo-img animate-spin" style={{ marginBottom: '1.5rem' }} alt="Beatzy Logo" />
           <h1 style={{ fontSize: '2.5rem', marginBottom: '1rem', fontWeight: '700' }}>Beatzy</h1>
           <p style={{ color: '#ececec', marginBottom: '2.5rem', fontSize: '1.1rem' }}>
             Extract albums, search songs, and download MP3s effortlessly.
@@ -541,7 +563,7 @@ export default function Home() {
       <div className={`sidebar ${sidebarOpen ? 'open' : ''}`} style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Disc3 size={24} color="var(--text-primary)" className="animate-spin" />
+            <img src="/white.png" width={24} height={24} className="logo-img animate-spin" alt="Beatzy Logo" />
             <span style={{ color: 'var(--text-primary)', fontWeight: '700', fontSize: '1.2rem', letterSpacing: '0.5px' }}>Beatzy</span>
           </div>
           <button className="mobile-close-btn" onClick={() => setSidebarOpen(false)} style={{ color: 'var(--text-primary)', background: 'none', border: 'none', cursor: 'pointer', alignItems: 'center', justifyContent: 'center' }}>
@@ -606,6 +628,7 @@ export default function Home() {
               </div>
               <Link 
                 href="/playlists"
+                draggable={false}
                 className="history-item"
                 style={{ color: 'var(--text-secondary)' }}
                 onMouseOver={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
@@ -726,7 +749,7 @@ export default function Home() {
               <Menu size={28} />
             </button>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Disc3 size={24} color="var(--text-primary)" className="animate-spin" />
+              <img src="/white.png" width={24} height={24} className="logo-img animate-spin" alt="Beatzy Logo" />
               <span style={{ color: 'var(--text-primary)', fontWeight: '700', fontSize: '1.2rem', letterSpacing: '0.5px' }}>Beatzy</span>
             </div>
           </div>
@@ -766,7 +789,7 @@ export default function Home() {
             <>
               {!albumData && results.length === 0 && !loading && (
             <div key={resetCount} className="animate-fade-in-up" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', color: 'var(--text-secondary)' }}>
-              <Disc3 size={64} className="animate-spin" style={{ marginBottom: '24px', opacity: 0.5, }} />
+              <img src="/white.png" width={64} height={64} className="logo-img animate-spin" style={{ marginBottom: '24px', opacity: 0.5 }} alt="Beatzy Logo" />
               <h2 style={{ fontSize: '2rem', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '12px' }}>How can I help you today?</h2>
               <p>Extract unlimited YouTube playlists, Spotify albums, or search for a song.</p>
             </div>

@@ -385,7 +385,7 @@ export default function PlaylistsPage() {
                       <Menu size={28} />
                     </button>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <Disc3 size={24} color="var(--text-primary)" className="animate-spin" />
+                      <img src="/white.png" width={24} height={24} className="logo-img animate-spin" alt="Beatzy Logo" />
                       <span style={{ color: 'var(--text-primary)', fontWeight: '700', fontSize: '1.2rem', letterSpacing: '0.5px' }}>Beatzy Playlist</span>
                     </div>
                   </div>
@@ -722,7 +722,7 @@ export default function PlaylistsPage() {
       <div className={`show-on-mobile sidebar ${sidebarOpen ? 'open' : ''}`} style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', zIndex: 9999 }}>
         <div style={{ padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Disc3 size={24} color="var(--text-primary)" className="animate-spin" />
+            <img src="/white.png" width={24} height={24} className="logo-img animate-spin" alt="Beatzy Logo" />
             <span style={{ color: 'var(--text-primary)', fontWeight: '700', fontSize: '1.2rem', letterSpacing: '0.5px' }}>Beatzy Playlists</span>
           </div>
           <button className="mobile-close-btn" onClick={() => setSidebarOpen(false)} style={{ color: 'var(--text-primary)', background: 'none', border: 'none', cursor: 'pointer', alignItems: 'center', justifyContent: 'center' }}>
@@ -731,7 +731,7 @@ export default function PlaylistsPage() {
         </div>
         <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px', flexShrink: 0 }}>
           <button
-            onClick={() => { setSidebarOpen(false); executeNavigation('back'); }}
+            onClick={() => { setSidebarOpen(false); handleNavigation('back'); }}
             style={{
               width: '100%', display: 'flex', alignItems: 'center', gap: '12px', padding: '12px',
               backgroundColor: 'transparent', color: 'var(--text-primary)', border: '1px solid var(--border-color)',

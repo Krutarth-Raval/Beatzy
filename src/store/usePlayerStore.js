@@ -6,6 +6,7 @@ const usePlayerStore = create(
     (set, get) => ({
   currentTrack: null,
   queue: [],
+  originalQueue: null,
   queueName: null,
   queueIndex: -1,
   isPlaying: false,
@@ -23,11 +24,30 @@ const usePlayerStore = create(
 
   playTrack: (track, newQueue = null, queueName = null) => {
     set((state) => {
-      const queue = newQueue || state.queue;
-      const queueIndex = queue.findIndex(t => t.id === track.id);
+      let queue = newQueue || state.queue;
+      let originalQueue = newQueue ? [...newQueue] : (state.originalQueue || [...state.queue]);
+      let queueIndex = queue.findIndex(t => t.id === track.id);
+
+      if (state.shuffle && newQueue) {
+        let shuff = [...newQueue];
+        const currIdx = shuff.findIndex(t => t.id === track.id);
+        let current = null;
+        if (currIdx !== -1) {
+          current = shuff.splice(currIdx, 1)[0];
+        }
+        for (let i = shuff.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [shuff[i], shuff[j]] = [shuff[j], shuff[i]];
+        }
+        if (current) shuff.unshift(current);
+        queue = shuff;
+        queueIndex = 0;
+      }
+
       return {
         currentTrack: track,
         queue,
+        originalQueue,
         queueName: queueName !== null ? queueName : state.queueName,
         queueIndex: queueIndex !== -1 ? queueIndex : 0,
         isPlaying: true,
@@ -63,11 +83,26 @@ const usePlayerStore = create(
 
     let nextIndex = state.queueIndex + 1;
 
-    if (state.shuffle) {
-      nextIndex = Math.floor(Math.random() * state.queue.length);
-    } else if (nextIndex >= state.queue.length) {
+    if (nextIndex >= state.queue.length) {
       if (state.repeat === 'all') {
-        nextIndex = 0;
+        if (state.shuffle) {
+          // Generate a new shuffle when repeat all hits the end
+          let newQueue = [...(state.originalQueue || state.queue)];
+          for (let i = newQueue.length - 1; i > 0; i--) {
+              const j = Math.floor(Math.random() * (i + 1));
+              [newQueue[i], newQueue[j]] = [newQueue[j], newQueue[i]];
+          }
+          set({
+            queue: newQueue,
+            queueIndex: 0,
+            currentTrack: newQueue[0],
+            isPlaying: true,
+            progress: 0
+          });
+          return;
+        } else {
+          nextIndex = 0;
+        }
       } else {
         // End of queue, don't repeat
         set({ isPlaying: false, progress: 0 });
@@ -103,9 +138,7 @@ const usePlayerStore = create(
 
     let prevIndex = state.queueIndex - 1;
 
-    if (state.shuffle) {
-      prevIndex = Math.floor(Math.random() * state.queue.length);
-    } else if (prevIndex < 0) {
+    if (prevIndex < 0) {
       if (state.repeat === 'all') {
         prevIndex = state.queue.length - 1;
       } else {
@@ -152,7 +185,37 @@ const usePlayerStore = create(
     set({ isMuted: newIsMuted });
   },
 
-  toggleShuffle: () => set((state) => ({ shuffle: !state.shuffle })),
+  toggleShuffle: () => set((state) => {
+    if (!state.shuffle) {
+      // Turning ON
+      const originalQueue = state.originalQueue || [...state.queue];
+      let newQueue = [...originalQueue];
+      
+      let current = null;
+      if (state.currentTrack) {
+        const currIdx = newQueue.findIndex(t => t.id === state.currentTrack.id);
+        if (currIdx !== -1) {
+          current = newQueue.splice(currIdx, 1)[0];
+        }
+      }
+      
+      for (let i = newQueue.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [newQueue[i], newQueue[j]] = [newQueue[j], newQueue[i]];
+      }
+      
+      if (current) {
+        newQueue.unshift(current);
+      }
+      
+      return { shuffle: true, queue: newQueue, originalQueue, queueIndex: 0 };
+    } else {
+      // Turning OFF
+      const queue = state.originalQueue || state.queue;
+      const queueIndex = state.currentTrack ? queue.findIndex(t => t.id === state.currentTrack.id) : 0;
+      return { shuffle: false, queue, originalQueue: null, queueIndex: queueIndex !== -1 ? queueIndex : 0 };
+    }
+  }),
   
   toggleRepeat: () => set((state) => {
     const modes = ['off', 'all', 'one'];

@@ -38,7 +38,7 @@ export default function AboutPage() {
       {/* Header */}
       <div style={{ padding: '24px', display: 'flex', alignItems: 'center', borderBottom: '1px solid var(--border-color)', position: 'sticky', top: 0, backgroundColor: 'var(--bg-sidebar)', zIndex: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginRight: 'auto' }}>
-          <Disc3 size={24} color="var(--primary-color)" className="animate-spin" />
+          <img src="/white.png" width={24} height={24} className="logo-img animate-spin" alt="Beatzy Logo" />
           <span style={{ color: 'var(--text-primary)', fontWeight: '700', fontSize: '1.2rem', letterSpacing: '0.5px' }}>Beatzy</span>
         </div>
       </div>
@@ -57,7 +57,7 @@ export default function AboutPage() {
         <div style={{ textAlign: 'center', marginBottom: '40px' }}>
           <h1 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: '12px', fontSize: 'clamp(2rem, 6vw, 2.8rem)', fontWeight: '800', marginBottom: '16px', color: 'var(--text-primary)', lineHeight: '1.2' }}>
             About
-            <Disc3 size={40} color="var(--primary-color)" className="animate-spin" style={{ flexShrink: 0 }} />
+            <img src="/white.png" width={40} height={40} className="logo-img animate-spin" style={{ flexShrink: 0 }} alt="Beatzy Logo" />
             Beatzy
           </h1>
           <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', maxWidth: '600px', margin: '0 auto' }}>
