@@ -7,6 +7,7 @@ import { polyfill } from 'mobile-drag-drop';
 import { scrollBehaviourDragImageTranslateOverride } from 'mobile-drag-drop/scroll-behaviour';
 import usePlayerStore from '@/store/usePlayerStore';
 import CreatePlaylistModal from '@/components/CreatePlaylistModal';
+import PwaInstallButton from '@/components/PwaInstallButton';
 import { useRouter } from 'next/navigation';
 
 export default function PlaylistsPage() {
@@ -309,9 +310,12 @@ export default function PlaylistsPage() {
             <h2 style={{ fontSize: '1.8rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '12px', margin: 0 }}>
               <Folder size={28} color="var(--primary-color)" /> My Playlists
             </h2>
-            <button onClick={handleCreatePlaylist} title="Create Playlist" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '36px', height: '36px', borderRadius: '50%', backgroundColor: 'var(--bg-hover)', border: 'none', color: 'var(--text-primary)', cursor: 'pointer' }}>
-              <Plus size={20} />
-            </button>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <PwaInstallButton />
+              <button onClick={handleCreatePlaylist} title="Create Playlist" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '36px', height: '36px', borderRadius: '50%', backgroundColor: 'var(--bg-hover)', border: 'none', color: 'var(--text-primary)', cursor: 'pointer' }}>
+                <Plus size={20} />
+              </button>
+            </div>
           </div>
 
           {loading ? (
@@ -755,6 +759,8 @@ export default function PlaylistsPage() {
           >
             <Plus size={18} /> <span style={{ fontWeight: '600' }}>Create Playlist</span>
           </button>
+          
+          <PwaInstallButton variant="sidebar" />
 
           <div
             onClick={() => setIsPlaylistsExpanded(!isPlaylistsExpanded)}

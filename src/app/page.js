@@ -9,6 +9,7 @@ import CreatePlaylistModal from '@/components/CreatePlaylistModal';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import usePlayerStore from '@/store/usePlayerStore';
+import PwaInstallButton from '@/components/PwaInstallButton';
 
 export default function Home() {
   const router = useRouter();
@@ -584,6 +585,8 @@ export default function Home() {
             <Plus size={18} /> <span style={{ fontWeight: '600' }}>New Search</span>
           </button>
           
+          <PwaInstallButton variant="sidebar" />
+          
           <div
             onClick={togglePlaylistsExpanded}
             style={{
@@ -753,11 +756,14 @@ export default function Home() {
               <span style={{ color: 'var(--text-primary)', fontWeight: '700', fontSize: '1.2rem', letterSpacing: '0.5px' }}>Beatzy</span>
             </div>
           </div>
-          {(results.length > 0 || albumData) && (
-            <button onClick={resetState} style={{ color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px' }}>
-              <Plus size={28} />
-            </button>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <PwaInstallButton />
+            {(results.length > 0 || albumData) && (
+              <button onClick={resetState} style={{ color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px' }}>
+                <Plus size={28} />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Scrollable Content */}

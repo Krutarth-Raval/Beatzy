@@ -15,9 +15,11 @@ const geistMono = Geist_Mono({
 export const metadata = {
   title: 'Beatzy',
   description: 'Download and stream Spotify and YouTube music effortlessly',
+  manifest: '/manifest.json',
 };
 
 import AudioPlayer from '@/components/AudioPlayer';
+import PwaRegistry from '@/components/PwaRegistry';
 
 export default function RootLayout({ children }) {
   return (
@@ -26,6 +28,7 @@ export default function RootLayout({ children }) {
         <Providers>
           {children}
           <AudioPlayer />
+          <PwaRegistry />
         </Providers>
       </body>
     </html>
