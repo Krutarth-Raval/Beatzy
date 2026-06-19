@@ -12,12 +12,6 @@
       "sizes": "any",
       "type": "image/png",
       "purpose": "any maskable"
-    },
-    {
-      "src": "/white.png",
-      "sizes": "any",
-      "type": "image/png",
-      "purpose": "any maskable"
     }
   ]
 }
