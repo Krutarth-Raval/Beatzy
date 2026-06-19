@@ -520,7 +520,7 @@ export default function Home() {
     );
   }
 
-  if (!session) {
+  if (!session && isOnline && status !== 'loading') {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '2rem', backgroundColor: '#212121', color: 'var(--text-primary)' }}>
         <div style={{ padding: '3rem', maxWidth: '500px', width: '100%' }}>

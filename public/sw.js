@@ -1,7 +1,10 @@
 const CACHE_NAME = 'beatzy-offline-cache-v1';
 
 const URLS_TO_CACHE = [
-  '/'
+  '/',
+  '/white.png',
+  '/black.png',
+  '/app-icon.png'
 ];
 
 self.addEventListener('install', (event) => {
