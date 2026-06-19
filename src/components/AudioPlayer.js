@@ -198,11 +198,16 @@ export default function AudioPlayer() {
 
   const getSafeDuration = () => {
     if (duration && duration !== Infinity && !isNaN(duration)) return duration;
-    if (currentTrack && currentTrack.duration) {
-      const parts = currentTrack.duration.split(':').reverse();
-      let totalSeconds = 0;
-      totalSeconds += (parseInt(parts[0]) || 0) + (parseInt(parts[1]) || 0) * 60 + (parseInt(parts[2]) || 0) * 3600;
-      return totalSeconds > 0 ? totalSeconds : 100;
+    if (currentTrack && currentTrack.duration != null) {
+      if (typeof currentTrack.duration === 'number') {
+        return currentTrack.duration > 0 ? currentTrack.duration : 100;
+      }
+      if (typeof currentTrack.duration === 'string') {
+        const parts = currentTrack.duration.split(':').reverse();
+        let totalSeconds = 0;
+        totalSeconds += (parseInt(parts[0]) || 0) + (parseInt(parts[1]) || 0) * 60 + (parseInt(parts[2]) || 0) * 3600;
+        return totalSeconds > 0 ? totalSeconds : 100;
+      }
     }
     return 100;
   };

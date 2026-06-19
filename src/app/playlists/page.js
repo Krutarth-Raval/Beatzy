@@ -277,8 +277,14 @@ export default function PlaylistsPage() {
   const formatTotalDuration = () => {
     let totalSeconds = 0;
     tracks.forEach(t => {
-      const parts = t.duration.split(':').reverse();
-      totalSeconds += (parseInt(parts[0]) || 0) + (parseInt(parts[1]) || 0) * 60 + (parseInt(parts[2]) || 0) * 3600;
+      if (t.duration != null) {
+        if (typeof t.duration === 'number') {
+          totalSeconds += t.duration > 0 ? t.duration : 0;
+        } else if (typeof t.duration === 'string') {
+          const parts = t.duration.split(':').reverse();
+          totalSeconds += (parseInt(parts[0]) || 0) + (parseInt(parts[1]) || 0) * 60 + (parseInt(parts[2]) || 0) * 3600;
+        }
+      }
     });
     const hours = Math.floor(totalSeconds / 3600);
     const mins = Math.floor((totalSeconds % 3600) / 60);
