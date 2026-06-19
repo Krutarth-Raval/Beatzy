@@ -78,6 +78,12 @@ export async function GET(request) {
     // Force audio/mp4 so iOS safari can play the downloaded blob natively!
     headers.set('Content-Type', 'audio/mp4');
     headers.set('Access-Control-Allow-Origin', '*');
+    
+    const contentLength = audioRes.headers.get('content-length');
+    if (contentLength) {
+      headers.set('Content-Length', contentLength);
+      headers.set('Access-Control-Expose-Headers', 'Content-Length');
+    }
 
     return new NextResponse(audioRes.body, {
       status: 200,

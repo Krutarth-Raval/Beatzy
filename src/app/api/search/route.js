@@ -93,14 +93,17 @@ export async function GET(request) {
     
     if (type === 'music') {
       const search = await yt.music.search(query, { type: 'song' });
-      videos = (search.songs?.contents || []).slice(0, 10).map(v => ({
-        id: v.id,
-        title: v.title || 'Unknown Title',
-        // thumbnails[] is sorted smallest→largest; pick the last one for highest resolution
-        thumbnail: v.thumbnails?.at(-1)?.url || v.thumbnails?.[0]?.url || '',
-        artist: v.artists?.map(a => a.name).join(', ') || 'Unknown',
-        duration: v.duration?.text || ''
-      }));
+      videos = (search.songs?.contents || []).slice(0, 10).map(v => {
+        const rawThumb = v.thumbnails?.at(-1)?.url || v.thumbnails?.[0]?.url || '';
+        const hiResThumb = rawThumb ? rawThumb.replace(/=w\d+-h\d+.*/, '=w1200-h1200-l90-rj') : rawThumb;
+        return {
+          id: v.id,
+          title: v.title || 'Unknown Title',
+          thumbnail: hiResThumb,
+          artist: v.artists?.map(a => a.name).join(', ') || 'Unknown',
+          duration: v.duration?.text || ''
+        };
+      });
     } else {
       const search = await yt.search(query, { type: 'video' });
       videos = search.videos.slice(0, 10).map(v => {

@@ -12,6 +12,7 @@ export default function AudioPlayer() {
   const audioRef = useRef(null);
   const [audioUrl, setAudioUrl] = useState(null);
   const [isBlobLoading, setIsBlobLoading] = useState(false);
+  const loadedTrackIdRef = useRef(null);
   const [isMobileExpanded, setIsMobileExpanded] = useState(false);
   const [bgColor, setBgColor] = useState('var(--bg-main)');
   const [dragProgress, setDragProgress] = useState(null);
@@ -55,11 +56,14 @@ export default function AudioPlayer() {
 
   // Load track audio source
   useEffect(() => {
-    let objectUrl = null;
+    let isActive = true;
 
     const loadAudio = async () => {
       if (!currentTrack) {
-        setAudioUrl(null);
+        setAudioUrl((prevUrl) => {
+          if (prevUrl && prevUrl.startsWith('blob:')) URL.revokeObjectURL(prevUrl);
+          return null;
+        });
         return;
       }
 
@@ -69,34 +73,45 @@ export default function AudioPlayer() {
         // If it's an offline track from our DB
         if (currentTrack.playlistId) {
           const blob = await getAudioBlob(currentTrack.id);
-          if (blob) {
-            objectUrl = URL.createObjectURL(blob);
-            setAudioUrl(objectUrl);
-          } else {
+          if (blob && isActive) {
+            const newUrl = URL.createObjectURL(blob);
+            setAudioUrl((prevUrl) => {
+              if (prevUrl && prevUrl.startsWith('blob:')) {
+                URL.revokeObjectURL(prevUrl);
+              }
+              return newUrl;
+            });
+          } else if (!blob) {
             console.error("Audio blob not found for track", currentTrack.id);
-            playNext(); // Skip broken tracks
+            if (isActive) playNext(); // Skip broken tracks
           }
-        } else if (currentTrack.audioUrl) {
+        } else if (currentTrack.audioUrl && isActive) {
           // Fallback if we stream directly in the future
-          setAudioUrl(currentTrack.audioUrl);
+          setAudioUrl((prevUrl) => {
+            if (prevUrl && prevUrl.startsWith('blob:')) URL.revokeObjectURL(prevUrl);
+            return currentTrack.audioUrl;
+          });
         }
       } catch (err) {
         console.error("Failed to load audio", err);
       } finally {
-        setIsBlobLoading(false);
+        if (isActive) setIsBlobLoading(false);
       }
     };
 
     loadAudio();
 
     return () => {
-      if (objectUrl) {
-        URL.revokeObjectURL(objectUrl);
-      }
+      isActive = false;
     };
   }, [currentTrack]);
 
   // Dominant color extraction has been removed to prevent 429 Too Many Requests errors from CDNs.
+
+  // Dynamic upgrade of old low-res thumbnails
+  const displayCover = currentTrack?.coverArt
+    ? currentTrack.coverArt.replace(/=w\d+-h\d+.*/, '=w1200-h1200-l90-rj').replace(/\/(default|mqdefault|hqdefault|sddefault)(\.[a-z]+)$/i, '/maxresdefault$2')
+    : null;
 
   // Handle Media Session API (Lock Screen controls)
   useEffect(() => {
@@ -106,7 +121,7 @@ export default function AudioPlayer() {
         artist: currentTrack.artists,
         album: queueName || currentTrack.album || 'Beatzy Playlist',
         artwork: [
-          { src: currentTrack.coverArt || '/placeholder-cover.jpg', sizes: '512x512', type: 'image/jpeg' }
+          { src: displayCover || '/placeholder-cover.jpg', sizes: '512x512', type: 'image/jpeg' }
         ]
       });
 
@@ -138,13 +153,14 @@ export default function AudioPlayer() {
   }, [audioUrl, isPlaying]);
 
   const handleTimeUpdate = () => {
-    if (audioRef.current) {
+    if (audioRef.current && loadedTrackIdRef.current === currentTrack?.id) {
       setProgress(audioRef.current.currentTime);
     }
   };
 
   const handleLoadedMetadata = () => {
     if (audioRef.current) {
+      loadedTrackIdRef.current = currentTrack?.id;
       setDuration(audioRef.current.duration);
       
       const storeState = usePlayerStore.getState();
@@ -252,9 +268,21 @@ export default function AudioPlayer() {
 
   if (!currentTrack) return null; // Don't render anything if no track is queued
 
+  const audioTag = (
+    <audio
+      ref={audioRef}
+      src={audioUrl || undefined}
+      onTimeUpdate={handleTimeUpdate}
+      onLoadedMetadata={handleLoadedMetadata}
+      onEnded={handleEnded}
+    />
+  );
+
   if (isMobileExpanded) {
     return (
-      <div className="audio-player-mobile-expanded animate-fade-in" style={{
+      <>
+        {audioTag}
+        <div className="audio-player-mobile-expanded animate-fade-in" style={{
         position: 'fixed',
         top: 0,
         left: 0,
@@ -273,9 +301,8 @@ export default function AudioPlayer() {
       }}>
         {/* Blurred Background Overlay from Cover Art */}
         <div style={{
-          position: 'fixed',
-          top: '-15%', left: '-15%', right: '-15%', bottom: '-15%',
-          backgroundImage: currentTrack.coverArt ? `url(${currentTrack.coverArt})` : 'none',
+          position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundImage: displayCover ? `url(${displayCover})` : 'none',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           filter: 'blur(80px) brightness(0.5)',
@@ -289,14 +316,6 @@ export default function AudioPlayer() {
           background: 'linear-gradient(to bottom, rgba(20,20,20,0.1) 0%, rgba(20,20,20,0.9) 100%)',
           zIndex: -1,
         }} />
-        {/* Hidden Audio Element */}
-        <audio
-          ref={audioRef}
-          src={audioUrl || undefined}
-          onTimeUpdate={handleTimeUpdate}
-          onLoadedMetadata={handleLoadedMetadata}
-          onEnded={handleEnded}
-        />
 
         {/* Top Bar */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: '40px' }}>
@@ -333,9 +352,9 @@ export default function AudioPlayer() {
 
           {/* Square Cover Art */}
           <div style={{ width: '100%', maxWidth: '350px', aspectRatio: '1/1', margin: '24px auto', borderRadius: '12px', overflow: 'hidden', backgroundColor: 'var(--bg-input)', boxShadow: '0 15px 35px rgba(0,0,0,0.6)' }}>
-            {currentTrack.coverArt ? (
+            {displayCover ? (
               <img
-                src={currentTrack.coverArt}
+                src={displayCover}
                 alt="Cover"
                 draggable={false}
                 style={{ width: '100%', height: '100%', objectFit: 'cover', userSelect: 'none', WebkitUserDrag: 'none' }}
@@ -432,8 +451,8 @@ export default function AudioPlayer() {
                       backgroundColor: isPlayingQueue ? 'rgba(255,255,255,0.1)' : 'transparent',
                       borderRadius: '8px', cursor: 'pointer'
                     }}>
-                      <div style={{ width: '40px', height: '40px', borderRadius: '6px', overflow: 'hidden', flexShrink: 0, backgroundColor: 'var(--bg-input)' }}>
-                        {(track.coverArt || track.thumbnail) && <img src={track.coverArt || track.thumbnail} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="cover" />}
+                      <div style={{ width: '48px', height: '48px', borderRadius: '8px', overflow: 'hidden', flexShrink: 0, backgroundColor: 'var(--bg-input)' }}>
+                        {(track.coverArt || track.thumbnail) && <img src={(track.coverArt || track.thumbnail).replace(/=w\d+-h\d+.*/, '=w200-h200-l90-rj').replace(/\/(default|mqdefault|hqdefault|sddefault)(\.[a-z]+)$/i, '/maxresdefault$2')} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="cover" />}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <p style={{ margin: 0, fontWeight: '600', color: isPlayingQueue ? 'var(--primary-color)' : 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{track.title}</p>
@@ -448,11 +467,14 @@ export default function AudioPlayer() {
           </div>
         )}
       </div>
+      </>
     );
   }
 
   return (
-    <div
+    <>
+      {audioTag}
+      <div
       className="audio-player-bar-clickable"
       onClick={() => { if (window.innerWidth <= 768) setIsMobileExpanded(true); }}
       style={{
@@ -467,28 +489,21 @@ export default function AudioPlayer() {
         zIndex: 1000,
         boxShadow: '0 -4px 20px rgba(0,0,0,0.3)',
       }}>
-      {/* Hidden Audio Element */}
-      <audio
-        ref={audioRef}
-        src={audioUrl || undefined}
-        onTimeUpdate={handleTimeUpdate}
-        onLoadedMetadata={handleLoadedMetadata}
-        onEnded={handleEnded}
-      />
 
       {/* ── MOBILE MINI BAR ──────────────────────────────────── */}
       <div className="mobile-mini-bar">
         {/* Thumbnail */}
-        <div style={{ width: '48px', height: '48px', borderRadius: '8px', overflow: 'hidden', backgroundColor: 'var(--bg-input)', flexShrink: 0 }}>
-          {currentTrack.coverArt ? (
+        <div style={{ width: '56px', height: '56px', borderRadius: '12px', overflow: 'hidden', backgroundColor: 'var(--bg-input)', marginRight: '16px', flexShrink: 0, boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}>
+          {displayCover ? (
             <img
-              src={currentTrack.coverArt}
+              src={displayCover}
               alt="Cover"
-              draggable={false}
               style={{ width: '100%', height: '100%', objectFit: 'cover', userSelect: 'none', WebkitUserDrag: 'none' }}
             />
           ) : (
-            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🎵</div>
+            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Music size={24} color="var(--text-secondary)" />
+            </div>
           )}
         </div>
 
@@ -549,16 +564,17 @@ export default function AudioPlayer() {
       <div className="desktop-player-bar">
         {/* 1. Track Info */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
-          <div style={{ width: '50px', height: '50px', borderRadius: '8px', overflow: 'hidden', backgroundColor: 'var(--bg-input)', flexShrink: 0 }}>
-            {currentTrack.coverArt ? (
+          <div style={{ width: '50px', aspectRatio: '1', backgroundColor: 'var(--bg-input)', borderRadius: '8px', overflow: 'hidden', flexShrink: 0 }}>
+            {displayCover ? (
               <img
-                src={currentTrack.coverArt}
+                src={displayCover}
                 alt="Cover"
-                draggable={false}
                 style={{ width: '100%', height: '100%', objectFit: 'cover', userSelect: 'none', WebkitUserDrag: 'none' }}
               />
             ) : (
-              <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🎵</div>
+              <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Music size={24} color="var(--text-secondary)" />
+              </div>
             )}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -633,5 +649,6 @@ export default function AudioPlayer() {
         </div>
       </div>
     </div>
+    </>
   );
 }
