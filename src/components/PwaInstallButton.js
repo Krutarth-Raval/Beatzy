@@ -31,12 +31,13 @@ export default function PwaInstallButton({ variant = 'icon' }) {
       if (outcome === 'accepted') {
         setDeferredPrompt(null);
       }
+    } else {
+      alert("To install Beatzy on your device, tap your browser's menu (⋮ or Share icon) and select 'Add to Home Screen' or 'Install App'.");
     }
   };
 
-  if (isStandalone || !deferredPrompt) {
+  if (isStandalone) {
     // Hide entirely if already running inside the PWA app
-    // OR if the browser does not currently support/allow the installation prompt.
     return null;
   }
 
