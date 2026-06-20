@@ -69,14 +69,21 @@ export async function GET(request) {
       throw new Error('Could not find direct audio stream URL from extractors');
     }
 
+    // Extract the Range header from the client request
+    const rangeHeader = request.headers.get('range');
+    const fetchHeaders = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+    };
+    if (rangeHeader) {
+      fetchHeaders['Range'] = rangeHeader;
+    }
+
     // 3. Fetch the actual audio binary stream from the provided URL
     const audioRes = await fetch(directUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
-      }
+      headers: fetchHeaders
     });
 
-    if (!audioRes.ok) {
+    if (!audioRes.ok && audioRes.status !== 206) {
       throw new Error(`Failed to fetch audio stream: ${audioRes.status}`);
     }
 
@@ -86,14 +93,17 @@ export async function GET(request) {
     headers.set('Content-Type', 'audio/mp4');
     headers.set('Access-Control-Allow-Origin', '*');
     
+    // Pass through critical streaming headers
+    headers.set('Accept-Ranges', 'bytes');
+    
     const contentLength = audioRes.headers.get('content-length');
-    if (contentLength) {
-      headers.set('Content-Length', contentLength);
-      headers.set('Access-Control-Expose-Headers', 'Content-Length');
-    }
+    if (contentLength) headers.set('Content-Length', contentLength);
+    
+    const contentRange = audioRes.headers.get('content-range');
+    if (contentRange) headers.set('Content-Range', contentRange);
 
     return new NextResponse(audioRes.body, {
-      status: 200,
+      status: audioRes.status, // Can be 200 or 206
       headers
     });
   } catch (error) {
