@@ -17,6 +17,47 @@ export async function GET(request) {
 
   try {
     // ==========================================
+    // METHOD 1: PIPED API (Free & Unlimited)
+    // ==========================================
+    console.log('Trying Piped API...');
+    const pipedInstances = [
+      'https://pipedapi.kavin.rocks',
+      'https://pipedapi.tokhmi.xyz',
+      'https://piped-api.garudalinux.org',
+      'https://pipedapi.moomoo.me',
+      'https://pipedapi.syncpundit.io'
+    ];
+
+    for (const instance of pipedInstances) {
+      try {
+        const res = await fetch(`${instance}/streams/${id}`, {
+          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.audioStreams && data.audioStreams.length > 0) {
+            const m4aStreams = data.audioStreams.filter(s => s.mimeType === 'audio/mp4' || s.format === 'M4A');
+            if (m4aStreams.length > 0) {
+              m4aStreams.sort((a, b) => b.bitrate - a.bitrate);
+              return NextResponse.json({ 
+                url: m4aStreams[0].url, 
+                title: 'Downloaded Audio',
+                ext: 'm4a'
+              });
+            } else {
+              return NextResponse.json({ 
+                url: data.audioStreams[0].url, 
+                title: 'Downloaded Audio',
+                ext: 'webm'
+              });
+            }
+          }
+        }
+      } catch (e) {
+        // Silently try next
+      }
+    }
+    // ==========================================
     // METHOD 1: RAPID API (Vercel Production)
     // ==========================================
     if (process.env.RAPIDAPI_KEY) {

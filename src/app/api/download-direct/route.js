@@ -13,8 +13,41 @@ export async function GET(request) {
   try {
     let directUrl = null;
 
-    // 1. Try RapidAPI
-    if (process.env.RAPIDAPI_KEY) {
+    const pipedInstances = [
+      'https://pipedapi.kavin.rocks',
+      'https://pipedapi.tokhmi.xyz',
+      'https://piped-api.garudalinux.org',
+      'https://pipedapi.moomoo.me',
+      'https://pipedapi.syncpundit.io'
+    ];
+
+    // 1. Try Piped API instances
+    for (const instance of pipedInstances) {
+      if (directUrl) break;
+      try {
+        const res = await fetch(`${instance}/streams/${id}`, {
+          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.audioStreams && data.audioStreams.length > 0) {
+            // Prefer M4A streams for native iOS/browser support
+            const m4aStreams = data.audioStreams.filter(s => s.mimeType === 'audio/mp4' || s.format === 'M4A');
+            if (m4aStreams.length > 0) {
+              m4aStreams.sort((a, b) => b.bitrate - a.bitrate);
+              directUrl = m4aStreams[0].url;
+            } else {
+              directUrl = data.audioStreams[0].url;
+            }
+          }
+        }
+      } catch (e) {
+        // Ignore and try next instance
+      }
+    }
+
+    // 2. Try RapidAPI if Piped fails
+    if (!directUrl && process.env.RAPIDAPI_KEY) {
       try {
         const rapidRes = await fetch(`https://youtube-mp36.p.rapidapi.com/dl?id=${id}`, {
           method: 'GET',
