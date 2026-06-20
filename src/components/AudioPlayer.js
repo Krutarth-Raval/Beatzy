@@ -10,6 +10,42 @@ import Image from 'next/image';
 import PlaylistSaveModal from './PlaylistSaveModal';
 import { removeTrack, addTrackToPlaylist } from '@/lib/db';
 
+const ScrollingText = ({ text, style, className }) => {
+  const containerRef = useRef(null);
+  const textRef = useRef(null);
+  const [isOverflowing, setIsOverflowing] = useState(false);
+
+  useEffect(() => {
+    const checkOverflow = () => {
+      if (containerRef.current && textRef.current) {
+        const textWidth = textRef.current.getBoundingClientRect().width;
+        const containerWidth = containerRef.current.clientWidth;
+        if (textWidth > 0 && containerWidth > 0) {
+          setIsOverflowing(textWidth > containerWidth);
+        }
+      }
+    };
+    checkOverflow();
+    const timeout = setTimeout(checkOverflow, 500);
+    window.addEventListener('resize', checkOverflow);
+    return () => {
+      clearTimeout(timeout);
+      window.removeEventListener('resize', checkOverflow);
+    };
+  }, [text]);
+
+  return (
+    <div ref={containerRef} className={`scrolling-text-mask ${className || ''}`} style={{ ...style, overflow: 'hidden', whiteSpace: 'nowrap', width: '100%' }}>
+      <div className={isOverflowing ? 'animate-marquee' : ''} style={{ display: 'inline-block', whiteSpace: 'nowrap' }}>
+        <span style={{ display: 'inline-block', paddingRight: isOverflowing ? '3rem' : '0' }}>
+          <span ref={textRef}>{text}</span>
+        </span>
+        {isOverflowing && <span style={{ display: 'inline-block', paddingRight: '3rem' }}>{text}</span>}
+      </div>
+    </div>
+  );
+};
+
 export default function AudioPlayer() {
   const audioRef = useRef(null);
   const [audioUrl, setAudioUrl] = useState(null);
@@ -448,8 +484,8 @@ export default function AudioPlayer() {
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', width: '100%' }}>
 
           <div style={{ textAlign: 'center', width: '100%', marginTop: '10px' }}>
-            <h2 style={{ color: 'var(--text-primary)', margin: 0, fontSize: '1.8rem', fontWeight: '800', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {currentTrack.title}
+            <h2 style={{ color: 'var(--text-primary)', margin: 0, fontSize: '1.8rem', fontWeight: '800', width: '100%' }}>
+              <ScrollingText text={currentTrack.title} />
             </h2>
             <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem', margin: '8px 0 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {currentTrack.artists}
@@ -652,9 +688,9 @@ export default function AudioPlayer() {
 
         {/* Track Info — stacked title + artist */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ color: 'var(--text-primary)', fontWeight: '600', fontSize: '0.95rem', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {currentTrack.title}
-          </p>
+          <div style={{ color: 'var(--text-primary)', fontWeight: '600', fontSize: '0.95rem', margin: 0, width: '100%' }}>
+            <ScrollingText text={currentTrack.title} />
+          </div>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', margin: '2px 0 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {currentTrack.artists}
           </p>
@@ -730,9 +766,9 @@ export default function AudioPlayer() {
             )}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', paddingRight: '16px' }}>
-            <h4 style={{ color: 'var(--text-primary)', margin: 0, fontSize: '0.95rem', fontWeight: '600', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {currentTrack.title}
-            </h4>
+            <div style={{ color: 'var(--text-primary)', margin: 0, fontSize: '0.95rem', fontWeight: '600', width: '100%' }}>
+              <ScrollingText text={currentTrack.title} />
+            </div>
             <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {currentTrack.artists}
             </span>
