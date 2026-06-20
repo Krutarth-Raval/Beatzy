@@ -882,7 +882,6 @@ export default function AudioPlayer() {
           </div>
         </div>
       )}
-    </div>
     </>
   );
 }
