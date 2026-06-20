@@ -95,6 +95,7 @@ export async function GET(request) {
     
     // Pass through critical streaming headers
     headers.set('Accept-Ranges', 'bytes');
+    headers.set('Cache-Control', 'public, max-age=31536000, immutable');
     
     const contentLength = audioRes.headers.get('content-length');
     if (contentLength) headers.set('Content-Length', contentLength);

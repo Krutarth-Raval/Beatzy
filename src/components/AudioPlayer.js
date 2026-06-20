@@ -376,17 +376,26 @@ export default function AudioPlayer() {
   if (!currentTrack) return null;
 
   const audioTag = (
-    <audio
-      ref={audioRef}
-      src={audioUrl || undefined}
-      onTimeUpdate={handleTimeUpdate}
-      onLoadedMetadata={handleLoadedMetadata}
-      onEnded={handleEnded}
-      onWaiting={() => setIsBuffering(true)}
-      onPlaying={() => setIsBuffering(false)}
-      onCanPlay={() => setIsBuffering(false)}
-      onLoadStart={() => setIsBuffering(true)}
-    />
+    <>
+      <audio
+        ref={audioRef}
+        src={audioUrl || undefined}
+        onTimeUpdate={handleTimeUpdate}
+        onLoadedMetadata={handleLoadedMetadata}
+        onEnded={handleEnded}
+        onWaiting={() => setIsBuffering(true)}
+        onPlaying={() => setIsBuffering(false)}
+        onCanPlay={() => setIsBuffering(false)}
+        onLoadStart={() => setIsBuffering(true)}
+      />
+      {queue[queueIndex + 1] && (
+        <audio
+          preload="auto"
+          src={`/api/download-direct?id=${queue[queueIndex + 1].id}`}
+          style={{ display: 'none' }}
+        />
+      )}
+    </>
   );
 
   if (isMobileExpanded) {
