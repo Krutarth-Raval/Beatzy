@@ -729,7 +729,7 @@ export default function AudioPlayer() {
               </div>
             )}
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', paddingRight: '16px' }}>
             <h4 style={{ color: 'var(--text-primary)', margin: 0, fontSize: '0.95rem', fontWeight: '600', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {currentTrack.title}
             </h4>
@@ -737,9 +737,6 @@ export default function AudioPlayer() {
               {currentTrack.artists}
             </span>
           </div>
-          <button onClick={handleToggleSave} style={{ background: 'none', border: 'none', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {isSaved ? <Check size={24} color="var(--primary-color)" /> : <Plus size={24} color="var(--text-secondary)" />}
-          </button>
         </div>
 
         {/* 2. Controls & Progress */}
@@ -810,6 +807,24 @@ export default function AudioPlayer() {
             onChange={(e) => setVolume(parseFloat(e.target.value))}
             style={{ width: '80px', height: '4px', accentColor: 'var(--text-secondary)', cursor: 'pointer' }}
           />
+          <div style={{ width: '1px', height: '24px', backgroundColor: 'var(--border-color)', margin: '0 8px' }}></div>
+          <button onClick={(e) => { e.stopPropagation(); setShowQueueModal(true); }} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px' }}>
+            <List size={20} />
+          </button>
+          <button onClick={(e) => { e.stopPropagation(); handleToggleSave(e); }} style={{
+            borderRadius: '50%',
+            width: '28px',
+            height: '28px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'var(--text-primary)',
+            border: 'none', cursor: 'pointer', transition: 'transform 0.2s',
+            transform: saveActionRef.current ? 'scale(1.1)' : 'scale(1)',
+            marginLeft: '4px'
+          }}>
+            {isSaved ? <Check size={16} color="var(--bg-main)" /> : <Plus size={16} color="var(--bg-main)" />}
+          </button>
         </div>
       </div>
     </div>
