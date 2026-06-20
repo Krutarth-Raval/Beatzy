@@ -496,24 +496,25 @@ export default function AudioPlayer() {
                 </button>
               </div>
 
-              <input
-                type="range"
-                min={0}
-                max={safeDuration}
-                step="any"
-                value={isDraggingProgress && dragProgress !== null ? dragProgress : progress}
-                onChange={handleProgressChange}
-                onMouseUp={handleProgressRelease}
-                onTouchEnd={handleProgressRelease}
-                onKeyUp={handleProgressRelease}
-                className={`custom-range ${(isBlobLoading || (isBuffering && progress === 0)) ? 'loading-progress' : ''}`}
-                style={{
-                  width: '100%',
-                  background: (isBlobLoading || (isBuffering && progress === 0))
-                    ? undefined 
-                    : `linear-gradient(to right, var(--primary-color) ${((isDraggingProgress && dragProgress !== null ? dragProgress : progress) / safeDuration) * 100}%, var(--bg-hover) ${((isDraggingProgress && dragProgress !== null ? dragProgress : progress) / safeDuration) * 100}%)`
-                }}
-              />
+              <div style={{ position: 'relative', width: '100%', display: 'flex', alignItems: 'center' }}>
+                <input
+                  type="range"
+                  min={0}
+                  max={safeDuration}
+                  step="any"
+                  value={isDraggingProgress && dragProgress !== null ? dragProgress : progress}
+                  onChange={handleProgressChange}
+                  onMouseUp={handleProgressRelease}
+                  onTouchEnd={handleProgressRelease}
+                  onKeyUp={handleProgressRelease}
+                  className="custom-range"
+                  style={{
+                    width: '100%',
+                    background: `linear-gradient(to right, var(--primary-color) ${((isDraggingProgress && dragProgress !== null ? dragProgress : progress) / safeDuration) * 100}%, var(--bg-hover) ${((isDraggingProgress && dragProgress !== null ? dragProgress : progress) / safeDuration) * 100}%)`
+                  }}
+                />
+                {(isBlobLoading || isBuffering) && <div className="loading-overlay"></div>}
+              </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: '500' }}>
                 <span>{formatTime(isDraggingProgress && dragProgress !== null ? dragProgress : progress)}</span>
                 <span>{formatTime(safeDuration)}</span>
@@ -694,13 +695,13 @@ export default function AudioPlayer() {
         {/* Non-interactive progress strip at the very bottom */}
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '2px', backgroundColor: 'var(--border-color)' }}>
           <div 
-            className={(isBlobLoading || (isBuffering && progress === 0)) ? 'loading-progress-mobile' : ''}
             style={{
-              width: (isBlobLoading || (isBuffering && progress === 0)) ? '100%' : `${Math.min((progress / safeDuration) * 100, 100)}%`,
+              width: `${Math.min((progress / safeDuration) * 100, 100)}%`,
               height: '100%',
               backgroundColor: 'var(--primary-color)',
               transition: 'width 0.5s linear',
           }} />
+          {(isBlobLoading || isBuffering) && <div className="loading-overlay" style={{ height: '100%', top: 0, transform: 'none', background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.6) 50%, transparent 100%)' }}></div>}
         </div>
       </div>
 
@@ -767,26 +768,27 @@ export default function AudioPlayer() {
 
           <div style={{ display: 'flex', alignItems: 'center', width: '100%', maxWidth: '500px', gap: '10px' }}>
             <span className="hide-on-mobile" style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', minWidth: '40px', textAlign: 'right' }}>{formatTime(isDraggingProgress && dragProgress !== null ? dragProgress : progress)}</span>
-            <input
-              type="range"
-              min={0}
-              max={safeDuration}
-              step="any"
-              value={isDraggingProgress && dragProgress !== null ? dragProgress : progress}
-              onClick={(e) => e.stopPropagation()}
-              onChange={handleProgressChange}
-              onMouseUp={handleProgressRelease}
-              onTouchEnd={handleProgressRelease}
-              onKeyUp={handleProgressRelease}
-              className={`custom-range ${(isBlobLoading || (isBuffering && progress === 0)) ? 'loading-progress' : ''}`}
-              style={{
-                flex: 1,
-                cursor: 'pointer',
-                background: (isBlobLoading || (isBuffering && progress === 0))
-                  ? undefined
-                  : `linear-gradient(to right, var(--primary-color) ${((isDraggingProgress && dragProgress !== null ? dragProgress : progress) / safeDuration) * 100}%, var(--bg-hover) ${((isDraggingProgress && dragProgress !== null ? dragProgress : progress) / safeDuration) * 100}%)`
-              }}
-            />
+            <div style={{ position: 'relative', flex: 1, display: 'flex', alignItems: 'center' }}>
+              <input
+                type="range"
+                min={0}
+                max={safeDuration}
+                step="any"
+                value={isDraggingProgress && dragProgress !== null ? dragProgress : progress}
+                onClick={(e) => e.stopPropagation()}
+                onChange={handleProgressChange}
+                onMouseUp={handleProgressRelease}
+                onTouchEnd={handleProgressRelease}
+                onKeyUp={handleProgressRelease}
+                className="custom-range"
+                style={{
+                  width: '100%',
+                  cursor: 'pointer',
+                  background: `linear-gradient(to right, var(--primary-color) ${((isDraggingProgress && dragProgress !== null ? dragProgress : progress) / safeDuration) * 100}%, var(--bg-hover) ${((isDraggingProgress && dragProgress !== null ? dragProgress : progress) / safeDuration) * 100}%)`
+                }}
+              />
+              {(isBlobLoading || isBuffering) && <div className="loading-overlay"></div>}
+            </div>
             <span className="hide-on-mobile" style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', minWidth: '40px' }}>{formatTime(safeDuration)}</span>
           </div>
         </div>
