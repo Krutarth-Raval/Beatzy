@@ -1122,7 +1122,6 @@ export default function Home() {
           <PlaylistSaveModal 
             track={trackToSave} 
             onClose={() => { setTrackToSave(null); loadSidebarPlaylists(); }} 
-            onSaveDirectly={handleSaveDirectly} 
           />
         )}
 

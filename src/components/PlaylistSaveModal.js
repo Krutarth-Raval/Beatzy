@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X, Folder, Plus, Loader2, Check } from 'lucide-react';
 import { getPlaylists, createPlaylist, addTrackToPlaylist } from '@/lib/db';
 
-export default function PlaylistSaveModal({ track, onClose, onSaveDirectly }) {
+export default function PlaylistSaveModal({ track, onClose }) {
   const [playlists, setPlaylists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -137,11 +137,7 @@ export default function PlaylistSaveModal({ track, onClose, onSaveDirectly }) {
       const blob = new Blob(chunks, { type: contentType });
       await addTrackToPlaylist(playlistId, { ...track, id: ytId }, blob);
 
-      if (onSaveDirectly) {
-        onSaveDirectly(playlistId);
-      } else {
-        onClose();
-      }
+      onClose();
     } catch (e) {
       console.error(e);
       setError(e.message || 'An error occurred while saving the track');
