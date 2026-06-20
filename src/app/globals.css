@@ -69,15 +69,7 @@ button {
   animation: sweep 1.5s infinite linear !important;
 }
 
-.loading-progress::-webkit-slider-thumb {
-  display: none !important;
-  opacity: 0 !important;
-}
 
-.loading-progress::-moz-range-thumb {
-  display: none !important;
-  opacity: 0 !important;
-}
 
 .loading-progress-mobile {
   background: linear-gradient(90deg, var(--bg-input) 25%, var(--text-secondary) 50%, var(--bg-input) 75%) !important;

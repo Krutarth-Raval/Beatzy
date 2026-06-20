@@ -495,10 +495,10 @@ export default function AudioPlayer() {
                 step="any"
                 value={progress}
                 onChange={handleProgressChange}
-                className={`custom-range ${isBlobLoading || isBuffering ? 'loading-progress' : ''}`}
+                className={`custom-range ${(isBlobLoading || (isBuffering && progress === 0)) ? 'loading-progress' : ''}`}
                 style={{
                   width: '100%',
-                  background: (isBlobLoading || isBuffering)
+                  background: (isBlobLoading || (isBuffering && progress === 0))
                     ? undefined 
                     : `linear-gradient(to right, var(--primary-color) ${(progress / safeDuration) * 100}%, var(--bg-hover) ${(progress / safeDuration) * 100}%)`
                 }}
@@ -683,9 +683,9 @@ export default function AudioPlayer() {
         {/* Non-interactive progress strip at the very bottom */}
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '2px', backgroundColor: 'var(--border-color)' }}>
           <div 
-            className={(isBlobLoading || isBuffering) ? 'loading-progress-mobile' : ''}
+            className={(isBlobLoading || (isBuffering && progress === 0)) ? 'loading-progress-mobile' : ''}
             style={{
-              width: (isBlobLoading || isBuffering) ? '100%' : `${Math.min((progress / safeDuration) * 100, 100)}%`,
+              width: (isBlobLoading || (isBuffering && progress === 0)) ? '100%' : `${Math.min((progress / safeDuration) * 100, 100)}%`,
               height: '100%',
               backgroundColor: 'var(--primary-color)',
               transition: 'width 0.5s linear',
@@ -764,11 +764,11 @@ export default function AudioPlayer() {
               value={progress}
               onClick={(e) => e.stopPropagation()}
               onChange={handleProgressChange}
-              className={`custom-range ${(isBlobLoading || isBuffering) ? 'loading-progress' : ''}`}
+              className={`custom-range ${(isBlobLoading || (isBuffering && progress === 0)) ? 'loading-progress' : ''}`}
               style={{
                 flex: 1,
                 cursor: 'pointer',
-                background: (isBlobLoading || isBuffering)
+                background: (isBlobLoading || (isBuffering && progress === 0))
                   ? undefined
                   : `linear-gradient(to right, var(--primary-color) ${(progress / safeDuration) * 100}%, var(--bg-hover) ${(progress / safeDuration) * 100}%)`
               }}
