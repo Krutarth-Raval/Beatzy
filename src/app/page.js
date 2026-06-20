@@ -406,7 +406,30 @@ export default function Home() {
       const res = await fetch(`/api/download?id=${id}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      setDlPopup(prev => ({ ...prev, loading: false, url: data.url, title: data.title || title }));
+      
+      const isFallback = data.url && (
+        data.url.includes('omenrosebank') || 
+        data.url.includes('fallback') || 
+        data.url.includes('australie-eta') || 
+        data.url.includes('lapinede') || 
+        data.url.includes('mygomp3')
+      );
+
+      if (!isFallback) {
+        // Automatically trigger the direct download stream via our local API proxy
+        const link = document.createElement('a');
+        link.href = `/api/download-direct?id=${id}`;
+        link.download = `${title}.m4a`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Hide the popup immediately since the download has started
+        setDlPopup({ show: false, loading: false, url: null, error: null, title: '' });
+      } else {
+        // Show fallback modal with the third-party link
+        setDlPopup(prev => ({ ...prev, loading: false, url: data.url, title: data.title || title }));
+      }
     } catch (e) {
       setDlPopup(prev => ({ ...prev, loading: false, error: e.message || "Failed to extract high quality link." }));
     }
