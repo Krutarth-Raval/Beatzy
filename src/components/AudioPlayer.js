@@ -459,6 +459,7 @@ export default function AudioPlayer() {
           <div style={{ width: '100%', maxWidth: '350px', aspectRatio: '1/1', margin: '24px auto', borderRadius: '12px', overflow: 'hidden', backgroundColor: 'var(--bg-input)', boxShadow: '0 15px 35px rgba(0,0,0,0.6)' }}>
             {displayCover ? (
               <img
+                key={`mobile-cover-${currentTrack.id}`}
                 src={displayCover}
                 alt="Cover"
                 draggable={false}
@@ -714,6 +715,7 @@ export default function AudioPlayer() {
               <div style={{ position: 'relative', width: '100%', height: '100%' }}>
                 <div className="skeleton-bg" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, transition: 'opacity 0.3s' }}></div>
                 <img
+                  key={`desktop-cover-${currentTrack.id}`}
                   src={displayCover}
                   alt="Cover"
                   style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', position: 'relative', zIndex: 1, opacity: 0, transition: 'opacity 0.3s ease' }}
