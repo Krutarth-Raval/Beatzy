@@ -137,29 +137,11 @@ export default function AudioPlayer() {
             return currentTrack.audioUrl;
           });
         } else if (isActive) {
-          // Check if prefetched
-          if (window[`prefetched_${currentTrack.id}`]) {
-             setAudioUrl((prevUrl) => {
-                if (prevUrl && prevUrl.startsWith('blob:')) URL.revokeObjectURL(prevUrl);
-                return window[`prefetched_${currentTrack.id}`];
-             });
-          } else {
-            // Fetch stream URL for online tracks (Search/Smart Shuffle)
-            const res = await fetch(`/api/download?id=${currentTrack.id}`);
-            if (res.ok) {
-              const data = await res.json();
-              if (data && data.url && isActive) {
-                setAudioUrl((prevUrl) => {
-                  if (prevUrl && prevUrl.startsWith('blob:')) URL.revokeObjectURL(prevUrl);
-                  return data.url;
-                });
-              } else if (isActive) {
-                playNext();
-              }
-            } else if (isActive) {
-              playNext();
-            }
-          }
+          // Stream directly from our Next.js backend proxy to bypass Piped CORS and IP binding errors
+          setAudioUrl((prevUrl) => {
+            if (prevUrl && prevUrl.startsWith('blob:')) URL.revokeObjectURL(prevUrl);
+            return `/api/download-direct?id=${currentTrack.id}`;
+          });
         }
       } catch (err) {
         console.error("Failed to load audio", err);
@@ -283,34 +265,6 @@ export default function AudioPlayer() {
       });
     }
   }, [currentTrack, isPlaying, displayCover, queueName]);
-
-  // Prefetch Next Track Stream URL
-  useEffect(() => {
-    let isActive = true;
-    const { queue, queueIndex, repeat, shuffle } = usePlayerStore.getState();
-    const nextIndex = queueIndex + 1;
-    let nextTrack = null;
-    
-    if (nextIndex < queue.length) {
-      nextTrack = queue[nextIndex];
-    } else if (repeat === 'all' && queue.length > 0) {
-      nextTrack = queue[0];
-    }
-
-    if (nextTrack && !nextTrack.playlistId && !nextTrack.audioUrl && !window[`prefetched_${nextTrack.id}`]) {
-      // It's an online track that we haven't prefetched yet
-      fetch(`/api/download?id=${nextTrack.id}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data && data.url && isActive) {
-            window[`prefetched_${nextTrack.id}`] = data.url;
-          }
-        })
-        .catch(err => console.error("Prefetch failed", err));
-    }
-    
-    return () => { isActive = false; };
-  }, [currentTrack?.id]);
 
   useEffect(() => {
     if (audioUrl && isPlaying && audioRef.current) {
