@@ -14,6 +14,7 @@ export default function AudioPlayer() {
   const audioRef = useRef(null);
   const [audioUrl, setAudioUrl] = useState(null);
   const [isBlobLoading, setIsBlobLoading] = useState(false);
+  const [isBuffering, setIsBuffering] = useState(false);
   const loadedTrackIdRef = useRef(null);
   const [isMobileExpanded, setIsMobileExpanded] = useState(false);
   const [bgColor, setBgColor] = useState('var(--bg-main)');
@@ -373,6 +374,10 @@ export default function AudioPlayer() {
       onTimeUpdate={handleTimeUpdate}
       onLoadedMetadata={handleLoadedMetadata}
       onEnded={handleEnded}
+      onWaiting={() => setIsBuffering(true)}
+      onPlaying={() => setIsBuffering(false)}
+      onCanPlay={() => setIsBuffering(false)}
+      onLoadStart={() => setIsBuffering(true)}
     />
   );
 
@@ -490,10 +495,10 @@ export default function AudioPlayer() {
                 step="any"
                 value={progress}
                 onChange={handleProgressChange}
-                className={`custom-range ${isBlobLoading ? 'loading-progress' : ''}`}
+                className={`custom-range ${isBlobLoading || isBuffering ? 'loading-progress' : ''}`}
                 style={{
                   width: '100%',
-                  background: isBlobLoading 
+                  background: (isBlobLoading || isBuffering)
                     ? undefined 
                     : `linear-gradient(to right, var(--primary-color) ${(progress / safeDuration) * 100}%, var(--bg-hover) ${(progress / safeDuration) * 100}%)`
                 }}
@@ -516,10 +521,10 @@ export default function AudioPlayer() {
                 <SkipBack size={36} fill="currentColor" />
               </button>
 
-              <button onClick={togglePlay} disabled={isBlobLoading} style={{
+              <button onClick={togglePlay} disabled={isBlobLoading || isBuffering} style={{
                 width: '80px', height: '80px', borderRadius: '50%', backgroundColor: 'var(--text-primary)', color: 'var(--bg-main)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: isBlobLoading ? 'not-allowed' : 'pointer',
-                opacity: isBlobLoading ? 0.5 : 1, boxShadow: '0 8px 20px rgba(0,0,0,0.3)'
+                display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: (isBlobLoading || isBuffering) ? 'not-allowed' : 'pointer',
+                opacity: (isBlobLoading || isBuffering) ? 0.5 : 1, boxShadow: '0 8px 20px rgba(0,0,0,0.3)'
               }}>
                 {isPlaying ? <Pause size={36} fill="currentColor" /> : <Play size={36} fill="currentColor" style={{ marginLeft: '4px' }} />}
               </button>
@@ -653,12 +658,12 @@ export default function AudioPlayer() {
 
           <button
             onClick={(e) => { e.stopPropagation(); togglePlay(); }}
-            disabled={isBlobLoading}
+            disabled={isBlobLoading || isBuffering}
             style={{
               width: '42px', height: '42px', borderRadius: '50%',
               backgroundColor: 'var(--text-primary)', color: 'var(--bg-main)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              opacity: isBlobLoading ? 0.5 : 1,
+              opacity: (isBlobLoading || isBuffering) ? 0.5 : 1,
             }}
           >
             {isPlaying
@@ -678,9 +683,9 @@ export default function AudioPlayer() {
         {/* Non-interactive progress strip at the very bottom */}
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '2px', backgroundColor: 'var(--border-color)' }}>
           <div 
-            className={isBlobLoading ? 'loading-progress-mobile' : ''}
+            className={(isBlobLoading || isBuffering) ? 'loading-progress-mobile' : ''}
             style={{
-              width: isBlobLoading ? '100%' : `${Math.min((progress / safeDuration) * 100, 100)}%`,
+              width: (isBlobLoading || isBuffering) ? '100%' : `${Math.min((progress / safeDuration) * 100, 100)}%`,
               height: '100%',
               backgroundColor: 'var(--primary-color)',
               transition: 'width 0.5s linear',
@@ -735,9 +740,9 @@ export default function AudioPlayer() {
             <button onClick={(e) => { e.stopPropagation(); playPrevious(); }} style={{ color: 'var(--text-primary)' }}>
               <SkipBack size={24} fill="currentColor" />
             </button>
-            <button onClick={(e) => { e.stopPropagation(); togglePlay(); }} disabled={isBlobLoading} style={{
+            <button onClick={(e) => { e.stopPropagation(); togglePlay(); }} disabled={isBlobLoading || isBuffering} style={{
               width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'var(--text-primary)', color: 'var(--bg-main)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: isBlobLoading ? 0.5 : 1,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: (isBlobLoading || isBuffering) ? 0.5 : 1,
             }}>
               {isPlaying ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" style={{ marginLeft: '2px' }} />}
             </button>
@@ -759,11 +764,11 @@ export default function AudioPlayer() {
               value={progress}
               onClick={(e) => e.stopPropagation()}
               onChange={handleProgressChange}
-              className={`custom-range ${isBlobLoading ? 'loading-progress' : ''}`}
+              className={`custom-range ${(isBlobLoading || isBuffering) ? 'loading-progress' : ''}`}
               style={{
                 flex: 1,
                 cursor: 'pointer',
-                background: isBlobLoading
+                background: (isBlobLoading || isBuffering)
                   ? undefined
                   : `linear-gradient(to right, var(--primary-color) ${(progress / safeDuration) * 100}%, var(--bg-hover) ${(progress / safeDuration) * 100}%)`
               }}
