@@ -438,7 +438,7 @@ export default function AudioPlayer() {
           </span>
 
           <button
-            onClick={() => setShowQueueModal(true)}
+            onClick={() => setShowQueueModal(!showQueueModal)}
             style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', padding: '4px' }}
           >
             <List size={24} />
@@ -808,7 +808,7 @@ export default function AudioPlayer() {
             style={{ width: '80px', height: '4px', accentColor: 'var(--text-secondary)', cursor: 'pointer' }}
           />
           <div style={{ width: '1px', height: '24px', backgroundColor: 'var(--border-color)', margin: '0 8px' }}></div>
-          <button onClick={(e) => { e.stopPropagation(); setShowQueueModal(true); }} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px' }}>
+          <button onClick={(e) => { e.stopPropagation(); setShowQueueModal(!showQueueModal); }} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px' }}>
             <List size={20} />
           </button>
           <button onClick={(e) => { e.stopPropagation(); handleToggleSave(e); }} style={{
