@@ -290,6 +290,14 @@ export default function AudioPlayer() {
 
   const handleProgressChange = (e) => {
     const newTime = parseFloat(e.target.value);
+    setDragProgress(newTime);
+    setIsDraggingProgress(true);
+  };
+
+  const handleProgressRelease = (e) => {
+    const newTime = parseFloat(e.target.value);
+    setIsDraggingProgress(false);
+    setDragProgress(null);
     seek(newTime);
   };
 
@@ -493,18 +501,21 @@ export default function AudioPlayer() {
                 min={0}
                 max={safeDuration}
                 step="any"
-                value={progress}
+                value={isDraggingProgress && dragProgress !== null ? dragProgress : progress}
                 onChange={handleProgressChange}
+                onMouseUp={handleProgressRelease}
+                onTouchEnd={handleProgressRelease}
+                onKeyUp={handleProgressRelease}
                 className={`custom-range ${(isBlobLoading || (isBuffering && progress === 0)) ? 'loading-progress' : ''}`}
                 style={{
                   width: '100%',
                   background: (isBlobLoading || (isBuffering && progress === 0))
                     ? undefined 
-                    : `linear-gradient(to right, var(--primary-color) ${(progress / safeDuration) * 100}%, var(--bg-hover) ${(progress / safeDuration) * 100}%)`
+                    : `linear-gradient(to right, var(--primary-color) ${((isDraggingProgress && dragProgress !== null ? dragProgress : progress) / safeDuration) * 100}%, var(--bg-hover) ${((isDraggingProgress && dragProgress !== null ? dragProgress : progress) / safeDuration) * 100}%)`
                 }}
               />
               <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: '500' }}>
-                <span>{formatTime(progress)}</span>
+                <span>{formatTime(isDraggingProgress && dragProgress !== null ? dragProgress : progress)}</span>
                 <span>{formatTime(safeDuration)}</span>
               </div>
             </div>
@@ -755,22 +766,25 @@ export default function AudioPlayer() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', width: '100%', maxWidth: '500px', gap: '10px' }}>
-            <span className="hide-on-mobile" style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', minWidth: '40px', textAlign: 'right' }}>{formatTime(progress)}</span>
+            <span className="hide-on-mobile" style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', minWidth: '40px', textAlign: 'right' }}>{formatTime(isDraggingProgress && dragProgress !== null ? dragProgress : progress)}</span>
             <input
               type="range"
               min={0}
               max={safeDuration}
               step="any"
-              value={progress}
+              value={isDraggingProgress && dragProgress !== null ? dragProgress : progress}
               onClick={(e) => e.stopPropagation()}
               onChange={handleProgressChange}
+              onMouseUp={handleProgressRelease}
+              onTouchEnd={handleProgressRelease}
+              onKeyUp={handleProgressRelease}
               className={`custom-range ${(isBlobLoading || (isBuffering && progress === 0)) ? 'loading-progress' : ''}`}
               style={{
                 flex: 1,
                 cursor: 'pointer',
                 background: (isBlobLoading || (isBuffering && progress === 0))
                   ? undefined
-                  : `linear-gradient(to right, var(--primary-color) ${(progress / safeDuration) * 100}%, var(--bg-hover) ${(progress / safeDuration) * 100}%)`
+                  : `linear-gradient(to right, var(--primary-color) ${((isDraggingProgress && dragProgress !== null ? dragProgress : progress) / safeDuration) * 100}%, var(--bg-hover) ${((isDraggingProgress && dragProgress !== null ? dragProgress : progress) / safeDuration) * 100}%)`
               }}
             />
             <span className="hide-on-mobile" style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', minWidth: '40px' }}>{formatTime(safeDuration)}</span>
