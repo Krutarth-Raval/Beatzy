@@ -832,7 +832,7 @@ export default function AudioPlayer() {
       {/* ── DESKTOP QUEUE MODAL ───────────────────────────────── */}
       {showQueueModal && window.innerWidth > 768 && (
         <div className="animate-fade-in-up" style={{
-          position: 'absolute', bottom: '100px', right: '20px', width: '380px', maxHeight: '60vh',
+          position: 'fixed', bottom: '100px', right: '20px', width: '380px', maxHeight: '60vh',
           backgroundColor: 'rgba(20, 20, 20, 0.6)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', zIndex: 3000, display: 'flex', flexDirection: 'column',
           borderRadius: '12px', boxShadow: '0 10px 40px rgba(0,0,0,0.5)', overflow: 'hidden',
           border: '1px solid var(--border-color)'
