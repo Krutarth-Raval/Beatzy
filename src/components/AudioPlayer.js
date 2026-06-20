@@ -826,7 +826,62 @@ export default function AudioPlayer() {
             {isSaved ? <Check size={16} color="var(--bg-main)" /> : <Plus size={16} color="var(--bg-main)" />}
           </button>
         </div>
+        </div>
       </div>
+      
+      {/* ── DESKTOP QUEUE MODAL ───────────────────────────────── */}
+      {showQueueModal && window.innerWidth > 768 && (
+        <div className="animate-fade-in-up" style={{
+          position: 'absolute', bottom: '100px', right: '20px', width: '380px', maxHeight: '60vh',
+          backgroundColor: 'var(--bg-input)', zIndex: 3000, display: 'flex', flexDirection: 'column',
+          borderRadius: '12px', boxShadow: '0 10px 40px rgba(0,0,0,0.5)', overflow: 'hidden',
+          border: '1px solid var(--border-color)'
+        }}>
+          <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)' }}>
+            <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '700', color: 'var(--text-primary)' }}>Up Next</h3>
+            <button onClick={(e) => { e.stopPropagation(); setShowQueueModal(false); }} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px' }}>
+              <ChevronDown size={20} />
+            </button>
+          </div>
+          <div className="content-scroll" style={{ flex: 1, padding: '12px', overflowY: 'auto' }}>
+            {(() => {
+              let displayQueue = queue.slice(queueIndex);
+              if (repeat === 'all' && displayQueue.length < queue.length) {
+                displayQueue = [...displayQueue, ...queue.slice(0, queueIndex)];
+              }
+
+              return displayQueue.map((track, i) => {
+                const isPlayingQueue = i === 0;
+                return (
+                  <div key={`desktop-queue-${track.id}-${i}`} onClick={(e) => { e.stopPropagation(); playTrack(track, queue, queueName); }} style={{
+                    display: 'flex', alignItems: 'center', gap: '12px', padding: '10px',
+                    backgroundColor: isPlayingQueue ? 'rgba(255,255,255,0.08)' : 'transparent',
+                    borderRadius: '8px', cursor: 'pointer', transition: 'background-color 0.2s'
+                  }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '6px', overflow: 'hidden', flexShrink: 0, backgroundColor: 'var(--bg-main)', position: 'relative' }}>
+                      {(track.coverArt || track.thumbnail) && (() => {
+                        const rawThumb = track.coverArt || track.thumbnail;
+                        const cover = rawThumb.includes('i.ytimg.com') ? rawThumb.split('?')[0] : rawThumb.replace(/=w\d+-h\d+.*/, '=w200-h200-l90-rj');
+                        return (
+                          <>
+                            <div className="skeleton-bg" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, transition: 'opacity 0.3s' }}></div>
+                            <img src={cover} style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'relative', zIndex: 1, opacity: 0, transition: 'opacity 0.3s ease' }} alt="cover" onLoad={(e) => { e.currentTarget.style.opacity = 1; if (e.currentTarget.previousSibling) e.currentTarget.previousSibling.style.opacity = 0; }} onError={(e) => { if (!e.target.dataset.error) { e.target.dataset.error = true; e.target.src = `https://i.ytimg.com/vi/${track.id}/mqdefault.jpg`; } else { if (e.currentTarget.previousSibling) e.currentTarget.previousSibling.style.opacity = 0; } }} />
+                          </>
+                        );
+                      })()}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ margin: 0, fontWeight: '600', fontSize: '0.9rem', color: isPlayingQueue ? 'var(--primary-color)' : 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{track.title}</p>
+                      <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{track.artists}</p>
+                    </div>
+                    {isPlayingQueue && <div className="equalizer-anim" style={{ color: 'var(--primary-color)', fontSize: '0.8rem' }}>...</div>}
+                  </div>
+                );
+              });
+            })()}
+          </div>
+        </div>
+      )}
     </div>
     </>
   );
