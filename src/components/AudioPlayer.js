@@ -4,9 +4,11 @@ import React, { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import usePlayerStore from '@/store/usePlayerStore';
 import { getAudioBlob } from '@/lib/db';
-import { Play, Pause, SkipForward, SkipBack, Shuffle, Repeat, Repeat1, Volume2, VolumeX, ChevronDown, List } from 'lucide-react';
+import { Play, Pause, SkipForward, SkipBack, Shuffle, Repeat, Repeat1, Volume2, VolumeX, ChevronDown, List, Loader2, Music, Sparkles, Plus, Check } from 'lucide-react';
 import { FastAverageColor } from 'fast-average-color';
 import Image from 'next/image';
+import PlaylistSaveModal from './PlaylistSaveModal';
+import { removeTrack, addTrackToPlaylist } from '@/lib/db';
 
 export default function AudioPlayer() {
   const audioRef = useRef(null);
@@ -15,9 +17,40 @@ export default function AudioPlayer() {
   const loadedTrackIdRef = useRef(null);
   const [isMobileExpanded, setIsMobileExpanded] = useState(false);
   const [bgColor, setBgColor] = useState('var(--bg-main)');
+
+  // Inject shimmer animation styles
+  useEffect(() => {
+    if (!document.getElementById('shimmer-style')) {
+      const style = document.createElement('style');
+      style.id = 'shimmer-style';
+      style.innerHTML = `
+        @keyframes shimmerPulse {
+          0% { opacity: 0.4; }
+          50% { opacity: 1; }
+          100% { opacity: 0.4; }
+        }
+        .loading-progress {
+          background: var(--text-secondary) !important;
+          animation: shimmerPulse 1s infinite ease-in-out !important;
+        }
+        .loading-progress::-webkit-slider-thumb {
+          display: none;
+          opacity: 0;
+        }
+        .loading-progress::-moz-range-thumb {
+          display: none;
+          opacity: 0;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }, []);
   const [dragProgress, setDragProgress] = useState(null);
   const [isDraggingProgress, setIsDraggingProgress] = useState(false);
   const [showQueueModal, setShowQueueModal] = useState(false);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  const saveActionRef = useRef(false);
 
   const {
     currentTrack,
@@ -31,6 +64,7 @@ export default function AudioPlayer() {
     isMuted,
     shuffle,
     repeat,
+    isFetchingRelated,
     setAudioRef,
     togglePlay,
     playNext,
@@ -67,6 +101,17 @@ export default function AudioPlayer() {
         return;
       }
 
+      // Clear previous audio URL to stop old song immediately
+      setAudioUrl((prevUrl) => {
+        if (prevUrl && prevUrl.startsWith('blob:')) URL.revokeObjectURL(prevUrl);
+        return null;
+      });
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.removeAttribute('src');
+        audioRef.current.load();
+      }
+
       setIsBlobLoading(true);
 
       try {
@@ -91,6 +136,30 @@ export default function AudioPlayer() {
             if (prevUrl && prevUrl.startsWith('blob:')) URL.revokeObjectURL(prevUrl);
             return currentTrack.audioUrl;
           });
+        } else if (isActive) {
+          // Check if prefetched
+          if (window[`prefetched_${currentTrack.id}`]) {
+             setAudioUrl((prevUrl) => {
+                if (prevUrl && prevUrl.startsWith('blob:')) URL.revokeObjectURL(prevUrl);
+                return window[`prefetched_${currentTrack.id}`];
+             });
+          } else {
+            // Fetch stream URL for online tracks (Search/Smart Shuffle)
+            const res = await fetch(`/api/download?id=${currentTrack.id}`);
+            if (res.ok) {
+              const data = await res.json();
+              if (data && data.url && isActive) {
+                setAudioUrl((prevUrl) => {
+                  if (prevUrl && prevUrl.startsWith('blob:')) URL.revokeObjectURL(prevUrl);
+                  return data.url;
+                });
+              } else if (isActive) {
+                playNext();
+              }
+            } else if (isActive) {
+              playNext();
+            }
+          }
         }
       } catch (err) {
         console.error("Failed to load audio", err);
@@ -104,7 +173,79 @@ export default function AudioPlayer() {
     return () => {
       isActive = false;
     };
+  }, [currentTrack?.id]);
+
+  // Check if saved
+  useEffect(() => {
+    const saved = !!currentTrack?.playlistId;
+    setIsSaved(saved);
+    saveActionRef.current = saved;
   }, [currentTrack]);
+
+  const handleToggleSave = async (e) => {
+    if (e) e.stopPropagation();
+    const playlistId = currentTrack?.playlistId || queue.find(t => t.playlistId)?.playlistId;
+    
+    if (!playlistId) {
+      setShowSaveModal(true);
+      return;
+    }
+
+    const willSave = !isSaved;
+    setIsSaved(willSave);
+    saveActionRef.current = willSave;
+
+    if (willSave) {
+      try {
+        const trackIdBeingSaved = currentTrack.id;
+        const res = await fetch(`/api/download-direct?id=${currentTrack.id}`);
+        if (!res.ok) throw new Error("Failed to download audio data");
+        const contentType = res.headers.get('content-type') || 'audio/mp4';
+        const blob = await res.blob();
+
+        // Check if user hasn't toggled off while downloading
+        if (saveActionRef.current && usePlayerStore.getState().currentTrack?.id === trackIdBeingSaved) {
+          await addTrackToPlaylist(playlistId, currentTrack, blob);
+          window.dispatchEvent(new CustomEvent('playlist-updated'));
+          usePlayerStore.setState(state => {
+            const newQueue = [...state.queue];
+            const idx = newQueue.findIndex(t => t.id === currentTrack.id);
+            if (idx !== -1) newQueue[idx] = { ...newQueue[idx], playlistId };
+            return {
+              queue: newQueue,
+              currentTrack: state.currentTrack?.id === currentTrack.id ? { ...state.currentTrack, playlistId } : state.currentTrack
+            };
+          });
+        }
+      } catch (err) {
+        console.error("Save failed", err);
+        if (saveActionRef.current) setIsSaved(false);
+      }
+    } else {
+      try {
+        await removeTrack(currentTrack.id);
+        window.dispatchEvent(new CustomEvent('playlist-updated'));
+        usePlayerStore.setState(state => {
+          const newQueue = [...state.queue];
+          const idx = newQueue.findIndex(t => t.id === currentTrack.id);
+          if (idx !== -1) {
+            const updated = { ...newQueue[idx] };
+            delete updated.playlistId;
+            newQueue[idx] = updated;
+          }
+          const current = state.currentTrack;
+          if (current?.id === currentTrack.id) {
+            const updatedCurr = { ...current };
+            delete updatedCurr.playlistId;
+            return { queue: newQueue, currentTrack: updatedCurr };
+          }
+          return { queue: newQueue };
+        });
+      } catch (err) {
+        console.error("Remove failed", err);
+      }
+    }
+  };
 
   // Dominant color extraction has been removed to prevent 429 Too Many Requests errors from CDNs.
 
@@ -141,9 +282,36 @@ export default function AudioPlayer() {
         }
       });
     }
-  }, [currentTrack, isPlaying, queueName]);
+  }, [currentTrack, isPlaying, displayCover, queueName]);
 
-  // Autoplay when url loads or play state changes
+  // Prefetch Next Track Stream URL
+  useEffect(() => {
+    let isActive = true;
+    const { queue, queueIndex, repeat, shuffle } = usePlayerStore.getState();
+    const nextIndex = queueIndex + 1;
+    let nextTrack = null;
+    
+    if (nextIndex < queue.length) {
+      nextTrack = queue[nextIndex];
+    } else if (repeat === 'all' && queue.length > 0) {
+      nextTrack = queue[0];
+    }
+
+    if (nextTrack && !nextTrack.playlistId && !nextTrack.audioUrl && !window[`prefetched_${nextTrack.id}`]) {
+      // It's an online track that we haven't prefetched yet
+      fetch(`/api/download?id=${nextTrack.id}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.url && isActive) {
+            window[`prefetched_${nextTrack.id}`] = data.url;
+          }
+        })
+        .catch(err => console.error("Prefetch failed", err));
+    }
+    
+    return () => { isActive = false; };
+  }, [currentTrack?.id]);
+
   useEffect(() => {
     if (audioUrl && isPlaying && audioRef.current) {
       audioRef.current.play().catch(e => console.error("Autoplay prevented:", e));
@@ -225,11 +393,9 @@ export default function AudioPlayer() {
 
     if (prevProgress !== null) {
       const prevPercentage = prevProgress / safeDuration;
-      // Prevent jumping from near 100% to near 0% when crossing 12 o'clock clockwise
       if (prevPercentage > 0.75 && percentage < 0.25) {
         percentage = 1;
       }
-      // Prevent jumping from near 0% to near 100% when crossing 12 o'clock anti-clockwise
       else if (prevPercentage < 0.25 && percentage > 0.75) {
         percentage = 0;
       }
@@ -241,7 +407,6 @@ export default function AudioPlayer() {
   const handlePointerDown = (e) => {
     setIsDraggingProgress(true);
     const rect = e.currentTarget.getBoundingClientRect();
-    // On initial touch, allow jumping anywhere by passing null for prevProgress
     const newProgress = updateProgressFromPointer(rect, e.clientX, e.clientY, null);
     dragProgressRef.current = newProgress;
     setDragProgress(newProgress);
@@ -271,7 +436,7 @@ export default function AudioPlayer() {
 
   const pathname = usePathname();
 
-  if (!currentTrack) return null; // Don't render anything if no track is queued
+  if (!currentTrack) return null;
 
   const audioTag = (
     <audio
@@ -297,24 +462,22 @@ export default function AudioPlayer() {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        padding: '24px', // Reduced top padding to move elements up
+        padding: '24px',
         overflowY: 'hidden',
         overflowX: 'hidden',
         boxSizing: 'border-box',
         width: '100%',
-        backgroundColor: '#050505', // solid base so nothing bleeds through
+        backgroundColor: '#050505',
       }}>
-        {/* Blurred Background Overlay from Cover Art */}
         <div style={{
           position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
           backgroundImage: displayCover ? `url(${displayCover})` : 'none',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           filter: 'blur(80px) brightness(0.5)',
-          opacity: 1, // Full opacity on top of black base
+          opacity: 1,
           zIndex: -1,
         }} />
-        {/* Gradient fade to ensure text readability */}
         <div style={{
           position: 'fixed',
           top: 0, left: 0, right: 0, bottom: 0,
@@ -322,7 +485,6 @@ export default function AudioPlayer() {
           zIndex: -1,
         }} />
 
-        {/* Top Bar */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: '40px' }}>
           <button
             onClick={() => setIsMobileExpanded(false)}
@@ -342,10 +504,8 @@ export default function AudioPlayer() {
           </button>
         </div>
 
-        {/* Main Content Flexible */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', width: '100%' }}>
 
-          {/* Track Info (Top) */}
           <div style={{ textAlign: 'center', width: '100%', marginTop: '10px' }}>
             <h2 style={{ color: 'var(--text-primary)', margin: 0, fontSize: '1.8rem', fontWeight: '800', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {currentTrack.title}
@@ -355,7 +515,6 @@ export default function AudioPlayer() {
             </p>
           </div>
 
-          {/* Square Cover Art */}
           <div style={{ width: '100%', maxWidth: '350px', aspectRatio: '1/1', margin: '24px auto', borderRadius: '12px', overflow: 'hidden', backgroundColor: 'var(--bg-input)', boxShadow: '0 15px 35px rgba(0,0,0,0.6)' }}>
             {displayCover ? (
               <img
@@ -375,14 +534,27 @@ export default function AudioPlayer() {
             )}
           </div>
 
-          {/* Flexible Space */}
           <div style={{ flex: 1, minHeight: '5px' }}></div>
 
-          {/* Bottom Group */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', paddingBottom: '10px' }}>
 
-            {/* Linear Progress */}
-            <div style={{ width: '100%', maxWidth: '350px', display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '30px' }}>
+            <div style={{ width: '100%', maxWidth: '350px', display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '30px', position: 'relative' }}>
+              <div style={{ position: 'absolute', right: 0, top: '-45px' }}>
+                <button onClick={handleToggleSave} style={{
+                  borderRadius: '50%',
+                  width: '32px',
+                  height: '32px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'var(--text-primary)',
+                  border: 'none', cursor: 'pointer', transition: 'transform 0.2s',
+                  transform: saveActionRef.current ? 'scale(1.1)' : 'scale(1)'
+                }}>
+                  {isSaved ? <Check size={18} color="var(--bg-main)" /> : <Plus size={18} color="var(--bg-main)" />}
+                </button>
+              </div>
+
               <input
                 type="range"
                 min={0}
@@ -390,10 +562,12 @@ export default function AudioPlayer() {
                 step="any"
                 value={progress}
                 onChange={handleProgressChange}
-                className="custom-range"
+                className={`custom-range ${isBlobLoading ? 'loading-progress' : ''}`}
                 style={{
                   width: '100%',
-                  background: `linear-gradient(to right, var(--primary-color) ${(progress / safeDuration) * 100}%, var(--bg-hover) ${(progress / safeDuration) * 100}%)`
+                  background: isBlobLoading 
+                    ? undefined 
+                    : `linear-gradient(to right, var(--primary-color) ${(progress / safeDuration) * 100}%, var(--bg-hover) ${(progress / safeDuration) * 100}%)`
                 }}
               />
               <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: '500' }}>
@@ -402,10 +576,12 @@ export default function AudioPlayer() {
               </div>
             </div>
 
-            {/* Controls */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', maxWidth: '320px', marginBottom: '20px' }}>
-              <button onClick={toggleShuffle} style={{ background: 'none', border: 'none', color: shuffle ? 'var(--primary-color)' : 'var(--text-secondary)', cursor: 'pointer' }}>
-                <Shuffle size={24} />
+              <button onClick={toggleShuffle} style={{ background: 'none', border: 'none', color: shuffle === 'smart' ? 'var(--primary-color)' : shuffle === 'on' ? 'var(--text-primary)' : 'var(--text-secondary)', cursor: 'pointer' }}>
+                <div style={{ position: 'relative' }}>
+                  <Shuffle size={24} />
+                  {shuffle === 'smart' && <Sparkles size={12} style={{ position: 'absolute', top: -6, right: -6, color: 'var(--primary-color)' }} />}
+                </div>
               </button>
 
               <button onClick={playPrevious} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer' }}>
@@ -420,8 +596,8 @@ export default function AudioPlayer() {
                 {isPlaying ? <Pause size={36} fill="currentColor" /> : <Play size={36} fill="currentColor" style={{ marginLeft: '4px' }} />}
               </button>
 
-              <button onClick={playNext} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer' }}>
-                <SkipForward size={36} fill="currentColor" />
+              <button onClick={playNext} disabled={isFetchingRelated} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: isFetchingRelated ? 'not-allowed' : 'pointer' }}>
+                {isFetchingRelated ? <Loader2 size={36} className="animate-spin" color="var(--primary-color)" /> : <SkipForward size={36} fill="currentColor" />}
               </button>
 
               <button onClick={toggleRepeat} style={{ background: 'none', border: 'none', color: repeat !== 'off' ? 'var(--primary-color)' : 'var(--text-secondary)', cursor: 'pointer' }}>
@@ -431,7 +607,6 @@ export default function AudioPlayer() {
           </div>
         </div>
 
-        {/* Queue Modal Overlay */}
         {showQueueModal && (
           <div className="animate-fade-in-up" style={{
             position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
@@ -445,10 +620,7 @@ export default function AudioPlayer() {
             </div>
             <div className="content-scroll" style={{ flex: 1, padding: '16px', paddingBottom: '40px' }}>
               {(() => {
-                // Slice the queue to only show current and upcoming songs
                 let displayQueue = queue.slice(queueIndex);
-                
-                // If we are at the end and repeat is on, append the beginning so the queue always looks populated
                 if (repeat === 'all' && displayQueue.length < queue.length) {
                   displayQueue = [...displayQueue, ...queue.slice(0, queueIndex)];
                 }
@@ -462,8 +634,17 @@ export default function AudioPlayer() {
                       backgroundColor: isPlayingQueue ? 'rgba(255,255,255,0.1)' : 'transparent',
                       borderRadius: '8px', cursor: 'pointer'
                     }}>
-                      <div style={{ width: '48px', height: '48px', borderRadius: '8px', overflow: 'hidden', flexShrink: 0, backgroundColor: 'var(--bg-input)' }}>
-                        {(track.coverArt || track.thumbnail) && <img src={(track.coverArt || track.thumbnail).replace(/=w\d+-h\d+.*/, '=w200-h200-l90-rj').replace(/\/(default|mqdefault|hqdefault|sddefault)(\.[a-z]+)$/i, '/maxresdefault$2')} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="cover" onError={(e) => { if (!e.target.dataset.error) { e.target.dataset.error = true; e.target.src = `https://i.ytimg.com/vi/${track.id}/mqdefault.jpg`; } }} />}
+                      <div style={{ width: '48px', height: '48px', borderRadius: '4px', overflow: 'hidden', flexShrink: 0, backgroundColor: 'var(--bg-input)', position: 'relative' }}>
+                        {(track.coverArt || track.thumbnail) && (() => {
+                          const rawThumb = track.coverArt || track.thumbnail;
+                          const cover = rawThumb.includes('i.ytimg.com') ? rawThumb.split('?')[0] : rawThumb.replace(/=w\d+-h\d+.*/, '=w200-h200-l90-rj');
+                          return (
+                            <>
+                              <div className="skeleton-bg" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, transition: 'opacity 0.3s' }}></div>
+                              <img src={cover} style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'relative', zIndex: 1, opacity: 0, transition: 'opacity 0.3s ease' }} alt="cover" onLoad={(e) => { e.currentTarget.style.opacity = 1; if (e.currentTarget.previousSibling) e.currentTarget.previousSibling.style.opacity = 0; }} onError={(e) => { if (!e.target.dataset.error) { e.target.dataset.error = true; e.target.src = `https://i.ytimg.com/vi/${track.id}/mqdefault.jpg`; } else { if (e.currentTarget.previousSibling) e.currentTarget.previousSibling.style.opacity = 0; } }} />
+                            </>
+                          );
+                        })()}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <p style={{ margin: 0, fontWeight: '600', color: isPlayingQueue ? 'var(--primary-color)' : 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{track.title}</p>
@@ -504,14 +685,18 @@ export default function AudioPlayer() {
       {/* ── MOBILE MINI BAR ──────────────────────────────────── */}
       <div className="mobile-mini-bar">
         {/* Thumbnail */}
-        <div style={{ width: '56px', height: '56px', borderRadius: '12px', overflow: 'hidden', backgroundColor: 'var(--bg-input)', marginRight: '16px', flexShrink: 0, boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}>
+        <div style={{ width: '56px', height: '56px', borderRadius: '12px', overflow: 'hidden', backgroundColor: 'var(--bg-input)', marginRight: '16px', flexShrink: 0, boxShadow: '0 4px 12px rgba(0,0,0,0.3)', position: 'relative' }}>
           {displayCover ? (
-            <img
-              src={displayCover}
-              alt="Cover"
-              style={{ width: '100%', height: '100%', objectFit: 'cover', userSelect: 'none', WebkitUserDrag: 'none' }}
-              onError={(e) => { if (!e.target.dataset.error) { e.target.dataset.error = true; e.target.src = `https://i.ytimg.com/vi/${currentTrack.id}/hqdefault.jpg`; } }}
-            />
+            <>
+              <div className="skeleton-bg" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, transition: 'opacity 0.3s' }}></div>
+              <img
+                src={displayCover}
+                alt="Cover"
+                style={{ width: '100%', height: '100%', objectFit: 'cover', userSelect: 'none', WebkitUserDrag: 'none', position: 'relative', zIndex: 1, opacity: 0, transition: 'opacity 0.3s ease' }}
+                onLoad={(e) => { e.currentTarget.style.opacity = 1; if (e.currentTarget.previousSibling) e.currentTarget.previousSibling.style.opacity = 0; }}
+                onError={(e) => { if (!e.target.dataset.error) { e.target.dataset.error = true; e.target.src = `https://i.ytimg.com/vi/${currentTrack.id}/hqdefault.jpg`; } else { if (e.currentTarget.previousSibling) e.currentTarget.previousSibling.style.opacity = 0; } }}
+              />
+            </>
           ) : (
             <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Music size={24} color="var(--text-secondary)" />
@@ -554,10 +739,11 @@ export default function AudioPlayer() {
           </button>
 
           <button
-            onClick={(e) => { e.stopPropagation(); playNext(); }}
-            style={{ color: 'var(--text-primary)', padding: '4px' }}
+            onClick={(e) => { e.stopPropagation(); if (!isFetchingRelated) playNext(); }}
+            disabled={isFetchingRelated}
+            style={{ color: 'var(--text-primary)', padding: '4px', cursor: isFetchingRelated ? 'not-allowed' : 'pointer' }}
           >
-            <SkipForward size={22} fill="currentColor" />
+            {isFetchingRelated ? <Loader2 size={22} className="animate-spin" color="var(--primary-color)" /> : <SkipForward size={22} fill="currentColor" />}
           </button>
         </div>
 
@@ -578,12 +764,16 @@ export default function AudioPlayer() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
           <div style={{ width: '50px', aspectRatio: '1', backgroundColor: 'var(--bg-input)', borderRadius: '8px', overflow: 'hidden', flexShrink: 0 }}>
             {displayCover ? (
-              <img
-                src={displayCover}
-                alt="Cover"
-                style={{ width: '100%', height: '100%', objectFit: 'cover', userSelect: 'none', WebkitUserDrag: 'none' }}
-                onError={(e) => { if (!e.target.dataset.error) { e.target.dataset.error = true; e.target.src = `https://i.ytimg.com/vi/${currentTrack.id}/hqdefault.jpg`; } }}
-              />
+              <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                <div className="skeleton-bg" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, transition: 'opacity 0.3s' }}></div>
+                <img
+                  src={displayCover}
+                  alt="Cover"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', position: 'relative', zIndex: 1, opacity: 0, transition: 'opacity 0.3s ease' }}
+                  onLoad={(e) => { e.currentTarget.style.opacity = 1; if (e.currentTarget.previousSibling) e.currentTarget.previousSibling.style.opacity = 0; }}
+                  onError={(e) => { if (!e.target.dataset.error) { e.target.dataset.error = true; e.target.src = `https://i.ytimg.com/vi/${currentTrack.id}/hqdefault.jpg`; } else { if (e.currentTarget.previousSibling) e.currentTarget.previousSibling.style.opacity = 0; } }}
+                />
+              </div>
             ) : (
               <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Music size={24} color="var(--text-secondary)" />
@@ -598,13 +788,19 @@ export default function AudioPlayer() {
               {currentTrack.artists}
             </span>
           </div>
+          <button onClick={handleToggleSave} style={{ background: 'none', border: 'none', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {isSaved ? <Check size={24} color="var(--primary-color)" /> : <Plus size={24} color="var(--text-secondary)" />}
+          </button>
         </div>
 
         {/* 2. Controls & Progress */}
         <div style={{ flex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-            <button onClick={(e) => { e.stopPropagation(); toggleShuffle(); }} style={{ color: shuffle ? 'var(--primary-color)' : 'var(--text-secondary)' }}>
-              <Shuffle size={18} />
+            <button onClick={(e) => { e.stopPropagation(); toggleShuffle(); }} style={{ background: 'none', border: 'none', color: shuffle === 'smart' ? 'var(--primary-color)' : shuffle === 'on' ? 'var(--text-primary)' : 'var(--text-secondary)', cursor: 'pointer' }}>
+              <div style={{ position: 'relative' }}>
+                <Shuffle size={20} fill={shuffle !== 'off' ? 'currentColor' : 'none'} />
+                {shuffle === 'smart' && <Sparkles size={10} style={{ position: 'absolute', top: -4, right: -4, color: 'var(--primary-color)' }} />}
+              </div>
             </button>
             <button onClick={(e) => { e.stopPropagation(); playPrevious(); }} style={{ color: 'var(--text-primary)' }}>
               <SkipBack size={24} fill="currentColor" />
@@ -615,8 +811,8 @@ export default function AudioPlayer() {
             }}>
               {isPlaying ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" style={{ marginLeft: '2px' }} />}
             </button>
-            <button onClick={(e) => { e.stopPropagation(); playNext(); }} style={{ color: 'var(--text-primary)' }}>
-              <SkipForward size={24} fill="currentColor" />
+            <button onClick={(e) => { e.stopPropagation(); if (!isFetchingRelated) playNext(); }} disabled={isFetchingRelated} style={{ color: 'var(--text-primary)', cursor: isFetchingRelated ? 'not-allowed' : 'pointer', background: 'none', border: 'none', padding: 0 }}>
+              {isFetchingRelated ? <Loader2 size={24} className="animate-spin" color="var(--primary-color)" /> : <SkipForward size={24} fill="currentColor" />}
             </button>
             <button onClick={(e) => { e.stopPropagation(); toggleRepeat(); }} style={{ color: repeat !== 'off' ? 'var(--primary-color)' : 'var(--text-secondary)' }}>
               {repeat === 'one' ? <Repeat1 size={18} /> : <Repeat size={18} />}
@@ -633,11 +829,13 @@ export default function AudioPlayer() {
               value={progress}
               onClick={(e) => e.stopPropagation()}
               onChange={handleProgressChange}
-              className="custom-range"
+              className={`custom-range ${isBlobLoading ? 'loading-progress' : ''}`}
               style={{
                 flex: 1,
                 cursor: 'pointer',
-                background: `linear-gradient(to right, var(--primary-color) ${(progress / safeDuration) * 100}%, var(--bg-hover) ${(progress / safeDuration) * 100}%)`
+                background: isBlobLoading
+                  ? undefined
+                  : `linear-gradient(to right, var(--primary-color) ${(progress / safeDuration) * 100}%, var(--bg-hover) ${(progress / safeDuration) * 100}%)`
               }}
             />
             <span className="hide-on-mobile" style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', minWidth: '40px' }}>{formatTime(safeDuration)}</span>

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from 'react';
-import { ArrowLeft, Play, Pause, Trash2, Folder, Loader2, Plus, Edit2, Check, X, Redo2, Copy, Shuffle, GripVertical, Image as ImageIcon, Camera, ChevronDown, Menu, Library, ChevronRight, Disc3 } from 'lucide-react';
+import { ArrowLeft, Play, Pause, Trash2, Folder, Loader2, Plus, Edit2, Check, X, Redo2, Copy, Shuffle, GripVertical, Image as ImageIcon, Camera, ChevronDown, Menu, Library, ChevronRight, Disc3, Sparkles } from 'lucide-react';
 import { getPlaylists, deletePlaylist, getTracksForPlaylist, removeTrack, createPlaylist, updatePlaylist, moveTrackToPlaylist, copyTrackToPlaylist, reorderTracks } from '@/lib/db';
 import { polyfill } from 'mobile-drag-drop';
 import { scrollBehaviourDragImageTranslateOverride } from 'mobile-drag-drop/scroll-behaviour';
@@ -50,10 +50,34 @@ export default function PlaylistsPage() {
     const touchmoveListener = () => { };
     window.addEventListener('touchmove', touchmoveListener, { passive: false });
 
+    const handlePlaylistUpdate = () => {
+      loadPlaylists();
+      // If we are currently viewing a playlist, we should refresh its tracks
+      // but we need to pass the selectedPlaylist.
+      // Since selectedPlaylist is in state, we can't easily access the latest state in this closure
+      // unless we use a ref or add it as a dependency.
+      // But we can trigger a refetch by dispatching another event, or better, add another useEffect that depends on selectedPlaylist
+    };
+    window.addEventListener('playlist-updated', handlePlaylistUpdate);
+
     return () => {
       window.removeEventListener('touchmove', touchmoveListener);
+      window.removeEventListener('playlist-updated', handlePlaylistUpdate);
     };
   }, []);
+
+  useEffect(() => {
+    const handleTracksUpdate = () => {
+      if (selectedPlaylist) {
+        // Silently reload tracks in the background without showing loading spinner
+        getTracksForPlaylist(selectedPlaylist.id)
+          .then(t => setTracks(t))
+          .catch(e => console.error(e));
+      }
+    };
+    window.addEventListener('playlist-updated', handleTracksUpdate);
+    return () => window.removeEventListener('playlist-updated', handleTracksUpdate);
+  }, [selectedPlaylist]);
 
   const loadPlaylists = async () => {
     setLoading(true);
@@ -159,7 +183,7 @@ export default function PlaylistsPage() {
     if (isThisPlaylistPlaying) {
       togglePlay();
     } else {
-      if (shuffle) {
+      if (shuffle !== 'off') {
         const shuffled = [...tracks].sort(() => Math.random() - 0.5);
         playTrack(shuffled[0], shuffled, selectedPlaylist?.name);
       } else {
@@ -359,7 +383,7 @@ export default function PlaylistsPage() {
                 >
                   <div style={{ width: '40px', height: '40px', borderRadius: '8px', backgroundColor: 'var(--bg-main)', overflow: 'hidden', flexShrink: 0 }}>
                     {p.coverArt ? (
-                      <img src={p.coverArt} alt="Cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <img src={p.coverArt.split('?')[0]} alt="Cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
                       <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🎵</div>
                     )}
@@ -458,16 +482,16 @@ export default function PlaylistsPage() {
                       <button
                         onClick={() => {
                           toggleShuffle();
-                          if (!shuffle && tracks.length > 0) {
+                          if (shuffle === 'off' && tracks.length > 0) {
                             const shuffled = [...tracks].sort(() => Math.random() - 0.5);
                             playTrack(shuffled[0], shuffled, selectedPlaylist?.name);
                           }
                         }}
                         disabled={tracks.length === 0}
-                        style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: shuffle ? 'var(--text-primary)' : 'var(--bg-hover)', color: shuffle ? 'var(--bg-main)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: tracks.length === 0 ? 'not-allowed' : 'pointer', opacity: tracks.length === 0 ? 0.5 : 1, transition: 'all 0.2s' }}
-                        title="Toggle Shuffle"
+                        title={`Shuffle: ${shuffle}`}
+                        style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: shuffle === 'smart' ? 'var(--primary-color)' : shuffle === 'on' ? 'var(--text-primary)' : 'var(--bg-hover)', color: shuffle !== 'off' ? 'var(--bg-main)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: tracks.length === 0 ? 'not-allowed' : 'pointer', opacity: tracks.length === 0 ? 0.5 : 1, transition: 'all 0.2s' }}
                       >
-                        <Shuffle size={20} />
+                        {shuffle === 'smart' ? <Sparkles size={20} /> : <Shuffle size={20} />}
                       </button>
                       <button
                         onClick={handlePlayPlaylist}
@@ -556,8 +580,17 @@ export default function PlaylistsPage() {
                         >
                           {isEditing ? <GripVertical size={20} style={{ cursor: 'grab', touchAction: 'none' }} /> : (isCurrentlyPlaying && isPlaying ? <div className="equalizer-anim">...</div> : index + 1)}
                         </div>
-                        <div style={{ width: '40px', height: '40px', borderRadius: '6px', backgroundColor: 'var(--bg-input)', overflow: 'hidden' }}>
-                          {(track.coverArt || track.thumbnail) && <img src={track.coverArt || track.thumbnail} alt="Cover" style={{ width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }} />}
+                        <div style={{ width: '40px', height: '40px', borderRadius: '6px', backgroundColor: 'var(--bg-input)', overflow: 'hidden', position: 'relative' }}>
+                          {(track.coverArt || track.thumbnail) && (() => {
+                            const rawThumb = track.coverArt || track.thumbnail;
+                            const cover = rawThumb.includes('i.ytimg.com') ? rawThumb.split('?')[0] : rawThumb.replace(/=w\\d+-h\\d+.*/, '=w200-h200-l90-rj');
+                            return (
+                              <>
+                                <div className="skeleton-bg" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, transition: 'opacity 0.3s' }}></div>
+                                <img src={cover} alt="Cover" style={{ width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none', position: 'relative', zIndex: 1, opacity: 0, transition: 'opacity 0.3s ease' }} onLoad={(e) => { e.currentTarget.style.opacity = 1; if (e.currentTarget.previousSibling) e.currentTarget.previousSibling.style.opacity = 0; }} onError={(e) => { if (!e.target.dataset.error) { e.target.dataset.error = true; e.target.src = `https://i.ytimg.com/vi/${track.id}/hqdefault.jpg`; } else { e.currentTarget.previousSibling.style.opacity = 0; } }} />
+                              </>
+                            );
+                          })()}
                         </div>
                         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                           <span style={{ fontWeight: '600', color: isCurrentlyPlaying ? 'var(--primary-color)' : 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{track.title}</span>

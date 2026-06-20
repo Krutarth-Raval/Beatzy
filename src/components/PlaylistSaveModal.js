@@ -137,7 +137,11 @@ export default function PlaylistSaveModal({ track, onClose, onSaveDirectly }) {
       const blob = new Blob(chunks, { type: contentType });
       await addTrackToPlaylist(playlistId, { ...track, id: ytId }, blob);
 
-      onClose();
+      if (onSaveDirectly) {
+        onSaveDirectly(playlistId);
+      } else {
+        onClose();
+      }
     } catch (e) {
       console.error(e);
       setError(e.message || 'An error occurred while saving the track');

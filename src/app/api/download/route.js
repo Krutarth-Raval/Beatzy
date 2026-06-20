@@ -28,62 +28,49 @@ export async function GET(request) {
       'https://pipedapi.syncpundit.io'
     ];
 
-    for (const instance of pipedInstances) {
-      try {
-        const res = await fetch(`${instance}/streams/${id}`, {
-          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.audioStreams && data.audioStreams.length > 0) {
-            const m4aStreams = data.audioStreams.filter(s => s.mimeType === 'audio/mp4' || s.format === 'M4A');
-            if (m4aStreams.length > 0) {
-              m4aStreams.sort((a, b) => b.bitrate - a.bitrate);
-              return NextResponse.json({ 
-                url: m4aStreams[0].url, 
-                title: 'Downloaded Audio',
-                ext: 'm4a'
-              });
-            } else {
-              return NextResponse.json({ 
-                url: data.audioStreams[0].url, 
-                title: 'Downloaded Audio',
-                ext: 'webm'
-              });
-            }
+    try {
+      const fetchPromises = pipedInstances.map(async (instance) => {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+
+        try {
+          const res = await fetch(`${instance}/streams/${id}`, {
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
+        if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+        const data = await res.json();
+        if (data && data.audioStreams && data.audioStreams.length > 0) {
+          const m4aStreams = data.audioStreams.filter(s => s.mimeType === 'audio/mp4' || s.format === 'M4A');
+          if (m4aStreams.length > 0) {
+            m4aStreams.sort((a, b) => b.bitrate - a.bitrate);
+            return {
+              url: m4aStreams[0].url,
+              title: 'Downloaded Audio',
+              ext: 'm4a'
+            };
+          } else {
+            return {
+              url: data.audioStreams[0].url,
+              title: 'Downloaded Audio',
+              ext: 'webm'
+            };
           }
         }
-      } catch (e) {
-        // Silently try next
-      }
-    }
-    // ==========================================
-    // METHOD 1: RAPID API (Vercel Production)
-    // ==========================================
-    if (process.env.RAPIDAPI_KEY) {
-      console.log('Using RapidAPI for extraction...');
-      
-      // Using the popular 'youtube-mp36' API from RapidAPI
-      const response = await fetch(`https://youtube-mp36.p.rapidapi.com/dl?id=${id}`, {
-        method: 'GET',
-        headers: {
-          'X-RapidAPI-Key': process.env.RAPIDAPI_KEY,
-          'X-RapidAPI-Host': 'youtube-mp36.p.rapidapi.com'
+        throw new Error('No audio streams found');
+        } catch (err) {
+          clearTimeout(timeoutId);
+          throw err;
         }
       });
-      
-      const data = await response.json();
-      
-      // If the API successfully returns a download link, return it immediately
-      if (data && (data.link || data.url)) {
-        return NextResponse.json({ 
-          url: data.link || data.url, 
-          title: data.title || 'Downloaded Audio',
-          ext: 'mp3'
-        });
-      }
-      console.warn('RapidAPI extraction failed. Falling back to next method...', data);
+
+      const fastResult = await Promise.any(fetchPromises);
+      return NextResponse.json(fastResult);
+    } catch (e) {
+      console.log('All Piped instances failed or timed out, falling back directly to yt-dlp...');
     }
+
 
 
 
