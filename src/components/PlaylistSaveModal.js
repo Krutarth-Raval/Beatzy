@@ -93,7 +93,22 @@ export default function PlaylistSaveModal({ track, onClose, onSaveDirectly }) {
 
       const contentLength = blobRes.headers.get('content-length');
       const contentType = blobRes.headers.get('content-type') || 'audio/mp4';
-      const total = contentLength ? parseInt(contentLength, 10) : 0;
+      let total = contentLength ? parseInt(contentLength, 10) : 0;
+      
+      // If Content-Length is missing, estimate based on track duration (approx 16KB/sec for 128kbps audio)
+      if (!total && track.duration) {
+        let durationSecs = 0;
+        if (typeof track.duration === 'number') {
+          durationSecs = track.duration;
+        } else if (typeof track.duration === 'string') {
+          const parts = track.duration.split(':').reverse();
+          durationSecs += (parseInt(parts[0]) || 0) + (parseInt(parts[1] || 0) * 60) + (parseInt(parts[2] || 0) * 3600);
+        }
+        if (durationSecs > 0) {
+          total = durationSecs * 16000;
+        }
+      }
+
       let loaded = 0;
 
       const reader = blobRes.body.getReader();
@@ -101,14 +116,22 @@ export default function PlaylistSaveModal({ track, onClose, onSaveDirectly }) {
 
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done) {
+          setDownloadProgress('100%');
+          break;
+        }
         chunks.push(value);
         loaded += value.length;
-        setDownloadProgress(
-          total
-            ? `${Math.round((loaded / total) * 100)}%`
-            : `${(loaded / (1024 * 1024)).toFixed(1)} MB`
-        );
+        
+        if (total) {
+          // Cap at 99% during download in case the estimate is slightly off
+          let percent = Math.round((loaded / total) * 100);
+          if (percent > 99) percent = 99;
+          setDownloadProgress(`${percent}%`);
+        } else {
+          // Fallback if we still don't have a total
+          setDownloadProgress(`${(loaded / (1024 * 1024)).toFixed(1)} MB`);
+        }
       }
 
       const blob = new Blob(chunks, { type: contentType });

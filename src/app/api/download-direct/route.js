@@ -13,34 +13,8 @@ export async function GET(request) {
   try {
     let directUrl = null;
 
-    // 1. Try Cobalt API for lightning fast extraction
-    try {
-      const cobaltRes = await fetch('https://co.wuk.sh/api/json', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
-        },
-        body: JSON.stringify({
-          url: `https://www.youtube.com/watch?v=${id}`,
-          isAudioOnly: true,
-          aFormat: 'mp3'
-        })
-      });
-
-      if (cobaltRes.ok) {
-        const cobaltData = await cobaltRes.json();
-        if (cobaltData && cobaltData.url) {
-          directUrl = cobaltData.url;
-        }
-      }
-    } catch (e) {
-      console.warn('Cobalt API failed', e);
-    }
-
-    // 2. Try RapidAPI if Cobalt fails
-    if (!directUrl && process.env.RAPIDAPI_KEY) {
+    // 1. Try RapidAPI
+    if (process.env.RAPIDAPI_KEY) {
       try {
         const rapidRes = await fetch(`https://youtube-mp36.p.rapidapi.com/dl?id=${id}`, {
           method: 'GET',

@@ -95,7 +95,7 @@ export async function GET(request) {
       const search = await yt.music.search(query, { type: 'song' });
       videos = (search.songs?.contents || []).slice(0, 10).map(v => {
         const rawThumb = v.thumbnails?.at(-1)?.url || v.thumbnails?.[0]?.url || '';
-        const hiResThumb = rawThumb ? rawThumb.replace(/=w\d+-h\d+.*/, '=w1200-h1200-l90-rj') : rawThumb;
+        const hiResThumb = rawThumb ? rawThumb.replace(/=w\d+-h\d+.*/, '=w500-h500-l90-rj') : rawThumb;
         return {
           id: v.id,
           title: v.title || 'Unknown Title',

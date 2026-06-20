@@ -44,40 +44,7 @@ export async function GET(request) {
       console.warn('RapidAPI extraction failed. Falling back to next method...', data);
     }
 
-    // ==========================================
-    // METHOD 1.5: COBALT API (Lightning Fast)
-    // ==========================================
-    console.log('Trying Cobalt API for high-speed unthrottled download...');
-    try {
-      const cobaltRes = await fetch('https://co.wuk.sh/api/json', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-        },
-        body: JSON.stringify({
-          url: `https://www.youtube.com/watch?v=${id}`,
-          isAudioOnly: true,
-          aFormat: 'mp3'
-        })
-      });
 
-      if (cobaltRes.ok) {
-        const cobaltData = await cobaltRes.json();
-        if (cobaltData && cobaltData.url) {
-          return NextResponse.json({ 
-            url: cobaltData.url, 
-            title: 'Downloaded Audio',
-            ext: 'mp3'
-          });
-        }
-      } else {
-        console.warn('Cobalt API returned status:', cobaltRes.status);
-      }
-    } catch (e) {
-      console.warn('Cobalt API failed, falling back to local yt-dlp...', e.message);
-    }
 
     // ==========================================
     // METHOD 2: YT-DLP (Local Fallback)
@@ -142,11 +109,20 @@ export async function GET(request) {
   } catch (error) {
     console.error('Download API error:', error);
     
+    // Fallback domains
+    const fallbackDomains = [
+      'australie-eta.fr',
+      'omenrosebank.co.za',
+      'lapinede-aix.fr',
+      'en.mygomp3.com'
+    ];
+    const randomDomain = fallbackDomains[Math.floor(Math.random() * fallbackDomains.length)];
+    
     // Vercel Fallback: If Vercel's IP is banned by YouTube bots, return a third-party download link
     // This ensures that the download button ALWAYS works even if the server is blocked.
     return NextResponse.json({ 
-      url: `https://carto-conches.fr/dl/${id}`,
-      title: 'Download via Carto-Conches (Fallback)'
+      url: `https://${randomDomain}/dl/${id}`,
+      title: `Download via ${randomDomain} (Fallback)`
     });
   }
 }

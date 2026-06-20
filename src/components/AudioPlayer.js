@@ -363,6 +363,12 @@ export default function AudioPlayer() {
                 alt="Cover"
                 draggable={false}
                 style={{ width: '100%', height: '100%', objectFit: 'cover', userSelect: 'none', WebkitUserDrag: 'none' }}
+                onError={(e) => {
+                  if (!e.target.dataset.error) {
+                    e.target.dataset.error = true;
+                    e.target.src = `https://i.ytimg.com/vi/${currentTrack.id}/hqdefault.jpg`;
+                  }
+                }}
               />
             ) : (
               <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '5rem' }}>🎵</div>
@@ -457,7 +463,7 @@ export default function AudioPlayer() {
                       borderRadius: '8px', cursor: 'pointer'
                     }}>
                       <div style={{ width: '48px', height: '48px', borderRadius: '8px', overflow: 'hidden', flexShrink: 0, backgroundColor: 'var(--bg-input)' }}>
-                        {(track.coverArt || track.thumbnail) && <img src={(track.coverArt || track.thumbnail).replace(/=w\d+-h\d+.*/, '=w200-h200-l90-rj').replace(/\/(default|mqdefault|hqdefault|sddefault)(\.[a-z]+)$/i, '/maxresdefault$2')} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="cover" />}
+                        {(track.coverArt || track.thumbnail) && <img src={(track.coverArt || track.thumbnail).replace(/=w\d+-h\d+.*/, '=w200-h200-l90-rj').replace(/\/(default|mqdefault|hqdefault|sddefault)(\.[a-z]+)$/i, '/maxresdefault$2')} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="cover" onError={(e) => { if (!e.target.dataset.error) { e.target.dataset.error = true; e.target.src = `https://i.ytimg.com/vi/${track.id}/mqdefault.jpg`; } }} />}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <p style={{ margin: 0, fontWeight: '600', color: isPlayingQueue ? 'var(--primary-color)' : 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{track.title}</p>
@@ -504,6 +510,7 @@ export default function AudioPlayer() {
               src={displayCover}
               alt="Cover"
               style={{ width: '100%', height: '100%', objectFit: 'cover', userSelect: 'none', WebkitUserDrag: 'none' }}
+              onError={(e) => { if (!e.target.dataset.error) { e.target.dataset.error = true; e.target.src = `https://i.ytimg.com/vi/${currentTrack.id}/hqdefault.jpg`; } }}
             />
           ) : (
             <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -575,6 +582,7 @@ export default function AudioPlayer() {
                 src={displayCover}
                 alt="Cover"
                 style={{ width: '100%', height: '100%', objectFit: 'cover', userSelect: 'none', WebkitUserDrag: 'none' }}
+                onError={(e) => { if (!e.target.dataset.error) { e.target.dataset.error = true; e.target.src = `https://i.ytimg.com/vi/${currentTrack.id}/hqdefault.jpg`; } }}
               />
             ) : (
               <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
