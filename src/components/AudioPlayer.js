@@ -375,6 +375,21 @@ export default function AudioPlayer() {
 
   if (!currentTrack) return null;
 
+  const preloadTags = [];
+  // Preload up to 4 previous and 4 next tracks for instant skipping
+  for (let i = Math.max(0, queueIndex - 4); i <= Math.min(queue.length - 1, queueIndex + 4); i++) {
+    if (i !== queueIndex && queue[i]) {
+      preloadTags.push(
+        <audio
+          key={`preload-${queue[i].id}-${i}`}
+          preload="auto"
+          src={`/api/download-direct?id=${queue[i].id}`}
+          style={{ display: 'none' }}
+        />
+      );
+    }
+  }
+
   const audioTag = (
     <>
       <audio
@@ -388,13 +403,7 @@ export default function AudioPlayer() {
         onCanPlay={() => setIsBuffering(false)}
         onLoadStart={() => setIsBuffering(true)}
       />
-      {queue[queueIndex + 1] && (
-        <audio
-          preload="auto"
-          src={`/api/download-direct?id=${queue[queueIndex + 1].id}`}
-          style={{ display: 'none' }}
-        />
-      )}
+      {preloadTags}
     </>
   );
 
