@@ -58,6 +58,31 @@ button {
   outline: none;
 }
 
+@keyframes shimmerPulse {
+  0% { opacity: 0.3; background-color: var(--text-secondary); }
+  50% { opacity: 1; background-color: var(--primary-color); }
+  100% { opacity: 0.3; background-color: var(--text-secondary); }
+}
+
+.loading-progress {
+  background: var(--text-secondary) !important;
+  animation: shimmerPulse 1.5s infinite ease-in-out !important;
+}
+
+.loading-progress::-webkit-slider-thumb {
+  display: none !important;
+  opacity: 0 !important;
+}
+
+.loading-progress::-moz-range-thumb {
+  display: none !important;
+  opacity: 0 !important;
+}
+
+.loading-progress-mobile {
+  animation: shimmerPulse 1.5s infinite ease-in-out !important;
+}
+
 /* Glassmorphism utility classes */
 .glass-panel {
   background: var(--glass-bg);

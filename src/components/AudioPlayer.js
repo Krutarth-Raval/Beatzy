@@ -18,33 +18,7 @@ export default function AudioPlayer() {
   const [isMobileExpanded, setIsMobileExpanded] = useState(false);
   const [bgColor, setBgColor] = useState('var(--bg-main)');
 
-  // Inject shimmer animation styles
-  useEffect(() => {
-    if (!document.getElementById('shimmer-style')) {
-      const style = document.createElement('style');
-      style.id = 'shimmer-style';
-      style.innerHTML = `
-        @keyframes shimmerPulse {
-          0% { opacity: 0.4; }
-          50% { opacity: 1; }
-          100% { opacity: 0.4; }
-        }
-        .loading-progress {
-          background: var(--text-secondary) !important;
-          animation: shimmerPulse 1s infinite ease-in-out !important;
-        }
-        .loading-progress::-webkit-slider-thumb {
-          display: none;
-          opacity: 0;
-        }
-        .loading-progress::-moz-range-thumb {
-          display: none;
-          opacity: 0;
-        }
-      `;
-      document.head.appendChild(style);
-    }
-  }, []);
+  // Removed dynamic CSS injection, now natively in globals.css
   const [dragProgress, setDragProgress] = useState(null);
   const [isDraggingProgress, setIsDraggingProgress] = useState(false);
   const [showQueueModal, setShowQueueModal] = useState(false);
@@ -703,11 +677,13 @@ export default function AudioPlayer() {
 
         {/* Non-interactive progress strip at the very bottom */}
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '2px', backgroundColor: 'var(--border-color)' }}>
-          <div style={{
-            width: `${Math.min((progress / safeDuration) * 100, 100)}%`,
-            height: '100%',
-            backgroundColor: 'var(--primary-color)',
-            transition: 'width 0.5s linear',
+          <div 
+            className={isBlobLoading ? 'loading-progress-mobile' : ''}
+            style={{
+              width: isBlobLoading ? '100%' : `${Math.min((progress / safeDuration) * 100, 100)}%`,
+              height: '100%',
+              backgroundColor: 'var(--primary-color)',
+              transition: 'width 0.5s linear',
           }} />
         </div>
       </div>
