@@ -556,9 +556,9 @@ export default function AudioPlayer() {
         {showQueueModal && (
           <div className="animate-fade-in-up" style={{
             position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'var(--bg-main)', zIndex: 3000, display: 'flex', flexDirection: 'column'
+            backgroundColor: 'var(--glass-bg)', backdropFilter: 'blur(25px)', zIndex: 3000, display: 'flex', flexDirection: 'column'
           }}>
-            <div style={{ padding: '24px 24px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--bg-input)' }}>
+            <div style={{ padding: '24px 24px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', backgroundColor: 'transparent' }}>
               <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '700' }}>Up Next</h3>
               <button onClick={() => setShowQueueModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', padding: '4px' }}>
                 <ChevronDown size={24} />
@@ -833,7 +833,7 @@ export default function AudioPlayer() {
       {showQueueModal && window.innerWidth > 768 && (
         <div className="animate-fade-in-up" style={{
           position: 'absolute', bottom: '100px', right: '20px', width: '380px', maxHeight: '60vh',
-          backgroundColor: 'var(--bg-input)', zIndex: 3000, display: 'flex', flexDirection: 'column',
+          backgroundColor: 'var(--glass-bg)', backdropFilter: 'blur(25px)', zIndex: 3000, display: 'flex', flexDirection: 'column',
           borderRadius: '12px', boxShadow: '0 10px 40px rgba(0,0,0,0.5)', overflow: 'hidden',
           border: '1px solid var(--border-color)'
         }}>
