@@ -809,6 +809,7 @@ export default function Home() {
                   <img
                     src={albumData.coverArt}
                     alt="Cover"
+                    draggable={false}
                     style={{ width: '150px', height: '150px', borderRadius: '8px', boxShadow: '0 4px 20px rgba(0,0,0,0.3)' }}
                   />
                 )}
@@ -861,7 +862,7 @@ export default function Home() {
                 {results.map((track) => (
                   <div key={track.id} className="track-card">
                     <div style={{ position: 'relative', paddingTop: '56.25%', backgroundColor: '#000' }}>
-                      <img src={track.thumbnail} alt={track.title} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.8 }} />
+                      <img src={track.thumbnail} alt={track.title} draggable={false} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.8 }} />
                       <div style={{ position: 'absolute', bottom: '8px', right: '8px', backgroundColor: 'rgba(0,0,0,0.8)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem' }}>
                         {track.duration}
                       </div>

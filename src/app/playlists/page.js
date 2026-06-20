@@ -267,11 +267,25 @@ export default function PlaylistsPage() {
   const getSortedTracks = () => {
     let sorted = [...tracks];
     if (sortMode === "Old to New") {
-      sorted.sort((a, b) => a.orderIndex - b.orderIndex);
+      sorted.sort((a, b) => (a.addedAt || a.orderIndex) - (b.addedAt || b.orderIndex));
     } else if (sortMode === "New to Old") {
-      sorted.sort((a, b) => b.orderIndex - a.orderIndex);
+      sorted.sort((a, b) => (b.addedAt || b.orderIndex) - (a.addedAt || a.orderIndex));
     }
     return sorted;
+  };
+
+  const formatDurationMs = (ms) => {
+    if (ms == null) return '';
+    if (typeof ms === 'string' && ms.includes(':')) return ms;
+    const totalSeconds = typeof ms === 'number' ? Math.floor(ms / 1000) : Math.floor(parseInt(ms) / 1000);
+    if (isNaN(totalSeconds)) return '';
+    const hours = Math.floor(totalSeconds / 3600);
+    const mins = Math.floor((totalSeconds % 3600) / 60);
+    const secs = totalSeconds % 60;
+    if (hours > 0) {
+      return `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   const formatTotalDuration = () => {
@@ -279,10 +293,14 @@ export default function PlaylistsPage() {
     tracks.forEach(t => {
       if (t.duration != null) {
         if (typeof t.duration === 'number') {
-          totalSeconds += t.duration > 0 ? t.duration : 0;
+          totalSeconds += Math.floor((t.duration > 0 ? t.duration : 0) / 1000);
         } else if (typeof t.duration === 'string') {
-          const parts = t.duration.split(':').reverse();
-          totalSeconds += (parseInt(parts[0]) || 0) + (parseInt(parts[1]) || 0) * 60 + (parseInt(parts[2]) || 0) * 3600;
+          if (t.duration.includes(':')) {
+            const parts = t.duration.split(':').reverse();
+            totalSeconds += (parseInt(parts[0]) || 0) + (parseInt(parts[1]) || 0) * 60 + (parseInt(parts[2]) || 0) * 3600;
+          } else {
+            totalSeconds += Math.floor(parseInt(t.duration) / 1000) || 0;
+          }
         }
       }
     });
@@ -312,12 +330,11 @@ export default function PlaylistsPage() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
-            <h2 style={{ fontSize: '1.8rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '12px', margin: 0 }}>
-              <Folder size={28} color="var(--primary-color)" /> My Playlists
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', gap: '8px' }}>
+            <h2 style={{ fontSize: '1.4rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px', margin: 0, whiteSpace: 'nowrap' }}>
+              <Folder size={24} color="var(--primary-color)" /> My Playlists
             </h2>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <PwaInstallButton />
+            <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
               <button onClick={handleCreatePlaylist} title="Create Playlist" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '36px', height: '36px', borderRadius: '50%', backgroundColor: 'var(--bg-hover)', border: 'none', color: 'var(--text-primary)', cursor: 'pointer' }}>
                 <Plus size={20} />
               </button>
@@ -531,7 +548,7 @@ export default function PlaylistsPage() {
                         onMouseOver={e => e.currentTarget.style.backgroundColor = isCurrentlyPlaying || isDragged ? 'rgba(255,255,255,0.05)' : 'var(--bg-hover)'}
                         onMouseOut={e => e.currentTarget.style.backgroundColor = isCurrentlyPlaying || isDragged ? 'rgba(255,255,255,0.05)' : 'transparent'}
                       >
-                        <div 
+                        <div
                           style={{ width: '24px', textAlign: 'center', color: isCurrentlyPlaying ? 'var(--primary-color)' : 'var(--text-secondary)', fontWeight: '600' }}
                           onPointerDown={() => isEditing && setActiveDragHandle(index)}
                           onPointerUp={() => setActiveDragHandle(null)}
@@ -546,7 +563,7 @@ export default function PlaylistsPage() {
                           <span style={{ fontWeight: '600', color: isCurrentlyPlaying ? 'var(--primary-color)' : 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{track.title}</span>
                           <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{track.artists}</span>
                         </div>
-                        <span className="hide-on-mobile" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{track.duration}</span>
+                        <span className="hide-on-mobile" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{formatDurationMs(track.duration)}</span>
 
                         {/* Edit Mode Actions */}
                         {isEditing && (
@@ -765,7 +782,7 @@ export default function PlaylistsPage() {
           >
             <Plus size={18} /> <span style={{ fontWeight: '600' }}>Create Playlist</span>
           </button>
-          
+
           <PwaInstallButton variant="sidebar" />
 
           <div

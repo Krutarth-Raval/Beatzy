@@ -85,6 +85,7 @@ export async function addTrackToPlaylist(playlistId, trackData, audioBlob) {
     duration: trackData.duration || '0:00',
     coverArt: trackData.coverArt || trackData.thumbnail || null,
     orderIndex: Date.now(), // default to adding at the end
+    addedAt: Date.now(),
   };
 
   const tx = db.transaction(['tracks', 'audio_blobs', 'playlists'], 'readwrite');
@@ -175,6 +176,7 @@ export async function moveTrackToPlaylist(trackId, newPlaylistId) {
   if (track) {
     track.playlistId = newPlaylistId;
     track.orderIndex = Date.now(); // Put at end of new playlist
+    track.addedAt = Date.now();
     await store.put(track);
   }
   await tx.done;
@@ -191,7 +193,7 @@ export async function copyTrackToPlaylist(trackId, newPlaylistId) {
   
   if (track && blobRecord) {
     const newTrackId = crypto.randomUUID();
-    const newTrack = { ...track, id: newTrackId, playlistId: newPlaylistId, orderIndex: Date.now() };
+    const newTrack = { ...track, id: newTrackId, playlistId: newPlaylistId, orderIndex: Date.now(), addedAt: Date.now() };
     await trackStore.put(newTrack);
     await blobStore.put({ id: newTrackId, blob: blobRecord.blob });
   }
