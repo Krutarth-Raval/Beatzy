@@ -58,15 +58,15 @@ button {
   outline: none;
 }
 
-@keyframes shimmerPulse {
-  0% { opacity: 0.3; background-color: var(--text-secondary); }
-  50% { opacity: 1; background-color: var(--primary-color); }
-  100% { opacity: 0.3; background-color: var(--text-secondary); }
+@keyframes sweep {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 .loading-progress {
-  background: var(--text-secondary) !important;
-  animation: shimmerPulse 1.5s infinite ease-in-out !important;
+  background: linear-gradient(90deg, var(--bg-input) 25%, var(--text-secondary) 50%, var(--bg-input) 75%) !important;
+  background-size: 200% 100% !important;
+  animation: sweep 1.5s infinite linear !important;
 }
 
 .loading-progress::-webkit-slider-thumb {
@@ -80,7 +80,9 @@ button {
 }
 
 .loading-progress-mobile {
-  animation: shimmerPulse 1.5s infinite ease-in-out !important;
+  background: linear-gradient(90deg, var(--bg-input) 25%, var(--text-secondary) 50%, var(--bg-input) 75%) !important;
+  background-size: 200% 100% !important;
+  animation: sweep 1.5s infinite linear !important;
 }
 
 /* Glassmorphism utility classes */
