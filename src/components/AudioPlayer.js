@@ -176,71 +176,20 @@ export default function AudioPlayer() {
     const saved = !!currentTrack?.playlistId;
     setIsSaved(saved);
     saveActionRef.current = saved;
+
+    const handleCloudSave = (e) => {
+      if (e.detail?.trackId === currentTrack?.id) {
+        setIsSaved(true);
+        saveActionRef.current = true;
+      }
+    };
+    window.addEventListener('track-saved-to-cloud', handleCloudSave);
+    return () => window.removeEventListener('track-saved-to-cloud', handleCloudSave);
   }, [currentTrack]);
 
-  const handleToggleSave = async (e) => {
+  const handleToggleSave = (e) => {
     if (e) e.stopPropagation();
-    const playlistId = currentTrack?.playlistId || queue.find(t => t.playlistId)?.playlistId;
-    
-    if (!playlistId) {
-      setShowSaveModal(true);
-      return;
-    }
-
-    const willSave = !isSaved;
-    setIsSaved(willSave);
-    saveActionRef.current = willSave;
-
-    if (willSave) {
-      try {
-        const trackIdBeingSaved = currentTrack.id;
-        const res = await fetch(`/api/download-direct?id=${currentTrack.id}`);
-        if (!res.ok) throw new Error("Failed to download audio data");
-        const contentType = res.headers.get('content-type') || 'audio/mp4';
-        const blob = await res.blob();
-
-        // Check if user hasn't toggled off while downloading
-        if (saveActionRef.current && usePlayerStore.getState().currentTrack?.id === trackIdBeingSaved) {
-          await addTrackToPlaylist(playlistId, currentTrack, blob);
-          window.dispatchEvent(new CustomEvent('playlist-updated'));
-          usePlayerStore.setState(state => {
-            const newQueue = [...state.queue];
-            const idx = newQueue.findIndex(t => t.id === currentTrack.id);
-            if (idx !== -1) newQueue[idx] = { ...newQueue[idx], playlistId };
-            return {
-              queue: newQueue,
-              currentTrack: state.currentTrack?.id === currentTrack.id ? { ...state.currentTrack, playlistId } : state.currentTrack
-            };
-          });
-        }
-      } catch (err) {
-        console.error("Save failed", err);
-        if (saveActionRef.current) setIsSaved(false);
-      }
-    } else {
-      try {
-        await removeTrack(currentTrack.id);
-        window.dispatchEvent(new CustomEvent('playlist-updated'));
-        usePlayerStore.setState(state => {
-          const newQueue = [...state.queue];
-          const idx = newQueue.findIndex(t => t.id === currentTrack.id);
-          if (idx !== -1) {
-            const updated = { ...newQueue[idx] };
-            delete updated.playlistId;
-            newQueue[idx] = updated;
-          }
-          const current = state.currentTrack;
-          if (current?.id === currentTrack.id) {
-            const updatedCurr = { ...current };
-            delete updatedCurr.playlistId;
-            return { queue: newQueue, currentTrack: updatedCurr };
-          }
-          return { queue: newQueue };
-        });
-      } catch (err) {
-        console.error("Remove failed", err);
-      }
-    }
+    setShowSaveModal(true);
   };
 
   // Dominant color extraction has been removed to prevent 429 Too Many Requests errors from CDNs.

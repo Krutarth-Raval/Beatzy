@@ -69,6 +69,7 @@ export default function PlaylistSaveModal({ track, onClose }) {
       if (!res.ok) throw new Error('Failed to add to playlist');
       
       setSavingTo(prev => ({ ...prev, [playlistId]: 'saved' }));
+      window.dispatchEvent(new CustomEvent('track-saved-to-cloud', { detail: { trackId: track.id } }));
       
       // Reset tick after 2 seconds
       setTimeout(() => {
