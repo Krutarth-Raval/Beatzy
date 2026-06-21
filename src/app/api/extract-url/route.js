@@ -22,11 +22,26 @@ export async function GET(request) {
         if (searchResults && searchResults.videos && searchResults.videos.length > 0) {
           id = searchResults.videos[0].id;
         } else {
-          return NextResponse.json({ error: 'Could not find a YouTube equivalent for this Spotify track.' }, { status: 404 });
+          throw new Error('youtubei returned no results');
         }
       } catch (e) {
-        console.error('yt-search resolution error:', e);
-        return NextResponse.json({ error: 'Search resolution failed' }, { status: 500 });
+        console.log('youtubei resolution failed, falling back to DuckDuckGo search to bypass IP block...', e.message);
+        try {
+          const ddgRes = await fetch(`https://html.duckduckgo.com/html/?q=site:youtube.com+${encodeURIComponent(q)}`, {
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+          });
+          const html = await ddgRes.text();
+          const match = html.match(/youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/);
+          if (match && match[1]) {
+            id = match[1];
+            console.log('DuckDuckGo fallback succeeded:', id);
+          } else {
+            return NextResponse.json({ error: 'Could not find a YouTube equivalent for this Spotify track.' }, { status: 404 });
+          }
+        } catch (ddgErr) {
+          console.error('DuckDuckGo resolution error:', ddgErr);
+          return NextResponse.json({ error: 'Search resolution failed' }, { status: 500 });
+        }
       }
     } else {
       return NextResponse.json({ error: 'Query (q) parameter is required to resolve Spotify tracks.' }, { status: 400 });
