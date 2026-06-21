@@ -6,7 +6,8 @@ import { prisma } from '@/lib/prisma';
 export async function GET(request, { params }) {
   try {
     const session = await getServerSession(authOptions);
-    const id = params.id;
+    const resolvedParams = await params;
+    const id = resolvedParams.id;
 
     const playlist = await prisma.playlist.findUnique({
       where: { id },
@@ -55,7 +56,8 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const id = params.id;
+    const resolvedParams = await params;
+    const id = resolvedParams.id;
 
     const playlist = await prisma.playlist.findUnique({ where: { id } });
     if (!playlist) {

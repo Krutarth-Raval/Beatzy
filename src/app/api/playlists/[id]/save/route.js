@@ -10,7 +10,8 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const playlistId = params.id;
+    const resolvedParams = await params;
+    const playlistId = resolvedParams.id;
 
     const playlist = await prisma.playlist.findUnique({ where: { id: playlistId } });
     if (!playlist) {
@@ -50,7 +51,8 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const playlistId = params.id;
+    const resolvedParams = await params;
+    const playlistId = resolvedParams.id;
 
     await prisma.savedPlaylist.deleteMany({
       where: {

@@ -10,7 +10,8 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const playlistId = params.id;
+    const resolvedParams = await params;
+    const playlistId = resolvedParams.id;
     const songData = await request.json(); // { id, title, artist, thumbnail, duration }
 
     if (!songData.id || !songData.title) {
@@ -73,7 +74,8 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const playlistId = params.id;
+    const resolvedParams = await params;
+    const playlistId = resolvedParams.id;
     const { searchParams } = new URL(request.url);
     const songId = searchParams.get('songId');
 
