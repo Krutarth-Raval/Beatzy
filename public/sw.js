@@ -32,8 +32,18 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
-  // Simple network-first, fallback to cache for offline support without breaking Next.js hot-reloading
+  // Simple network-first, fallback to cache for offline support
   event.respondWith(
-    fetch(event.request).catch(() => caches.match(event.request))
+    fetch(event.request).catch(() => {
+      return caches.match(event.request).then((response) => {
+        if (response) return response;
+        // If not in cache and network failed, return a 503 Offline response
+        return new Response('Network error and no cached version available', {
+          status: 503,
+          statusText: 'Service Unavailable',
+          headers: new Headers({ 'Content-Type': 'text/plain' })
+        });
+      });
+    })
   );
 });
