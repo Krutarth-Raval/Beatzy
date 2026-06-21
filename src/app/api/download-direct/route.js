@@ -65,6 +65,70 @@ export async function GET(request) {
       }
     }
 
+    // 3. Fallback to native yt-dlp extraction (matches /api/download fallback)
+    if (!directUrl) {
+      try {
+        const { exec } = require('child_process');
+        const { promisify } = require('util');
+        const execAsync = promisify(exec);
+        const fs = require('fs');
+        const os = require('os');
+        const path = require('path');
+
+        let ytDlpPath;
+        const isVercel = process.env.VERCEL === '1';
+
+        if (isVercel) {
+          const vercelBinPath = path.join(process.cwd(), 'node_modules', 'youtube-dl-exec', 'bin', 'yt-dlp');
+          ytDlpPath = path.join(os.tmpdir(), 'yt-dlp');
+          
+          if (!fs.existsSync(ytDlpPath)) {
+            try {
+              fs.copyFileSync(vercelBinPath, ytDlpPath);
+              fs.chmodSync(ytDlpPath, 0o777);
+            } catch (err) {
+              console.log('Downloading yt-dlp dynamically...');
+              const downloadRes = await fetch('https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux');
+              if (!downloadRes.ok) throw new Error('Failed to download yt-dlp binary');
+              const buffer = await downloadRes.arrayBuffer();
+              fs.writeFileSync(ytDlpPath, Buffer.from(buffer));
+              fs.chmodSync(ytDlpPath, 0o777);
+            }
+          }
+        } else {
+          ytDlpPath = path.join(process.cwd(), 'node_modules', 'youtube-dl-exec', 'bin', 'yt-dlp.exe');
+          if (!fs.existsSync(ytDlpPath)) {
+            ytDlpPath = path.join(process.cwd(), 'node_modules', 'youtube-dl-exec', 'bin', 'yt-dlp');
+          }
+        }
+
+        const command = `"${ytDlpPath}" -j --no-warnings "https://www.youtube.com/watch?v=${id}"`;
+        const { stdout } = await execAsync(command);
+        const info = JSON.parse(stdout);
+        
+        // Find best audio format exactly like /api/download does
+        const audioFormats = info.formats
+          .filter(f => f.acodec && f.acodec !== 'none')
+          .sort((a, b) => {
+            if (a.vcodec === 'none' && b.vcodec !== 'none') return -1;
+            if (a.vcodec !== 'none' && b.vcodec === 'none') return 1;
+            const isAUniversal = a.ext === 'm4a' || a.ext === 'mp4';
+            const isBUniversal = b.ext === 'm4a' || b.ext === 'mp4';
+            if (isAUniversal && !isBUniversal) return -1;
+            if (!isAUniversal && isBUniversal) return 1;
+            return (b.abr || 0) - (a.abr || 0);
+          });
+
+        if (audioFormats.length > 0) {
+          directUrl = audioFormats[0].url;
+        } else {
+          directUrl = info.url;
+        }
+      } catch (e) {
+        console.error('yt-dlp fallback failed:', e);
+      }
+    }
+
     if (!directUrl) {
       throw new Error('Could not find direct audio stream URL from extractors');
     }
@@ -72,11 +136,10 @@ export async function GET(request) {
     // Extract the Range header from the client request
     const rangeHeader = request.headers.get('range');
     const fetchHeaders = {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+      // CRITICAL: Always inject a Range header to bypass YouTube's 50kbps full-file throttling
+      'Range': rangeHeader || 'bytes=0-'
     };
-    if (rangeHeader) {
-      fetchHeaders['Range'] = rangeHeader;
-    }
 
     // 3. Fetch the actual audio binary stream from the provided URL
     const audioRes = await fetch(directUrl, {
