@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import usePlayerStore from '@/store/usePlayerStore';
-import { Play, Pause, SkipForward, SkipBack, Shuffle, Repeat, Repeat1, Volume2, VolumeX, ChevronDown, List, Loader2, Music, Sparkles, Plus, Check } from 'lucide-react';
+import { Play, Pause, SkipForward, SkipBack, Shuffle, Repeat, Repeat1, Volume2, VolumeX, ChevronDown, List, Loader2, Music, Sparkles, Plus, Check, X } from 'lucide-react';
 import { FastAverageColor } from 'fast-average-color';
 import Image from 'next/image';
 import PlaylistSaveModal from './PlaylistSaveModal';
@@ -59,6 +59,7 @@ export default function AudioPlayer() {
   const [isDraggingProgress, setIsDraggingProgress] = useState(false);
   const [showQueueModal, setShowQueueModal] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
+  const [showGlobalPlayer, setShowGlobalPlayer] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const saveActionRef = useRef(false);
 
@@ -420,6 +421,16 @@ export default function AudioPlayer() {
       onPlaying={() => setIsBuffering(false)}
       onCanPlay={() => setIsBuffering(false)}
       onLoadStart={() => setIsBuffering(true)}
+      onError={(e) => {
+        if (audioUrl && audioUrl.startsWith('/api/download-direct')) {
+           console.error("Audio proxy failed, falling back to YouTube iframe");
+           setShowGlobalPlayer(true);
+           setIsBuffering(false);
+           if (isPlaying) {
+             togglePlay(); // Pause internal playing state
+           }
+        }
+      }}
     />
   );
 
@@ -868,6 +879,32 @@ export default function AudioPlayer() {
           track={currentTrack} 
           onClose={() => setShowSaveModal(false)} 
         />
+      )}
+
+      {/* Fallback YouTube Player Modal */}
+      {showGlobalPlayer && currentTrack && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '20px' }}>
+          <div className="glass-panel animate-fade-in" style={{ backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '20px', width: '100%', maxWidth: '800px', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h4 style={{ fontWeight: '600', fontSize: '1.2rem', color: 'var(--text-primary)', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden', margin: 0 }}>
+                {currentTrack.title}
+              </h4>
+              <button onClick={() => {
+                setShowGlobalPlayer(false);
+                // Optionally auto-advance to next track when they close it manually
+                // playNext(); 
+              }} style={{ color: 'var(--text-primary)', backgroundColor: 'var(--bg-main)', borderRadius: '50%', padding: '6px', border: '1px solid var(--border-color)', cursor: 'pointer', transition: 'background-color 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-main)'}>
+                <X size={20} />
+              </button>
+            </div>
+            <div style={{ position: 'relative', width: '100%', paddingTop: '56.25%', borderRadius: '12px', overflow: 'hidden', background: 'black', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
+              <iframe style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }} src={`https://www.youtube-nocookie.com/embed/${currentTrack.id.replace('youtube-', '').replace('spotify:track:', '')}?autoplay=1`} title="YouTube video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen></iframe>
+            </div>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '16px', textAlign: 'center', margin: '16px 0 0 0' }}>
+              Direct audio streaming failed. Falling back to the YouTube video player.
+            </p>
+          </div>
+        </div>
       )}
     </>
   );
