@@ -15,10 +15,12 @@ export async function GET(request) {
   if (id.includes('spotify:') || id.length > 15) {
     if (q) {
       try {
-        const ytSearch = (await import('yt-search')).default;
-        const searchResults = await ytSearch(q);
+        const { Innertube } = require('youtubei.js');
+        const yt = await Innertube.create();
+        const searchResults = await yt.search(q, { type: 'video' });
+        
         if (searchResults && searchResults.videos && searchResults.videos.length > 0) {
-          id = searchResults.videos[0].videoId;
+          id = searchResults.videos[0].id;
         } else {
           return NextResponse.json({ error: 'Could not find a YouTube equivalent for this Spotify track.' }, { status: 404 });
         }

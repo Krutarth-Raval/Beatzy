@@ -15,16 +15,18 @@ export async function GET(request) {
   if (id.includes('spotify:') || id.length > 15) {
     if (q) {
       try {
-        const ytSearch = (await import('yt-search')).default;
-        const searchResults = await ytSearch(q);
+        const { Innertube } = require('youtubei.js');
+        const yt = await Innertube.create();
+        const searchResults = await yt.search(q, { type: 'video' });
+        
         if (searchResults && searchResults.videos && searchResults.videos.length > 0) {
-          id = searchResults.videos[0].videoId;
+          id = searchResults.videos[0].id;
         } else {
-          return NextResponse.json({ error: 'Could not find a YouTube equivalent for this Spotify track.' }, { status: 404 });
+          return new Response(JSON.stringify({ error: 'Could not find a YouTube equivalent for this Spotify track.' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
         }
       } catch (e) {
-        console.error('yt-search resolution error:', e);
-        return NextResponse.json({ error: 'Search resolution failed' }, { status: 500 });
+        console.error('youtubei resolution error:', e);
+        return new Response(JSON.stringify({ error: 'Search resolution failed' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
       }
     } else {
       return NextResponse.json({ error: 'Query (q) parameter is required to resolve Spotify tracks.' }, { status: 400 });
