@@ -82,12 +82,14 @@ export async function GET(request) {
     const isVercel = process.env.VERCEL === '1';
 
     if (isVercel) {
-      // Vercel execution (will likely fail due to Captcha, but we try anyway)
-      const vercelBinPath = path.join(process.cwd(), 'node_modules', 'youtube-dl-exec', 'bin', 'yt-dlp');
-      ytDlpPath = path.join(os.tmpdir(), 'yt-dlp');
+      ytDlpPath = path.join(os.tmpdir(), 'yt-dlp_static');
       
       if (!fs.existsSync(ytDlpPath)) {
-        fs.copyFileSync(vercelBinPath, ytDlpPath);
+        console.log('Downloading statically compiled yt-dlp_linux to bypass python requirement...');
+        const downloadRes = await fetch('https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux');
+        if (!downloadRes.ok) throw new Error('Failed to download yt-dlp binary');
+        const buffer = await downloadRes.arrayBuffer();
+        fs.writeFileSync(ytDlpPath, Buffer.from(buffer));
         fs.chmodSync(ytDlpPath, 0o777);
       }
     } else {
