@@ -868,7 +868,7 @@ export default function Home() {
                         <Play size={16} />
                       </button>
                       <button onClick={() => downloadTrack(track)} style={{ width: '36px', height: '36px', borderRadius: '8px', backgroundColor: 'var(--bg-input)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-primary)' }}>
-                        <Download size={16} />
+                        <Plus size={16} />
                       </button>
                     </div>
                   </div>
@@ -898,7 +898,7 @@ export default function Home() {
                           <Play size={16} /> Play
                         </button>
                         <button onClick={() => handleDownloadYT(track)} style={{ flex: 1, padding: '8px', borderRadius: '8px', backgroundColor: 'var(--bg-main)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: '600', fontSize: '0.9rem' }}>
-                          <Download size={16} /> MP3
+                          <Plus size={16} /> Save
                         </button>
                       </div>
                     </div>
