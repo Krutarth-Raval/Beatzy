@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useSession, signIn, signOut } from 'next-auth/react';
-import { Search, Play, Download, LogOut, Music, Loader2, X, Disc3, Menu, MessageSquare, Plus, Settings, Trash2, Moon, Sun, AlertTriangle, Home as HomeIcon, Mic, Library, ChevronDown, ChevronRight, Info, Camera, History } from 'lucide-react';
+import { Search, Play, Download, LogOut, Music, Loader2, X, Disc3, Menu, MessageSquare, Plus, Settings, Trash2, Moon, Sun, AlertTriangle, Home as HomeIcon, Mic, Library, ChevronDown, ChevronRight, Info, Camera, History, Check, Zap } from 'lucide-react';
 import Tesseract from 'tesseract.js';
 import PlaylistSaveModal from '@/components/PlaylistSaveModal';
 import CreatePlaylistModal from '@/components/CreatePlaylistModal';
@@ -11,8 +11,10 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import usePlayerStore from '@/store/usePlayerStore';
 import PwaInstallButton from '@/components/PwaInstallButton';
+import useModalStore from '@/store/useModalStore';
 
 export default function Home() {
+  const { showAlert } = useModalStore();
   const router = useRouter();
   const { data: session, status } = useSession();
   const { currentTrack: globalTrack } = usePlayerStore();
@@ -33,6 +35,8 @@ export default function Home() {
   const [isAnalyzingImage, setIsAnalyzingImage] = useState(false);
 
   const [trackToSave, setTrackToSave] = useState(null);
+  const [tracksToSave, setTracksToSave] = useState(null); // Array of tracks
+  const [isInstantSaving, setIsInstantSaving] = useState(false);
   const [currentTrack, setCurrentTrack] = useState(null); // Requires: id (YT id), title
 
   // Download Popup State
@@ -102,11 +106,9 @@ export default function Home() {
 
   const loadSidebarPlaylists = async () => {
     try {
-      const db = await import('@/lib/db');
-      const localP = await db.getPlaylists();
       let cloudP = [];
       try {
-        const res = await fetch('/api/playlists');
+        const res = await fetch('/api/playlists', { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
           cloudP = [
@@ -117,9 +119,51 @@ export default function Home() {
       } catch (e) {
         console.error('Failed to load cloud playlists for sidebar', e);
       }
-      setPlaylists([...cloudP, ...localP]);
+      setPlaylists(cloudP);
     } catch (error) {
       console.error(error);
+    }
+  };
+
+  const handleInstantSave = async () => {
+    if (!session?.user) {
+      showAlert('You must be logged in to save playlists.');
+      return;
+    }
+    
+    setIsInstantSaving(true);
+    try {
+      // 1. Create Playlist
+      const res = await fetch('/api/playlists', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          name: albumData.title, 
+          description: '', 
+          isPublic: false,
+          coverImage: albumData.coverArt || null
+        })
+      });
+      
+      if (!res.ok) throw new Error('Failed to create playlist');
+      const newPlaylist = await res.json();
+      
+      // 2. Add all songs
+      const bulkRes = await fetch(`/api/playlists/${newPlaylist.id}/songs/bulk`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tracks: albumData.tracks })
+      });
+      
+      if (!bulkRes.ok) throw new Error('Failed to add tracks');
+      
+      showAlert('Playlist saved instantly!', 'success');
+      loadSidebarPlaylists();
+    } catch (error) {
+      console.error(error);
+      showAlert('Failed to save playlist instantly.');
+    } finally {
+      setIsInstantSaving(false);
     }
   };
 
@@ -133,13 +177,16 @@ export default function Home() {
 
   const handlePlayPlaylistDirectly = async (playlistId) => {
     try {
-      const db = await import('@/lib/db');
-      const t = await db.getTracksForPlaylist(playlistId);
-      if (t.length > 0) {
-        const usePlayerStore = (await import('@/store/usePlayerStore')).default;
-        usePlayerStore.getState().playTrack(t[0], t);
-      } else {
-        alert("This playlist is empty.");
+      const res = await fetch(`/api/playlists/${playlistId}`);
+      if (res.ok) {
+        const data = await res.json();
+        const t = data.tracks || [];
+        if (t.length > 0) {
+          const usePlayerStore = (await import('@/store/usePlayerStore')).default;
+          usePlayerStore.getState().playTrack(t[0], t);
+        } else {
+          showAlert("Empty Playlist", "This playlist is empty.");
+        }
       }
     } catch (err) {
       console.error(err);
@@ -285,7 +332,7 @@ export default function Home() {
         addToHistory({ type: 'search', query: queryToSearch, title: queryToSearch });
       }
     } catch (err) {
-      setError(err.message);
+      showAlert("Search Error", err.message);
     } finally {
       setLoading(false);
     }
@@ -313,7 +360,27 @@ export default function Home() {
 
       if (!res.ok) throw new Error(data?.error || 'Unknown server error');
 
-      setAlbumData(data);
+      const formattedTracks = data.tracks.map(t => {
+        let id = t.id || '';
+        if (!isYouTube && !id.includes('spotify:')) {
+          id = `spotify:track:${id}`;
+        }
+        return {
+          ...t,
+          id,
+          thumbnail: t.thumbnail || t.coverArt || (isYouTube ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : ''),
+          coverArt: t.coverArt || t.thumbnail || (isYouTube ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : ''),
+          title: t.title || t.name,
+          artist: t.artist || t.artists,
+          type: isYouTube ? 'youtube' : 'spotify'
+        };
+      });
+
+      setAlbumData({
+        ...data,
+        tracks: formattedTracks,
+        displayType: isYouTube ? 'YouTube Playlist' : (data.type === 'album' ? 'Spotify Album' : 'Spotify Playlist')
+      });
       if (!fromHistory) {
         addToHistory({ type: 'spotify', query: url, title: data.title || url });
       }
@@ -351,11 +418,11 @@ export default function Home() {
       if (data && data.length > 0) {
         setCurrentTrack({ id: data[0].id, title: track.name });
       } else {
-        alert("Could not find this song on YouTube.");
+        showAlert("Not Found", "Could not find this song on YouTube.");
         setCurrentTrack(null);
       }
     } catch (e) {
-      alert("Error finding song.");
+      showAlert("Error", "Error finding song.");
       setCurrentTrack(null);
     }
   };
@@ -858,22 +925,51 @@ export default function Home() {
 
           {/* Spotify Results Section */}
           {albumData && (
-            <div className="animate-fade-in" style={{ maxWidth: '800px', margin: '0 auto' }}>
-              <div style={{ display: 'flex', alignItems: 'flex-end', gap: '2rem', marginBottom: '2rem' }}>
+            <div className="animate-fade-in album-data-wrapper" style={{ maxWidth: '800px', margin: '0 auto' }}>
+              <style dangerouslySetInnerHTML={{__html: `
+                @media (max-width: 768px) {
+                  .album-data-wrapper .album-header-flex {
+                    flex-direction: column !important;
+                    align-items: center !important;
+                    text-align: center !important;
+                    gap: 1.5rem !important;
+                  }
+                  .album-data-wrapper .album-text-section {
+                    flex-basis: auto !important;
+                    width: 100% !important;
+                  }
+                  .album-data-wrapper .album-buttons-flex {
+                    justify-content: center !important;
+                    width: 100% !important;
+                  }
+                  .album-data-wrapper .album-buttons-flex > button {
+                    flex: 1 !important;
+                  }
+                }
+              `}} />
+              <div className="album-header-flex" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: '2rem', marginBottom: '2rem' }}>
                 {albumData.coverArt && (
                   <img
                     src={albumData.coverArt}
                     alt="Cover"
                     draggable={false}
-                    style={{ width: '150px', height: '150px', borderRadius: '8px', boxShadow: '0 4px 20px rgba(0,0,0,0.3)' }}
+                    style={{ width: '150px', height: '150px', borderRadius: '8px', boxShadow: '0 4px 20px rgba(0,0,0,0.3)', flexShrink: 0 }}
                   />
                 )}
-                <div>
+                <div className="album-text-section" style={{ flex: '1 1 300px', minWidth: 0 }}>
                   <p style={{ textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: '600', letterSpacing: '1px', marginBottom: '0.5rem', fontSize: '0.8rem' }}>
-                    {albumData.type || 'Playlist'}
+                    {albumData.displayType || albumData.type || 'Playlist'}
                   </p>
-                  <h1 style={{ fontSize: '2rem', fontWeight: '700', marginBottom: '0.5rem', lineHeight: '1.2' }}>{albumData.title}</h1>
-                  <p style={{ color: 'var(--text-secondary)' }}>{albumData.tracks.length} tracks available</p>
+                  <h1 style={{ fontSize: 'clamp(1.5rem, 5vw, 2.5rem)', fontWeight: '700', marginBottom: '0.5rem', lineHeight: '1.2', wordBreak: 'break-word' }}>{albumData.title}</h1>
+                  <p style={{ color: 'var(--text-secondary)', marginBottom: '16px' }}>{albumData.tracks.length} tracks available</p>
+                  <div className="album-buttons-flex" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                    <button onClick={() => setTracksToSave(albumData.tracks)} style={{ padding: '10px 24px', borderRadius: '8px', backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '600', fontSize: '0.95rem', cursor: 'pointer', transition: 'background-color 0.2s', whiteSpace: 'nowrap', justifyContent: 'center' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-input)'}>
+                      <Plus size={18} /> Add All
+                    </button>
+                    <button onClick={handleInstantSave} disabled={isInstantSaving} style={{ padding: '10px 24px', borderRadius: '8px', backgroundColor: 'var(--primary-color)', color: 'var(--bg-main)', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '600', fontSize: '0.95rem', cursor: isInstantSaving ? 'not-allowed' : 'pointer', border: 'none', opacity: isInstantSaving ? 0.7 : 1, transition: 'opacity 0.2s', whiteSpace: 'nowrap', justifyContent: 'center' }}>
+                      {isInstantSaving ? <Loader2 size={18} className="animate-spin" /> : <Zap size={18} />} Save Instantly
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -1150,10 +1246,11 @@ export default function Home() {
           </div>
         )}
 
-        {trackToSave && (
+        {(trackToSave || tracksToSave) && (
           <PlaylistSaveModal 
             track={trackToSave} 
-            onClose={() => { setTrackToSave(null); loadSidebarPlaylists(); }} 
+            tracks={tracksToSave}
+            onClose={() => { setTrackToSave(null); setTracksToSave(null); loadSidebarPlaylists(); }} 
           />
         )}
 

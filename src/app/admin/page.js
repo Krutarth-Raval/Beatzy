@@ -5,8 +5,10 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Disc3, X, Menu, Users, Star, Plus, Trash2, Loader2, Save, ArrowLeft } from 'lucide-react';
 import DynamicIcon from '@/components/DynamicIcon';
+import useModalStore from '@/store/useModalStore';
 
 export default function AdminDashboard() {
+  const { showAlert } = useModalStore();
   const { data: session, status } = useSession();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -81,11 +83,13 @@ export default function AdminDashboard() {
       if (res.ok) {
         setNewUpdate({ icon: '', title: '', description: '' });
         fetchUpdates();
+        showAlert("Success", "Update published successfully!");
       } else {
-        alert('Failed to save update');
+        showAlert("Error", "Failed to save update");
       }
     } catch (err) {
       console.error(err);
+      showAlert("Error", "An unexpected error occurred.");
     } finally {
       setSavingUpdate(false);
     }

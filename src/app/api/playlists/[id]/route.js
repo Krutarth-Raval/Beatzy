@@ -37,7 +37,8 @@ export async function GET(request, { params }) {
       ...playlist,
       tracks: playlist.songs.map(ps => ({
         ...ps.song,
-        addedAt: ps.addedAt
+        addedAt: ps.addedAt,
+        playlistId: ps.playlistId
       }))
     };
     delete formattedPlaylist.songs;
@@ -74,5 +75,42 @@ export async function DELETE(request, { params }) {
   } catch (error) {
     console.error('Playlist DELETE Error:', error);
     return NextResponse.json({ error: 'Failed to delete playlist' }, { status: 500 });
+  }
+}
+
+export async function PATCH(request, { params }) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const resolvedParams = await params;
+    const id = resolvedParams.id;
+    const body = await request.json();
+
+    const playlist = await prisma.playlist.findUnique({ where: { id } });
+    if (!playlist) {
+      return NextResponse.json({ error: 'Playlist not found' }, { status: 404 });
+    }
+
+    if (playlist.userId !== session.user.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const updatedData = {};
+    if (body.name !== undefined) updatedData.name = body.name.trim() || 'Untitled Playlist';
+    if (body.description !== undefined) updatedData.description = body.description;
+    if (body.coverImage !== undefined) updatedData.coverImage = body.coverImage;
+
+    const updatedPlaylist = await prisma.playlist.update({
+      where: { id },
+      data: updatedData
+    });
+
+    return NextResponse.json(updatedPlaylist);
+  } catch (error) {
+    console.error('Playlist PATCH Error:', error);
+    return NextResponse.json({ error: 'Failed to update playlist' }, { status: 500 });
   }
 }

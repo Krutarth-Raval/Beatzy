@@ -1,8 +1,10 @@
 "use client";
 import { useState, useEffect } from 'react';
 import { Download, ExternalLink } from 'lucide-react';
+import useModalStore from '@/store/useModalStore';
 
 export default function PwaInstallButton({ variant = 'icon' }) {
+  const { showAlert } = useModalStore();
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isStandalone, setIsStandalone] = useState(false);
 
@@ -32,7 +34,7 @@ export default function PwaInstallButton({ variant = 'icon' }) {
         setDeferredPrompt(null);
       }
     } else {
-      alert("To install Beatzy on your device, tap your browser's menu (⋮ or Share icon) and select 'Add to Home Screen' or 'Install App'.");
+      showAlert("Install Beatzy", "To install Beatzy on your device, tap your browser's menu (⋮ or Share icon) and select 'Add to Home Screen' or 'Install App'.");
     }
   };
 

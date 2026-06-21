@@ -91,6 +91,7 @@ export async function POST(request) {
         id,
         name,
         artists: artist,
+        thumbnail: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`
       });
     }
 

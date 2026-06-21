@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { X, Loader2, Folder, Plus, Check } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 
-export default function PlaylistSaveModal({ track, onClose }) {
+export default function PlaylistSaveModal({ track, tracks, onClose }) {
   const { data: session } = useSession();
   const [playlists, setPlaylists] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -32,72 +32,77 @@ export default function PlaylistSaveModal({ track, onClose }) {
     }
     
     try {
-      const res = await fetch('/api/playlists');
+      const res = await fetch('/api/playlists', { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
-        // Only show owned playlists for adding songs
         setPlaylists(data.owned || []);
       }
     } catch (e) {
       console.error('Failed to fetch playlists', e);
+      setError('Could not load some playlists.');
     } finally {
       setLoading(false);
     }
   };
 
   const saveToPlaylist = async (playlistId) => {
-    if (!session?.user) return;
-    
     setSavingTo(prev => ({ ...prev, [playlistId]: 'saving' }));
     setError(null);
 
     try {
-      const ytId = track.id?.replace('youtube-', '') || track.id;
-      
-      const res = await fetch(`/api/playlists/${playlistId}/songs`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: ytId,
-          title: track.title || track.name || 'Unknown Track',
-          artist: track.artist || track.author?.name || 'Unknown Artist',
-          thumbnail: track.thumbnail || track.best_thumbnail?.url || track.thumbnails?.[0]?.url || '',
-          duration: track.duration || track.duration_string || ''
-        })
-      });
+      if (!session?.user) throw new Error('Must be logged in to save to cloud');
 
-      if (!res.ok) throw new Error('Failed to add to playlist');
-      
+      if (tracks && tracks.length > 0) {
+        const res = await fetch(`/api/playlists/${playlistId}/songs/bulk`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tracks })
+        });
+        if (!res.ok) throw new Error('Failed to add tracks to cloud playlist');
+        window.dispatchEvent(new CustomEvent('track-saved-to-cloud', { detail: { bulk: true } }));
+      } else if (track) {
+        const ytId = track.id?.replace('youtube-', '') || track.id;
+        const res = await fetch(`/api/playlists/${playlistId}/songs`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: ytId,
+            title: track.title || track.name || 'Unknown Track',
+            artist: track.artist || track.author?.name || track.artists || 'Unknown Artist',
+            thumbnail: track.thumbnail || track.best_thumbnail?.url || track.thumbnails?.[0]?.url || '',
+            duration: String(track.duration || track.duration_string || '')
+          })
+        });
+
+        if (!res.ok) throw new Error('Failed to add to cloud playlist');
+        window.dispatchEvent(new CustomEvent('track-saved-to-cloud', { detail: { trackId: track.id } }));
+      }
+
       setSavingTo(prev => ({ ...prev, [playlistId]: 'saved' }));
-      window.dispatchEvent(new CustomEvent('track-saved-to-cloud', { detail: { trackId: track.id } }));
-      
-      // Reset tick after 2 seconds
-      setTimeout(() => {
-        setSavingTo(prev => ({ ...prev, [playlistId]: null }));
-      }, 2000);
-      
+
     } catch (e) {
       console.error(e);
-      setError(e.message || 'An error occurred while saving the track');
+      setError(e.message || 'An error occurred while saving');
       setSavingTo(prev => ({ ...prev, [playlistId]: null }));
     }
   };
 
   const handleCreateAndSave = async () => {
-    if (!newName.trim() || creatingNew || !session?.user) return;
+    if (!newName.trim() || creatingNew) return;
     
     setCreatingNew(true);
     setError(null);
     try {
+      if (!session?.user) throw new Error('Must be logged in to create playlists');
+      
       const res = await fetch('/api/playlists', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: newName.trim(), description: '', isPublic: false })
       });
-      
-      if (!res.ok) throw new Error('Failed to create playlist');
-      
+      if (!res.ok) throw new Error('Failed to create cloud playlist');
       const newPlaylist = await res.json();
+      
       setPlaylists(prev => [newPlaylist, ...prev]);
       setShowNewInput(false);
       setNewName('');
@@ -119,9 +124,9 @@ export default function PlaylistSaveModal({ track, onClose }) {
           <X size={20} />
         </button>
 
-        <h3 style={{ fontSize: '1.2rem', marginBottom: '4px', fontWeight: '700', color: 'var(--text-primary)' }}>Save to Cloud Playlist</h3>
+        <h3 style={{ fontSize: '1.2rem', marginBottom: '4px', fontWeight: '700', color: 'var(--text-primary)' }}>Save to Playlist</h3>
         <p style={{ color: 'var(--text-secondary)', marginBottom: '20px', fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: '20px' }}>
-          {track.title || track.name}
+          {tracks ? `${tracks.length} tracks` : (track?.title || track?.name)}
         </p>
 
         {error && <p style={{ color: '#ff4d4f', fontSize: '0.85rem', marginBottom: '16px' }}>{error}</p>}
@@ -130,10 +135,6 @@ export default function PlaylistSaveModal({ track, onClose }) {
           {loading ? (
             <div style={{ display: 'flex', justifyContent: 'center', padding: '20px' }}>
               <Loader2 className="animate-spin" size={24} color="var(--text-secondary)" />
-            </div>
-          ) : !session?.user ? (
-            <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-secondary)' }}>
-              Please log in to use Cloud Playlists.
             </div>
           ) : (
             <>
@@ -183,7 +184,7 @@ export default function PlaylistSaveModal({ track, onClose }) {
                       ref={newInputRef}
                       type="text"
                       value={newName}
-                      onChange={e => setNewName(e.target.value.slice(0, 30))}
+                      onChange={e => setNewName(e.target.value.slice(0, 15))}
                       onKeyDown={e => { if (e.key === 'Enter') handleCreateAndSave(); if (e.key === 'Escape') { setShowNewInput(false); setNewName(''); } }}
                       placeholder="Playlist name..."
                       disabled={creatingNew}
@@ -200,8 +201,8 @@ export default function PlaylistSaveModal({ track, onClose }) {
                         boxSizing: 'border-box',
                       }}
                     />
-                    <span style={{ fontSize: '0.75rem', color: newName.length === 30 ? '#ff4d4f' : 'var(--text-secondary)', textAlign: 'right', paddingRight: '2px', lineHeight: 1 }}>
-                      {newName.length}/30
+                    <span style={{ fontSize: '0.75rem', color: newName.length === 15 ? '#ff4d4f' : 'var(--text-secondary)', textAlign: 'right', paddingRight: '2px', lineHeight: 1 }}>
+                      {newName.length}/15
                     </span>
                   </div>
                   <button

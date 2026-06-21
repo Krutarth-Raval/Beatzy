@@ -5,8 +5,10 @@ import { ArrowLeft, Play, Library, Heart, Search, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import usePlayerStore from '@/store/usePlayerStore';
+import useModalStore from '@/store/useModalStore';
 
 export default function ExplorePlaylistsPage() {
+  const { showAlert } = useModalStore();
   const [playlists, setPlaylists] = useState([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
@@ -50,7 +52,7 @@ export default function ExplorePlaylistsPage() {
   const handleSavePlaylist = async (e, playlistId, isSaved) => {
     e.stopPropagation();
     if (!session?.user) {
-      alert('Please log in to save playlists.');
+      showAlert("Login Required", "Please log in to save playlists.");
       return;
     }
     

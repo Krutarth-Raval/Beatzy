@@ -4,10 +4,31 @@ export const runtime = 'nodejs';
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
-  const id = searchParams.get('id');
+  let id = searchParams.get('id');
+  const q = searchParams.get('q');
 
   if (!id) {
     return NextResponse.json({ error: 'Missing video ID' }, { status: 400 });
+  }
+
+  // If the ID is a Spotify ID, we must resolve it to a YouTube video ID first
+  if (id.includes('spotify:') || id.length > 15) {
+    if (q) {
+      try {
+        const ytSearch = (await import('yt-search')).default;
+        const searchResults = await ytSearch(q);
+        if (searchResults && searchResults.videos && searchResults.videos.length > 0) {
+          id = searchResults.videos[0].videoId;
+        } else {
+          return NextResponse.json({ error: 'Could not find a YouTube equivalent for this Spotify track.' }, { status: 404 });
+        }
+      } catch (e) {
+        console.error('yt-search resolution error:', e);
+        return NextResponse.json({ error: 'Search resolution failed' }, { status: 500 });
+      }
+    } else {
+      return NextResponse.json({ error: 'Query (q) parameter is required to resolve Spotify tracks.' }, { status: 400 });
+    }
   }
 
   try {

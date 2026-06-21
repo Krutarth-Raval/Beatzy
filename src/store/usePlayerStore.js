@@ -8,6 +8,7 @@ const usePlayerStore = create(
   queue: [],
   originalQueue: null,
   queueName: null,
+  queuePlaylistId: null,
   queueIndex: -1,
   isPlaying: false,
   progress: 0,
@@ -23,7 +24,11 @@ const usePlayerStore = create(
 
   setAudioRef: (ref) => set({ audioRef: ref }),
 
-  playTrack: (track, newQueue = null, queueName = null) => {
+  updateCurrentTrack: (updater) => set((state) => ({ 
+    currentTrack: state.currentTrack ? { ...state.currentTrack, ...updater(state.currentTrack) } : null 
+  })),
+
+  playTrack: (track, newQueue = null, queueName = null, queuePlaylistId = null) => {
     set((state) => {
       let queue = newQueue || state.queue;
       let originalQueue = newQueue ? [...newQueue] : (state.originalQueue || [...state.queue]);
@@ -50,6 +55,7 @@ const usePlayerStore = create(
         queue,
         originalQueue,
         queueName: queueName !== null ? queueName : state.queueName,
+        queuePlaylistId: queuePlaylistId !== null ? queuePlaylistId : state.queuePlaylistId,
         queueIndex: queueIndex !== -1 ? queueIndex : 0,
         isPlaying: true,
         progress: 0,
@@ -322,6 +328,7 @@ const usePlayerStore = create(
     currentTrack: state.currentTrack,
     queue: state.queue,
     queueName: state.queueName,
+    queuePlaylistId: state.queuePlaylistId,
     queueIndex: state.queueIndex,
     progress: state.progress,
     volume: state.volume,

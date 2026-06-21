@@ -20,6 +20,7 @@ export const metadata = {
 
 import AudioPlayer from '@/components/AudioPlayer';
 import PwaRegistry from '@/components/PwaRegistry';
+import GlobalModal from '@/components/GlobalModal';
 
 export default function RootLayout({ children }) {
   return (
@@ -29,6 +30,7 @@ export default function RootLayout({ children }) {
           {children}
           <AudioPlayer />
           <PwaRegistry />
+          <GlobalModal />
         </Providers>
       </body>
     </html>

@@ -3,12 +3,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import usePlayerStore from '@/store/usePlayerStore';
-import { getAudioBlob } from '@/lib/db';
 import { Play, Pause, SkipForward, SkipBack, Shuffle, Repeat, Repeat1, Volume2, VolumeX, ChevronDown, List, Loader2, Music, Sparkles, Plus, Check } from 'lucide-react';
 import { FastAverageColor } from 'fast-average-color';
 import Image from 'next/image';
 import PlaylistSaveModal from './PlaylistSaveModal';
-import { removeTrack, addTrackToPlaylist } from '@/lib/db';
+import TrackThumbnail from './TrackThumbnail';
 
 const ScrollingText = ({ text, style, className }) => {
   const containerRef = useRef(null);
@@ -35,7 +34,7 @@ const ScrollingText = ({ text, style, className }) => {
   }, [text]);
 
   return (
-    <div ref={containerRef} className={`scrolling-text-mask ${className || ''}`} style={{ ...style, overflow: 'hidden', whiteSpace: 'nowrap', width: '100%' }}>
+    <div ref={containerRef} className={`${isOverflowing ? 'scrolling-text-mask' : ''} ${className || ''}`} style={{ ...style, overflow: 'hidden', whiteSpace: 'nowrap', width: '100%' }}>
       <div className={isOverflowing ? 'animate-marquee' : ''} style={{ display: 'inline-block', whiteSpace: 'nowrap' }}>
         <span style={{ display: 'inline-block', paddingRight: isOverflowing ? '3rem' : '0' }}>
           <span ref={textRef}>{text}</span>
@@ -68,6 +67,7 @@ export default function AudioPlayer() {
     queue,
     queueIndex,
     queueName,
+    queuePlaylistId,
     isPlaying,
     progress,
     duration,
@@ -87,7 +87,8 @@ export default function AudioPlayer() {
     setVolume,
     toggleMute,
     toggleShuffle,
-    toggleRepeat
+    toggleRepeat,
+    updateCurrentTrack
   } = usePlayerStore();
 
   // Initialize audio ref
@@ -126,25 +127,7 @@ export default function AudioPlayer() {
       setIsBlobLoading(true);
 
       try {
-        // If it's an offline track from our DB
-        if (currentTrack.playlistId) {
-          const blob = await getAudioBlob(currentTrack.id);
-          if (blob && isActive) {
-            const newUrl = URL.createObjectURL(blob);
-            setAudioUrl((prevUrl) => {
-              if (prevUrl && prevUrl.startsWith('blob:')) {
-                URL.revokeObjectURL(prevUrl);
-              }
-              return newUrl;
-            });
-          } else if (!blob && isActive) {
-            // Blob not found (Cloud Playlist), fallback to streaming
-            setAudioUrl((prevUrl) => {
-              if (prevUrl && prevUrl.startsWith('blob:')) URL.revokeObjectURL(prevUrl);
-              return `/api/download-direct?id=${currentTrack.id}`;
-            });
-          }
-        } else if (currentTrack.audioUrl && isActive) {
+        if (currentTrack.audioUrl && isActive) {
           // Fallback if we stream directly in the future
           setAudioUrl((prevUrl) => {
             if (prevUrl && prevUrl.startsWith('blob:')) URL.revokeObjectURL(prevUrl);
@@ -154,7 +137,10 @@ export default function AudioPlayer() {
           // Stream directly from our Next.js backend proxy to bypass Piped CORS and IP binding errors
           setAudioUrl((prevUrl) => {
             if (prevUrl && prevUrl.startsWith('blob:')) URL.revokeObjectURL(prevUrl);
-            return `/api/download-direct?id=${currentTrack.id}`;
+            const title = currentTrack.title || currentTrack.name || '';
+            const artist = currentTrack.artists || currentTrack.artist || '';
+            const q = encodeURIComponent(`${title} ${artist}`);
+            return `/api/download-direct?id=${currentTrack.id}&q=${q}`;
           });
         }
       } catch (err) {
@@ -181,14 +167,58 @@ export default function AudioPlayer() {
       if (e.detail?.trackId === currentTrack?.id) {
         setIsSaved(true);
         saveActionRef.current = true;
+        // Update Zustand store so a refresh doesn't wipe the playlistId
+        if (e.detail?.playlistId) {
+          updateCurrentTrack(() => ({ playlistId: e.detail.playlistId }));
+        }
       }
     };
     window.addEventListener('track-saved-to-cloud', handleCloudSave);
     return () => window.removeEventListener('track-saved-to-cloud', handleCloudSave);
-  }, [currentTrack]);
+  }, [currentTrack?.id]);
 
-  const handleToggleSave = (e) => {
+  const handleToggleSave = async (e) => {
     if (e) e.stopPropagation();
+    
+    // If we are playing from a playlist that we own, save directly to it without opening the modal
+    if (queuePlaylistId && !isSaved) {
+      saveActionRef.current = true;
+      setIsSaved(true); // Optimistic UI update
+      updateCurrentTrack(() => ({ playlistId: queuePlaylistId })); // Optimistic Zustand update
+      
+      try {
+        const ytId = currentTrack.id?.replace('youtube-', '') || currentTrack.id;
+        const res = await fetch(`/api/playlists/${queuePlaylistId}/songs`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: ytId,
+            title: currentTrack.title || currentTrack.name || 'Unknown Track',
+            artist: currentTrack.artist || currentTrack.artists || currentTrack.author?.name || 'Unknown Artist',
+            thumbnail: currentTrack.thumbnail || currentTrack.coverArt || currentTrack.thumbnails?.[0]?.url || currentTrack.best_thumbnail?.url || '',
+            duration: String(currentTrack.duration || currentTrack.duration_string || '')
+          })
+        });
+        
+        if (res.ok) {
+          // Successfully saved directly
+          window.dispatchEvent(new CustomEvent('track-saved-to-cloud', { 
+            detail: { trackId: currentTrack.id, playlistId: queuePlaylistId, track: currentTrack } 
+          }));
+          return;
+        } else {
+          // Revert if failed
+          saveActionRef.current = false;
+          setIsSaved(false);
+        }
+      } catch (err) {
+        console.error("Direct save failed:", err);
+        saveActionRef.current = false;
+        setIsSaved(false);
+      }
+    }
+    
+    // Fallback: If not playing from an owned playlist, or if it's already saved and they want to see the modal to manage it
     setShowSaveModal(true);
   };
 
@@ -249,7 +279,8 @@ export default function AudioPlayer() {
   const handleLoadedMetadata = () => {
     if (audioRef.current) {
       loadedTrackIdRef.current = currentTrack?.id;
-      setDuration(audioRef.current.duration);
+      const discoveredDuration = audioRef.current.duration;
+      setDuration(discoveredDuration);
       
       const storeState = usePlayerStore.getState();
       audioRef.current.volume = storeState.volume;
@@ -257,6 +288,18 @@ export default function AudioPlayer() {
       
       if (storeState.progress > 0 && audioRef.current.currentTime === 0) {
         audioRef.current.currentTime = storeState.progress;
+      }
+      
+      // Auto-heal missing duration in DB in the background
+      if (currentTrack?.id && (!currentTrack.duration || currentTrack.duration === '0') && !currentTrack.duration_string) {
+        const trueSeconds = Math.floor(discoveredDuration);
+        if (trueSeconds > 0) {
+          fetch(`/api/songs/${currentTrack.id}/duration`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ duration: String(trueSeconds) })
+          }).catch(e => console.error('Auto-heal duration failed:', e));
+        }
       }
     }
   };
@@ -448,23 +491,7 @@ export default function AudioPlayer() {
           </div>
 
           <div style={{ width: '100%', maxWidth: '350px', aspectRatio: '1/1', margin: '24px auto', borderRadius: '12px', overflow: 'hidden', backgroundColor: 'var(--bg-input)', boxShadow: '0 15px 35px rgba(0,0,0,0.6)' }}>
-            {displayCover ? (
-              <img
-                key={`mobile-cover-${currentTrack.id}`}
-                src={displayCover}
-                alt="Cover"
-                draggable={false}
-                style={{ width: '100%', height: '100%', objectFit: 'cover', userSelect: 'none', WebkitUserDrag: 'none' }}
-                onError={(e) => {
-                  if (!e.target.dataset.error) {
-                    e.target.dataset.error = true;
-                    e.target.src = `https://i.ytimg.com/vi/${currentTrack.id}/hqdefault.jpg`;
-                  }
-                }}
-              />
-            ) : (
-              <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '5rem' }}>🎵</div>
-            )}
+            <TrackThumbnail track={currentTrack} showBackground={false} />
           </div>
 
           <div style={{ flex: 1, minHeight: '5px' }}></div>
@@ -572,16 +599,7 @@ export default function AudioPlayer() {
                       borderRadius: '8px', cursor: 'pointer'
                     }}>
                       <div style={{ width: '48px', height: '48px', borderRadius: '4px', overflow: 'hidden', flexShrink: 0, backgroundColor: 'var(--bg-input)', position: 'relative' }}>
-                        {(track.coverArt || track.thumbnail) && (() => {
-                          const rawThumb = track.coverArt || track.thumbnail;
-                          const cover = rawThumb.includes('i.ytimg.com') ? rawThumb.split('?')[0] : rawThumb.replace(/=w\d+-h\d+.*/, '=w200-h200-l90-rj');
-                          return (
-                            <>
-                              <div className="skeleton-bg" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, transition: 'opacity 0.3s' }}></div>
-                              <img src={cover} style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'relative', zIndex: 1, opacity: 0, transition: 'opacity 0.3s ease' }} alt="cover" onLoad={(e) => { e.currentTarget.style.opacity = 1; if (e.currentTarget.previousSibling) e.currentTarget.previousSibling.style.opacity = 0; }} onError={(e) => { if (!e.target.dataset.error) { e.target.dataset.error = true; e.target.src = `https://i.ytimg.com/vi/${track.id}/mqdefault.jpg`; } else { if (e.currentTarget.previousSibling) e.currentTarget.previousSibling.style.opacity = 0; } }} />
-                            </>
-                          );
-                        })()}
+                        <TrackThumbnail track={track} showBackground={false} />
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <p style={{ margin: 0, fontWeight: '600', color: isPlayingQueue ? 'var(--primary-color)' : 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{track.title}</p>
@@ -623,22 +641,7 @@ export default function AudioPlayer() {
       <div className="mobile-mini-bar">
         {/* Thumbnail */}
         <div style={{ width: '56px', height: '56px', borderRadius: '12px', overflow: 'hidden', backgroundColor: 'var(--bg-input)', marginRight: '16px', flexShrink: 0, boxShadow: '0 4px 12px rgba(0,0,0,0.3)', position: 'relative' }}>
-          {displayCover ? (
-            <>
-              <div className="skeleton-bg" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, transition: 'opacity 0.3s' }}></div>
-              <img
-                src={displayCover}
-                alt="Cover"
-                style={{ width: '100%', height: '100%', objectFit: 'cover', userSelect: 'none', WebkitUserDrag: 'none', position: 'relative', zIndex: 1, opacity: 0, transition: 'opacity 0.3s ease' }}
-                onLoad={(e) => { e.currentTarget.style.opacity = 1; if (e.currentTarget.previousSibling) e.currentTarget.previousSibling.style.opacity = 0; }}
-                onError={(e) => { if (!e.target.dataset.error) { e.target.dataset.error = true; e.target.src = `https://i.ytimg.com/vi/${currentTrack.id}/hqdefault.jpg`; } else { if (e.currentTarget.previousSibling) e.currentTarget.previousSibling.style.opacity = 0; } }}
-              />
-            </>
-          ) : (
-            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Music size={24} color="var(--text-secondary)" />
-            </div>
-          )}
+          <TrackThumbnail track={currentTrack} showBackground={false} />
         </div>
 
         {/* Track Info — stacked title + artist */}
@@ -702,23 +705,9 @@ export default function AudioPlayer() {
         {/* 1. Track Info */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
           <div style={{ width: '50px', aspectRatio: '1', backgroundColor: 'var(--bg-input)', borderRadius: '8px', overflow: 'hidden', flexShrink: 0 }}>
-            {displayCover ? (
-              <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-                <div className="skeleton-bg" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, transition: 'opacity 0.3s' }}></div>
-                <img
-                  key={`desktop-cover-${currentTrack.id}`}
-                  src={displayCover}
-                  alt="Cover"
-                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', position: 'relative', zIndex: 1, opacity: 0, transition: 'opacity 0.3s ease' }}
-                  onLoad={(e) => { e.currentTarget.style.opacity = 1; if (e.currentTarget.previousSibling) e.currentTarget.previousSibling.style.opacity = 0; }}
-                  onError={(e) => { if (!e.target.dataset.error) { e.target.dataset.error = true; e.target.src = `https://i.ytimg.com/vi/${currentTrack.id}/hqdefault.jpg`; } else { if (e.currentTarget.previousSibling) e.currentTarget.previousSibling.style.opacity = 0; } }}
-                />
-              </div>
-            ) : (
-              <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Music size={24} color="var(--text-secondary)" />
-              </div>
-            )}
+            <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+              <TrackThumbnail track={currentTrack} showBackground={false} />
+            </div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', paddingRight: '16px' }}>
             <div style={{ color: 'var(--text-primary)', margin: 0, fontSize: '0.95rem', fontWeight: '600', width: '100%' }}>
@@ -872,6 +861,13 @@ export default function AudioPlayer() {
             })()}
           </div>
         </div>
+      )}
+
+      {showSaveModal && (
+        <PlaylistSaveModal 
+          track={currentTrack} 
+          onClose={() => setShowSaveModal(false)} 
+        />
       )}
     </>
   );

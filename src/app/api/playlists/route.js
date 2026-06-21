@@ -14,9 +14,14 @@ export async function GET(request) {
     const ownedPlaylists = await prisma.playlist.findMany({
       where: { userId: session.user.id },
       include: {
-        _count: { select: { songs: true, savedBy: true } }
+        _count: { select: { songs: true, savedBy: true } },
+        songs: {
+          orderBy: { addedAt: 'asc' },
+          take: 1,
+          select: { song: { select: { id: true, thumbnail: true } } }
+        }
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'asc' }
     });
 
     const savedPlaylists = await prisma.savedPlaylist.findMany({
@@ -25,11 +30,16 @@ export async function GET(request) {
         playlist: {
           include: {
             user: { select: { name: true } },
-            _count: { select: { songs: true, savedBy: true } }
+            _count: { select: { songs: true, savedBy: true } },
+            songs: {
+              orderBy: { addedAt: 'asc' },
+              take: 1,
+              select: { song: { select: { id: true, thumbnail: true } } }
+            }
           }
         }
       },
-      orderBy: { savedAt: 'desc' }
+      orderBy: { savedAt: 'asc' }
     });
 
     return NextResponse.json({
@@ -49,7 +59,7 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { name, description, isPublic } = await request.json();
+    const { name, description, isPublic, coverImage } = await request.json();
 
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 });
@@ -60,6 +70,7 @@ export async function POST(request) {
         name,
         description: description || '',
         isPublic: !!isPublic,
+        coverImage: coverImage || null,
         userId: session.user.id,
       }
     });
