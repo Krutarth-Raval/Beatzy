@@ -137,9 +137,12 @@ export default function AudioPlayer() {
               }
               return newUrl;
             });
-          } else if (!blob) {
-            console.error("Audio blob not found for track", currentTrack.id);
-            if (isActive) playNext(); // Skip broken tracks
+          } else if (!blob && isActive) {
+            // Blob not found (Cloud Playlist), fallback to streaming
+            setAudioUrl((prevUrl) => {
+              if (prevUrl && prevUrl.startsWith('blob:')) URL.revokeObjectURL(prevUrl);
+              return `/api/download-direct?id=${currentTrack.id}`;
+            });
           }
         } else if (currentTrack.audioUrl && isActive) {
           // Fallback if we stream directly in the future
