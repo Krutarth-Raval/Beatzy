@@ -639,7 +639,7 @@ export default function PlaylistsPage() {
                         </div>
                         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                           <span style={{ fontWeight: '600', color: isCurrentlyPlaying ? 'var(--primary-color)' : 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{track.title}</span>
-                          <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{track.artists}</span>
+                          <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{track?.artists || track?.artist || 'Unknown Artist'}</span>
                         </div>
                         <span className="hide-on-mobile" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{formatDurationMs(track.duration)}</span>
 

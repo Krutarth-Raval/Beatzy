@@ -877,7 +877,7 @@ export default function Home() {
                     <span style={{ width: '32px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{index + 1}</span>
                     <div style={{ flex: 1, overflow: 'hidden' }}>
                       <h4 style={{ fontWeight: '500', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{track.name}</h4>
-                      <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{track.artists}</p>
+                      <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{track?.artists || track?.artist || 'Unknown Artist'}</p>
                     </div>
 
                     <div style={{ display: 'flex', gap: '8px' }}>
