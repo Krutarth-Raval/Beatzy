@@ -45,6 +45,8 @@ model User {
   accounts      Account[]
   sessions      Session[]
   histories     History[]
+  playlists     Playlist[]
+  savedPlaylists SavedPlaylist[]
 }
 
 model VerificationToken {
@@ -73,4 +75,61 @@ model Update {
   title       String
   description String
   createdAt   DateTime @default(now())
+}
+
+model Playlist {
+  id          String   @id @default(cuid())
+  name        String
+  description String?  @db.Text
+  coverImage  String?  @db.Text
+  isPublic    Boolean  @default(false)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  songs       PlaylistSong[]
+  savedBy     SavedPlaylist[]
+
+  @@index([userId])
+}
+
+model Song {
+  id        String   @id // YouTube ID or Spotify ID
+  title     String
+  artist    String
+  thumbnail String   @db.Text
+  duration  String?
+  createdAt DateTime @default(now())
+
+  playlists PlaylistSong[]
+}
+
+model PlaylistSong {
+  id         String   @id @default(cuid())
+  playlistId String
+  songId     String
+  addedAt    DateTime @default(now())
+  order      Int      @default(0)
+
+  playlist   Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  song       Song     @relation(fields: [songId], references: [id], onDelete: Cascade)
+
+  @@unique([playlistId, songId])
+  @@index([playlistId])
+  @@index([songId])
+}
+
+model SavedPlaylist {
+  id         String   @id @default(cuid())
+  userId     String
+  playlistId String
+  savedAt    DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  playlist   Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, playlistId])
+  @@index([userId])
+  @@index([playlistId])
 }

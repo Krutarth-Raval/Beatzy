@@ -82,7 +82,23 @@ export default function PlaylistsPage() {
   const loadPlaylists = async () => {
     setLoading(true);
     try {
-      const p = await getPlaylists();
+      const localP = await getPlaylists();
+      let cloudP = [];
+      
+      try {
+        const res = await fetch('/api/playlists');
+        if (res.ok) {
+          const data = await res.json();
+          cloudP = [
+            ...(data.owned || []).map(p => ({ ...p, isCloud: true, isOwner: true })),
+            ...(data.saved || []).map(p => ({ ...p, isCloud: true, isOwner: false }))
+          ];
+        }
+      } catch (e) {
+        console.error('Failed to load cloud playlists', e);
+      }
+      
+      const p = [...cloudP, ...localP];
       setPlaylists(p);
 
       const urlParams = new URLSearchParams(window.location.search);
@@ -140,8 +156,16 @@ export default function PlaylistsPage() {
     setPendingChanges({ moves: [], deletes: [], copies: [] });
     setSortMode("Manual");
     try {
-      const t = await getTracksForPlaylist(playlist.id);
-      setTracks(t);
+      if (playlist.isCloud) {
+        const res = await fetch(`/api/playlists/${playlist.id}`);
+        if (res.ok) {
+          const data = await res.json();
+          setTracks(data.tracks || []);
+        }
+      } else {
+        const t = await getTracksForPlaylist(playlist.id);
+        setTracks(t);
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -157,7 +181,17 @@ export default function PlaylistsPage() {
   const confirmDeletePlaylist = async () => {
     if (!playlistToDelete) return;
     try {
-      await deletePlaylist(playlistToDelete);
+      const playlist = playlists.find(p => p.id === playlistToDelete);
+      if (playlist?.isCloud) {
+        if (playlist.isOwner) {
+          await fetch(`/api/playlists/${playlistToDelete}`, { method: 'DELETE' });
+        } else {
+          await fetch(`/api/playlists/${playlistToDelete}/save`, { method: 'DELETE' });
+        }
+      } else {
+        await deletePlaylist(playlistToDelete);
+      }
+      
       if (selectedPlaylist?.id === playlistToDelete) {
         setSelectedPlaylist(null);
         setTracks([]);
@@ -272,16 +306,27 @@ export default function PlaylistsPage() {
 
   const saveAllChanges = async () => {
     if (!selectedPlaylist) return;
-    for (const id of pendingChanges.deletes) {
-      await removeTrack(id);
+    
+    if (selectedPlaylist.isCloud) {
+      if (selectedPlaylist.isOwner) {
+        for (const id of pendingChanges.deletes) {
+          await fetch(`/api/playlists/${selectedPlaylist.id}/songs?songId=${id}`, { method: 'DELETE' });
+        }
+      }
+      // Note: Moves/copies across cloud playlists require more complex backend logic.
+      // For now, we only support deletes for Cloud Playlists.
+    } else {
+      for (const id of pendingChanges.deletes) {
+        await removeTrack(id);
+      }
+      for (const move of pendingChanges.moves) {
+        await moveTrackToPlaylist(move.trackId, move.targetPlaylistId);
+      }
+      for (const copy of pendingChanges.copies) {
+        await copyTrackToPlaylist(copy.trackId, copy.targetPlaylistId);
+      }
+      await reorderTracks(selectedPlaylist.id, tracks.map(t => t.id));
     }
-    for (const move of pendingChanges.moves) {
-      await moveTrackToPlaylist(move.trackId, move.targetPlaylistId);
-    }
-    for (const copy of pendingChanges.copies) {
-      await copyTrackToPlaylist(copy.trackId, copy.targetPlaylistId);
-    }
-    await reorderTracks(selectedPlaylist.id, tracks.map(t => t.id));
 
     setPendingChanges({ moves: [], deletes: [], copies: [] });
     setHasUnsavedChanges(false);
