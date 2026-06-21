@@ -246,16 +246,19 @@ export default function AudioPlayer() {
   // Dominant color extraction has been removed to prevent 429 Too Many Requests errors from CDNs.
 
   // Dynamic upgrade of old low-res thumbnails
-  const displayCover = currentTrack?.coverArt
-    ? currentTrack.coverArt.replace(/=w\d+-h\d+.*/, '=w1200-h1200-l90-rj').replace(/\/(default|mqdefault|hqdefault|sddefault)(\.[a-z]+)$/i, '/maxresdefault$2')
+  const rawCover = currentTrack?.coverArt || currentTrack?.thumbnail;
+  const displayCover = rawCover
+    ? rawCover.replace(/=w\d+-h\d+.*/, '=w1200-h1200-l90-rj').replace(/\/(default|mqdefault|hqdefault|sddefault)(\.[a-z]+)$/i, '/maxresdefault$2')
     : null;
+
+  const displayArtist = currentTrack?.artists || currentTrack?.artist || 'Unknown Artist';
 
   // Handle Media Session API (Lock Screen controls)
   useEffect(() => {
     if ('mediaSession' in navigator && currentTrack) {
       navigator.mediaSession.metadata = new window.MediaMetadata({
         title: currentTrack.title,
-        artist: currentTrack.artists,
+        artist: displayArtist,
         album: queueName || currentTrack.album || 'Beatzy Playlist',
         artwork: [
           { src: displayCover || '/placeholder-cover.jpg', sizes: '512x512', type: 'image/jpeg' }
@@ -491,7 +494,7 @@ export default function AudioPlayer() {
               <ScrollingText text={currentTrack.title} />
             </h2>
             <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem', margin: '8px 0 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {currentTrack.artists}
+              {currentTrack?.artists || currentTrack?.artist || 'Unknown Artist'}
             </p>
           </div>
 
@@ -633,7 +636,7 @@ export default function AudioPlayer() {
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <p style={{ margin: 0, fontWeight: '600', color: isPlayingQueue ? 'var(--primary-color)' : 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{track.title}</p>
-                        <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{track.artists}</p>
+                        <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{track?.artists || track?.artist || 'Unknown Artist'}</p>
                       </div>
                       {isPlayingQueue && <div className="equalizer-anim" style={{ color: 'var(--primary-color)' }}>...</div>}
                     </div>
@@ -695,7 +698,7 @@ export default function AudioPlayer() {
             <ScrollingText text={currentTrack.title} />
           </div>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', margin: '2px 0 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {currentTrack.artists}
+            {currentTrack?.artists || currentTrack?.artist || 'Unknown Artist'}
           </p>
         </div>
 
@@ -773,7 +776,7 @@ export default function AudioPlayer() {
               <ScrollingText text={currentTrack.title} />
             </div>
             <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {currentTrack.artists}
+              {currentTrack?.artists || currentTrack?.artist || 'Unknown Artist'}
             </span>
           </div>
         </div>
@@ -911,7 +914,7 @@ export default function AudioPlayer() {
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ margin: 0, fontWeight: '600', fontSize: '0.9rem', color: isPlayingQueue ? 'var(--primary-color)' : 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{track.title}</p>
-                      <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{track.artists}</p>
+                      <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{track?.artists || track?.artist || 'Unknown Artist'}</p>
                     </div>
                     {isPlayingQueue && <div className="equalizer-anim" style={{ color: 'var(--primary-color)', fontSize: '0.8rem' }}>...</div>}
                   </div>

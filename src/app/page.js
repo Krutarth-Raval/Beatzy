@@ -98,10 +98,27 @@ export default function Home() {
     localStorage.setItem('isPlaylistsExpanded', newState);
   };
 
-  const loadSidebarPlaylists = () => {
-    import('@/lib/db').then((db) => {
-      db.getPlaylists().then(setPlaylists).catch(console.error);
-    });
+  const loadSidebarPlaylists = async () => {
+    try {
+      const db = await import('@/lib/db');
+      const localP = await db.getPlaylists();
+      let cloudP = [];
+      try {
+        const res = await fetch('/api/playlists');
+        if (res.ok) {
+          const data = await res.json();
+          cloudP = [
+            ...(data.owned || []).map(p => ({ ...p, isCloud: true, isOwner: true })),
+            ...(data.saved || []).map(p => ({ ...p, isCloud: true, isOwner: false }))
+          ];
+        }
+      } catch (e) {
+        console.error('Failed to load cloud playlists for sidebar', e);
+      }
+      setPlaylists([...cloudP, ...localP]);
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   useEffect(() => {
