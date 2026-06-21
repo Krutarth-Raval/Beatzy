@@ -12,6 +12,7 @@ export async function GET(request) {
 
   try {
     let directUrl = null;
+    let directUrlError = null;
 
     const pipedInstances = [
       'https://pipedapi.kavin.rocks',
@@ -125,12 +126,13 @@ export async function GET(request) {
           directUrl = info.url;
         }
       } catch (e) {
-        console.error('yt-dlp fallback failed:', e);
+        directUrlError = 'yt-dlp fallback failed: ' + (e.message || String(e));
+        console.error(directUrlError);
       }
     }
 
     if (!directUrl) {
-      throw new Error('Could not find direct audio stream URL from extractors');
+      throw new Error(directUrlError || 'Could not find direct audio stream URL from extractors');
     }
 
     // Extract the Range header from the client request
