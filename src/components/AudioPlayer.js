@@ -145,8 +145,8 @@ export default function AudioPlayer() {
             const data = await extractRes.json();
             
             if (data.url && isActive) {
-               // Step 2: Pass the direct URL to the Edge streaming proxy (bypasses Node.js Vercel buffering)
-               setAudioUrl(`/api/proxy-audio?url=${encodeURIComponent(data.url)}`);
+               // Step 2: Stream directly from YouTube to the browser to bypass proxy 403 errors!
+               setAudioUrl(data.url);
             }
           } catch (e) {
             console.error("Extraction failed", e);

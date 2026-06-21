@@ -113,7 +113,16 @@ export async function GET(request) {
       try {
         const ytdl = require('@distube/ytdl-core');
         const info = await ytdl.getInfo(id);
-        const format = ytdl.chooseFormat(info.formats, { quality: 'highestaudio', filter: 'audioonly' });
+        
+        // Find best audio format robustly
+        let format = null;
+        try {
+          format = ytdl.chooseFormat(info.formats, { quality: 'highestaudio', filter: 'audioonly' });
+        } catch (err) {
+          // Fallback if highestaudio/audioonly fails
+          format = info.formats.find(f => f.hasAudio) || info.formats[0];
+        }
+        
         if (format && format.url) {
           directUrl = format.url;
         }
