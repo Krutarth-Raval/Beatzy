@@ -97,7 +97,7 @@ export async function GET(request) {
           }
         }
 
-        const command = `"${ytDlpPath}" -j --no-warnings "https://www.youtube.com/watch?v=${id}"`;
+        const command = `"${ytDlpPath}" -j --force-ipv6 --no-warnings "https://www.youtube.com/watch?v=${id}"`;
         const { stdout } = await execAsync(command);
         const info = JSON.parse(stdout);
         

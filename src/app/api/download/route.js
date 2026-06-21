@@ -100,7 +100,7 @@ export async function GET(request) {
       }
     }
 
-    const command = `"${ytDlpPath}" -j --no-warnings --prefer-free-formats "https://www.youtube.com/watch?v=${id}"`;
+    const command = `"${ytDlpPath}" -j --force-ipv6 --no-warnings --prefer-free-formats "https://www.youtube.com/watch?v=${id}"`;
     const { stdout, stderr } = await execAsync(command);
 
     if (stderr && !stdout) {
