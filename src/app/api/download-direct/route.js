@@ -172,6 +172,6 @@ export async function GET(request) {
     });
   } catch (error) {
     console.error('Direct download error:', error);
-    return NextResponse.json({ error: 'Failed to stream audio' }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Failed to stream audio', stack: error.stack }, { status: 500 });
   }
 }
