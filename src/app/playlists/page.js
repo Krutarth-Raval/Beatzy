@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from 'react';
-import { ArrowLeft, Play, Pause, Trash2, Folder, Loader2, Plus, Edit2, Check, X, Redo2, Copy, Shuffle, GripVertical, Image as ImageIcon, Camera, ChevronDown, Menu, Library, ChevronRight, Disc3, Sparkles } from 'lucide-react';
+import { ArrowLeft, Play, Pause, Trash2, Folder, Loader2, Plus, Edit2, Check, X, Redo2, Copy, Shuffle, GripVertical, Image as ImageIcon, Camera, ChevronDown, Menu, Library, ChevronRight, Disc3, Sparkles, Settings, Share2, Globe, Lock, BookmarkPlus } from 'lucide-react';
 import { getPlaylists, deletePlaylist, getTracksForPlaylist, removeTrack, createPlaylist, updatePlaylist, moveTrackToPlaylist, copyTrackToPlaylist, reorderTracks } from '@/lib/db';
 import { polyfill } from 'mobile-drag-drop';
 import { scrollBehaviourDragImageTranslateOverride } from 'mobile-drag-drop/scroll-behaviour';
@@ -34,6 +34,9 @@ export default function PlaylistsPage() {
   const [playlistToDelete, setPlaylistToDelete] = useState(null);
   const [pendingChanges, setPendingChanges] = useState({ moves: [], deletes: [], copies: [] });
   const [activeDragHandle, setActiveDragHandle] = useState(null);
+
+  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
+  const [isSavingPlaylist, setIsSavingPlaylist] = useState(false);
 
   const router = useRouter();
   const { playTrack, currentTrack, isPlaying, togglePlay, shuffle, toggleShuffle } = usePlayerStore();
@@ -252,6 +255,52 @@ export default function PlaylistsPage() {
       }
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleToggleVisibility = async () => {
+    if (!selectedPlaylist?.isCloud || !selectedPlaylist?.isOwner) return;
+    try {
+      const newVisibility = !selectedPlaylist.isPublic;
+      const res = await fetch(`/api/playlists/${selectedPlaylist.id}/visibility`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isPublic: newVisibility })
+      });
+      if (res.ok) {
+        setSelectedPlaylist(prev => ({ ...prev, isPublic: newVisibility }));
+        setShowSettingsMenu(false);
+      }
+    } catch (e) {
+      console.error('Failed to toggle visibility', e);
+    }
+  };
+
+  const handleShare = () => {
+    if (selectedPlaylist?.id) {
+      const url = `${window.location.origin}/playlists?id=${selectedPlaylist.id}`;
+      navigator.clipboard.writeText(url).then(() => {
+        alert('Playlist link copied to clipboard!');
+        setShowSettingsMenu(false);
+      });
+    }
+  };
+
+  const handleSavePublicPlaylist = async () => {
+    if (!selectedPlaylist?.isCloud || selectedPlaylist?.isOwner) return;
+    setIsSavingPlaylist(true);
+    try {
+      const res = await fetch(`/api/playlists/${selectedPlaylist.id}/save`, { method: 'POST' });
+      if (res.ok) {
+        alert('Playlist saved to your library!');
+        loadPlaylists();
+      } else {
+        alert('Failed to save playlist.');
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsSavingPlaylist(false);
+    }
   };
 
   const handleSaveName = async () => {
@@ -475,7 +524,7 @@ export default function PlaylistsPage() {
                 }} />
 
                 {/* Mobile Header Navbar */}
-                <div className="show-on-mobile" style={{ width: '100%', display: 'flex', position: 'relative', zIndex: 1, padding: '0 0 16px 0', justifyContent: 'flex-start' }}>
+                <div className="show-on-mobile" style={{ width: '100%', display: 'flex', position: 'relative', zIndex: 1, padding: '0 0 16px 0', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', alignItems: 'center' }}>
                     <button onClick={() => setSidebarOpen(true)} style={{ color: 'var(--text-primary)', marginRight: '16px', background: 'none', border: 'none', cursor: 'pointer' }}>
                       <Menu size={28} />
@@ -485,7 +534,52 @@ export default function PlaylistsPage() {
                       <span style={{ color: 'var(--text-primary)', fontWeight: '700', fontSize: '1.2rem', letterSpacing: '0.5px' }}>Beatzy Playlist</span>
                     </div>
                   </div>
+                  
+                  {/* Settings Button on Mobile Header */}
+                  {selectedPlaylist.isCloud && (
+                    <div style={{ position: 'relative' }}>
+                      <button onClick={() => setShowSettingsMenu(!showSettingsMenu)} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', padding: '4px' }}>
+                        <Settings size={24} />
+                      </button>
+                    </div>
+                  )}
                 </div>
+
+                {/* Settings Button on Desktop (absolute positioned) */}
+                {selectedPlaylist.isCloud && (
+                  <div className="hide-on-mobile" style={{ position: 'absolute', top: '24px', right: '24px', zIndex: 10 }}>
+                    <button onClick={() => setShowSettingsMenu(!showSettingsMenu)} style={{ background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '50%', color: 'var(--text-primary)', cursor: 'pointer', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s' }} onMouseOver={e => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'} onMouseOut={e => e.currentTarget.style.backgroundColor = 'var(--bg-input)'}>
+                      <Settings size={20} />
+                    </button>
+                  </div>
+                )}
+
+                {/* Settings Dropdown Menu */}
+                {showSettingsMenu && selectedPlaylist.isCloud && (
+                  <div style={{ position: 'absolute', top: '64px', right: '24px', zIndex: 20, backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '12px', boxShadow: '0 10px 40px rgba(0,0,0,0.5)', width: '220px', overflow: 'hidden', padding: '8px' }}>
+                    {selectedPlaylist.isOwner ? (
+                      <>
+                        <button onClick={handleToggleVisibility} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', borderRadius: '8px', textAlign: 'left' }} onMouseOver={e => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'} onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                          {selectedPlaylist.isPublic ? <Lock size={18} /> : <Globe size={18} />}
+                          <span>{selectedPlaylist.isPublic ? 'Make Private' : 'Make Public'}</span>
+                        </button>
+                        <div style={{ height: '1px', backgroundColor: 'var(--border-color)', margin: '4px 0' }} />
+                      </>
+                    ) : (
+                      <>
+                        <button onClick={handleSavePublicPlaylist} disabled={isSavingPlaylist} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', borderRadius: '8px', textAlign: 'left', opacity: isSavingPlaylist ? 0.5 : 1 }} onMouseOver={e => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'} onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                          {isSavingPlaylist ? <Loader2 className="animate-spin" size={18} /> : <BookmarkPlus size={18} />}
+                          <span>Save to Library</span>
+                        </button>
+                        <div style={{ height: '1px', backgroundColor: 'var(--border-color)', margin: '4px 0' }} />
+                      </>
+                    )}
+                    <button onClick={handleShare} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', borderRadius: '8px', textAlign: 'left' }} onMouseOver={e => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'} onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                      <Share2 size={18} />
+                      <span>Share Playlist</span>
+                    </button>
+                  </div>
+                )}
 
                 <div className="playlist-header-mobile" style={{ display: 'flex', alignItems: 'flex-end', gap: '24px', position: 'relative', zIndex: 1 }}>
 

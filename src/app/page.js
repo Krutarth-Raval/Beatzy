@@ -6,6 +6,7 @@ import { Search, Play, Download, LogOut, Music, Loader2, X, Disc3, Menu, Message
 import Tesseract from 'tesseract.js';
 import PlaylistSaveModal from '@/components/PlaylistSaveModal';
 import CreatePlaylistModal from '@/components/CreatePlaylistModal';
+import PlaylistSearchModal from '@/components/PlaylistSearchModal';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import usePlayerStore from '@/store/usePlayerStore';
@@ -16,6 +17,7 @@ export default function Home() {
   const { data: session, status } = useSession();
   const { currentTrack: globalTrack } = usePlayerStore();
   const [showCreatePlaylistModal, setShowCreatePlaylistModal] = useState(false);
+  const [showPlaylistSearchModal, setShowPlaylistSearchModal] = useState(false);
 
   // Modes: 'search' or 'spotify'
   const [mode, setMode] = useState('spotify');
@@ -627,6 +629,19 @@ export default function Home() {
           
           <PwaInstallButton variant="sidebar" />
           
+          <button
+            onClick={() => { setSidebarOpen(false); setShowPlaylistSearchModal(true); }}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', gap: '12px', padding: '12px',
+              backgroundColor: 'transparent', color: 'var(--text-primary)', border: '1px solid var(--border-color)',
+              borderRadius: '8px', cursor: 'pointer', transition: 'background-color 0.2s', marginBottom: '8px'
+            }}
+            onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
+            onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+          >
+            <Search size={18} /> <span style={{ fontWeight: '600' }}>Search Playlists</span>
+          </button>
+
           <div
             onClick={togglePlaylistsExpanded}
             style={{
@@ -1145,16 +1160,14 @@ export default function Home() {
         {showCreatePlaylistModal && (
           <CreatePlaylistModal 
             onClose={() => setShowCreatePlaylistModal(false)}
-            onCreate={async (name) => {
-              setShowCreatePlaylistModal(false);
-              try {
-                const db = await import('@/lib/db');
-                await db.createPlaylist(name);
-                loadSidebarPlaylists();
-              } catch (e) {
-                console.error(e);
-              }
-            }}
+            onPlaylistCreated={loadSidebarPlaylists}
+          />
+        )}
+
+        {showPlaylistSearchModal && (
+          <PlaylistSearchModal
+            onClose={() => setShowPlaylistSearchModal(false)}
+            onPlaylistSaved={loadSidebarPlaylists}
           />
         )}
       </div>
