@@ -75,63 +75,18 @@ export async function GET(request) {
 
 
     // ==========================================
-    // METHOD 2: YT-DLP (Local Fallback)
+    // METHOD 2: PURE JS YTDL-CORE FALLBACK
     // ==========================================
-    console.log('Using local yt-dlp fallback...');
-    let ytDlpPath;
-    const isVercel = process.env.VERCEL === '1';
-
-    if (isVercel) {
-      ytDlpPath = path.join(os.tmpdir(), 'yt-dlp_static');
-      
-      if (!fs.existsSync(ytDlpPath)) {
-        console.log('Downloading statically compiled yt-dlp_linux to bypass python requirement...');
-        const downloadRes = await fetch('https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux');
-        if (!downloadRes.ok) throw new Error('Failed to download yt-dlp binary');
-        const buffer = await downloadRes.arrayBuffer();
-        fs.writeFileSync(ytDlpPath, Buffer.from(buffer));
-        fs.chmodSync(ytDlpPath, 0o777);
-      }
-    } else {
-      // Local Windows/Mac execution
-      ytDlpPath = path.join(process.cwd(), 'node_modules', 'youtube-dl-exec', 'bin', 'yt-dlp.exe');
-      if (!fs.existsSync(ytDlpPath)) {
-        ytDlpPath = path.join(process.cwd(), 'node_modules', 'youtube-dl-exec', 'bin', 'yt-dlp');
-      }
-    }
-
-    const command = `"${ytDlpPath}" -j --force-ipv6 --extractor-args "youtube:player_client=android" --no-warnings --prefer-free-formats "https://www.youtube.com/watch?v=${id}"`;
-    const { stdout, stderr } = await execAsync(command);
-
-    if (stderr && !stdout) {
-      throw new Error(stderr);
-    }
-
-    const output = JSON.parse(stdout);
-
-    // Find the best audio format. We prefer audio-only (vcodec === 'none') and specifically M4A/MP4 for universal browser support.
-    const audioFormats = output.formats
-      .filter(f => f.acodec && f.acodec !== 'none')
-      .sort((a, b) => {
-        // 1. Prefer pure audio streams first
-        if (a.vcodec === 'none' && b.vcodec !== 'none') return -1;
-        if (a.vcodec !== 'none' && b.vcodec === 'none') return 1;
-        
-        // 2. Strongly prefer universal formats (m4a/mp4/aac) over webm/opus
-        const isAUniversal = a.ext === 'm4a' || a.ext === 'mp4';
-        const isBUniversal = b.ext === 'm4a' || b.ext === 'mp4';
-        if (isAUniversal && !isBUniversal) return -1;
-        if (!isAUniversal && isBUniversal) return 1;
-
-        // 3. Then sort by audio bitrate
-        return (b.abr || 0) - (a.abr || 0);
-      });
-
-    if (audioFormats.length > 0) {
+    console.log('Using local ytdl-core fallback...');
+    const ytdl = require('@distube/ytdl-core');
+    const info = await ytdl.getInfo(id);
+    const format = ytdl.chooseFormat(info.formats, { quality: 'highestaudio', filter: 'audioonly' });
+    
+    if (format && format.url) {
       return NextResponse.json({ 
-        url: audioFormats[0].url, 
-        title: output.title,
-        ext: audioFormats[0].ext
+        url: format.url, 
+        title: info.videoDetails.title || 'Downloaded Audio',
+        ext: format.container || 'mp3'
       });
     } else {
       throw new Error('No audio stream found');

@@ -91,61 +91,17 @@ export async function GET(request) {
       }
     }
 
-    // 3. Fallback to native yt-dlp extraction (matches /api/download fallback)
+    // 3. Ultra-reliable pure JavaScript fallback (No binary downloads, fixes Vercel timeouts)
     if (!directUrl) {
       try {
-        const { exec } = require('child_process');
-        const { promisify } = require('util');
-        const execAsync = promisify(exec);
-        const fs = require('fs');
-        const os = require('os');
-        const path = require('path');
-
-        let ytDlpPath;
-        const isVercel = process.env.VERCEL === '1';
-
-        if (isVercel) {
-          ytDlpPath = path.join(os.tmpdir(), 'yt-dlp_static');
-          
-          if (!fs.existsSync(ytDlpPath)) {
-            console.log('Downloading statically compiled yt-dlp_linux to bypass python requirement...');
-            const downloadRes = await fetch('https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux');
-            if (!downloadRes.ok) throw new Error('Failed to download yt-dlp binary');
-            const buffer = await downloadRes.arrayBuffer();
-            fs.writeFileSync(ytDlpPath, Buffer.from(buffer));
-            fs.chmodSync(ytDlpPath, 0o777);
-          }
-        } else {
-          ytDlpPath = path.join(process.cwd(), 'node_modules', 'youtube-dl-exec', 'bin', 'yt-dlp.exe');
-          if (!fs.existsSync(ytDlpPath)) {
-            ytDlpPath = path.join(process.cwd(), 'node_modules', 'youtube-dl-exec', 'bin', 'yt-dlp');
-          }
-        }
-
-        const command = `"${ytDlpPath}" -j --force-ipv6 --extractor-args "youtube:player_client=android" --no-warnings "https://www.youtube.com/watch?v=${id}"`;
-        const { stdout } = await execAsync(command);
-        const info = JSON.parse(stdout);
-        
-        // Find best audio format exactly like /api/download does
-        const audioFormats = info.formats
-          .filter(f => f.acodec && f.acodec !== 'none')
-          .sort((a, b) => {
-            if (a.vcodec === 'none' && b.vcodec !== 'none') return -1;
-            if (a.vcodec !== 'none' && b.vcodec === 'none') return 1;
-            const isAUniversal = a.ext === 'm4a' || a.ext === 'mp4';
-            const isBUniversal = b.ext === 'm4a' || b.ext === 'mp4';
-            if (isAUniversal && !isBUniversal) return -1;
-            if (!isAUniversal && isBUniversal) return 1;
-            return (b.abr || 0) - (a.abr || 0);
-          });
-
-        if (audioFormats.length > 0) {
-          directUrl = audioFormats[0].url;
-        } else {
-          directUrl = info.url;
+        const ytdl = require('@distube/ytdl-core');
+        const info = await ytdl.getInfo(id);
+        const format = ytdl.chooseFormat(info.formats, { quality: 'highestaudio', filter: 'audioonly' });
+        if (format && format.url) {
+          directUrl = format.url;
         }
       } catch (e) {
-        directUrlError = 'yt-dlp fallback failed: ' + (e.message || String(e));
+        directUrlError = 'ytdl-core fallback failed: ' + (e.message || String(e));
         console.error(directUrlError);
       }
     }
