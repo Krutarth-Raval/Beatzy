@@ -27,7 +27,8 @@ const PlaylistCoverDynamic = ({ coverArt, songs, isSidebar = false }) => {
           setThumb(initial);
         } else if (isSpotify) {
           const id = firstSong.id.replace('spotify:track:', '');
-          fetch(`https://open.spotify.com/oembed?url=spotify:track:${id}`)
+          const oembedUrl = `https://open.spotify.com/oembed?url=spotify:track:${id}`;
+          fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(oembedUrl)}`)
             .then(res => res.json())
             .then(data => { if (data.thumbnail_url) setThumb(data.thumbnail_url); })
             .catch(() => {});
