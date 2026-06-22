@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 
+export const maxDuration = 60; // Increase timeout to 60 seconds for yt-dlp
+
 export const runtime = 'nodejs';
 
 export async function GET(request) {
@@ -108,7 +110,8 @@ export async function GET(request) {
           noCallHome: true,
           noCheckCertificate: true,
           preferFreeFormats: true,
-          youtubeSkipDashManifest: true
+          youtubeSkipDashManifest: true,
+          cacheDir: '/tmp'
         });
         
         if (output && output.formats) {
