@@ -77,43 +77,40 @@ export async function GET(request) {
 
 
     // ==========================================
-    // METHOD 2: FALLBACK TO YOUTUBE-DL-EXEC
+    // METHOD 2: FALLBACK TO DEDICATED PYTHON BACKEND
     // ==========================================
-    console.log('Using local youtube-dl-exec fallback...');
-    const youtubedl = require('youtube-dl-exec');
-    const output = await youtubedl(`https://www.youtube.com/watch?v=${id}`, {
-      dumpJson: true,
-      noWarnings: true,
-      noCallHome: true,
-      noCheckCertificate: true,
-      preferFreeFormats: true,
-      youtubeSkipDashManifest: true,
-      cacheDir: '/tmp'
-    });
+    console.log('Using dedicated Python backend fallback...');
+    const backendUrl = process.env.EXTRACTOR_URL || 'http://127.0.0.1:8000';
+    let directUrl = null;
+    let directUrlError = null;
     
-    if (output && output.formats) {
-      // Find best audio format robustly with strong preference for m4a/mp4 formats
-      const audioFormats = output.formats
-        .filter(f => f.acodec !== 'none' && f.vcodec === 'none')
-        .sort((a, b) => {
-          const isAUniversal = a.ext === 'm4a' || a.ext === 'mp4';
-          const isBUniversal = b.ext === 'm4a' || b.ext === 'mp4';
-          if (isAUniversal && !isBUniversal) return -1;
-          if (!isAUniversal && isBUniversal) return 1;
-          return (b.abr || 0) - (a.abr || 0);
-        });
-        
-      const format = audioFormats.length > 0 ? audioFormats[0] : output.formats.find(f => f.acodec !== 'none');
-      
-      if (format && format.url) {
-        return NextResponse.json({ 
-          url: format.url, 
-          title: output.title || 'Downloaded Audio',
-          ext: format.ext || 'm4a'
-        });
+    try {
+      const res = await fetch(`${backendUrl}/api/extract-url?id=${id}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.url) {
+          directUrl = data.url;
+        }
+      } else {
+        const errorData = await res.json();
+        directUrlError = 'Dedicated backend failed: ' + (errorData.detail || res.statusText);
+        console.error(directUrlError);
       }
+    } catch (e) {
+      directUrlError = 'Dedicated backend error: ' + (e.message || String(e));
+      console.error(directUrlError);
     }
-    throw new Error('No audio stream found via fallback');
+    
+    if (!directUrl) {
+      throw new Error(directUrlError || 'Could not find any formats to download');
+    }
+
+    return NextResponse.json({ 
+      url: directUrl, 
+      title: 'Downloaded Audio',
+      ext: 'm4a'
+    });
+
   } catch (error) {
     console.error('Download API error:', error);
     

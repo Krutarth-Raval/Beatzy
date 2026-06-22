@@ -100,40 +100,28 @@ export async function GET(request) {
       }
     }
 
-    // 3. Ultra-reliable fallback using youtube-dl-exec
+    // ==========================================
+    // METHOD 2: FALLBACK TO DEDICATED PYTHON BACKEND
+    // ==========================================
     if (!directUrl) {
+      console.log('Using dedicated Python backend fallback...');
+      const backendUrl = process.env.EXTRACTOR_URL || 'http://127.0.0.1:8000';
+      
       try {
-        const youtubedl = require('youtube-dl-exec');
-        const output = await youtubedl(`https://www.youtube.com/watch?v=${id}`, {
-          dumpJson: true,
-          noWarnings: true,
-          noCallHome: true,
-          noCheckCertificate: true,
-          preferFreeFormats: true,
-          youtubeSkipDashManifest: true,
-          cacheDir: '/tmp'
-        });
-        
-        if (output && output.formats) {
-          // Find best audio format robustly with strong preference for m4a/mp4 formats
-          const audioFormats = output.formats
-            .filter(f => f.acodec !== 'none' && f.vcodec === 'none')
-            .sort((a, b) => {
-              const isAUniversal = a.ext === 'm4a' || a.ext === 'mp4';
-              const isBUniversal = b.ext === 'm4a' || b.ext === 'mp4';
-              if (isAUniversal && !isBUniversal) return -1;
-              if (!isAUniversal && isBUniversal) return 1;
-              return (b.abr || 0) - (a.abr || 0);
-            });
-            
-          const format = audioFormats.length > 0 ? audioFormats[0] : output.formats.find(f => f.acodec !== 'none');
-          
-          if (format && format.url) {
-            directUrl = format.url;
+        const res = await fetch(`${backendUrl}/api/extract-url?id=${id}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.url) {
+            directUrl = data.url;
+            console.log('Successfully extracted using dedicated backend');
           }
+        } else {
+          const errorData = await res.json();
+          directUrlError = 'Dedicated backend failed: ' + (errorData.detail || res.statusText);
+          console.error(directUrlError);
         }
       } catch (e) {
-        directUrlError = 'youtube-dl-exec fallback failed: ' + (e.message || String(e));
+        directUrlError = 'Dedicated backend error: ' + (e.message || String(e));
         console.error(directUrlError);
       }
     }
