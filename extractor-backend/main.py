@@ -83,6 +83,11 @@ async def extract_url(id: str = Query(..., description="YouTube video ID"), q: s
             'youtube': {'player_client': ['android', 'ios']}
         }
     }
+    
+    import os
+    cookie_path = "www.youtube.com_cookies.txt"
+    if os.path.exists(cookie_path):
+        ydl_opts['cookiefile'] = cookie_path
 
     try:
         url = f"https://www.youtube.com/watch?v={id}"
