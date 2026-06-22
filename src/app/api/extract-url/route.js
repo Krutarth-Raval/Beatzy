@@ -108,26 +108,39 @@ export async function GET(request) {
       }
     }
 
-    // 3. Ultra-reliable pure JavaScript fallback (No binary downloads, fixes Vercel timeouts)
+    // 3. Ultra-reliable fallback using youtube-dl-exec
     if (!directUrl) {
       try {
-        const ytdl = require('@distube/ytdl-core');
-        const info = await ytdl.getInfo(id);
+        const youtubedl = require('youtube-dl-exec');
+        const output = await youtubedl(`https://www.youtube.com/watch?v=${id}`, {
+          dumpJson: true,
+          noWarnings: true,
+          noCallHome: true,
+          noCheckCertificate: true,
+          preferFreeFormats: true,
+          youtubeSkipDashManifest: true
+        });
         
-        // Find best audio format robustly
-        let format = null;
-        try {
-          format = ytdl.chooseFormat(info.formats, { quality: 'highestaudio', filter: 'audioonly' });
-        } catch (err) {
-          // Fallback if highestaudio/audioonly fails
-          format = info.formats.find(f => f.hasAudio) || info.formats[0];
-        }
-        
-        if (format && format.url) {
-          directUrl = format.url;
+        if (output && output.formats) {
+          // Find best audio format robustly with strong preference for m4a/mp4 formats
+          const audioFormats = output.formats
+            .filter(f => f.acodec !== 'none' && f.vcodec === 'none')
+            .sort((a, b) => {
+              const isAUniversal = a.ext === 'm4a' || a.ext === 'mp4';
+              const isBUniversal = b.ext === 'm4a' || b.ext === 'mp4';
+              if (isAUniversal && !isBUniversal) return -1;
+              if (!isAUniversal && isBUniversal) return 1;
+              return (b.abr || 0) - (a.abr || 0);
+            });
+            
+          const format = audioFormats.length > 0 ? audioFormats[0] : output.formats.find(f => f.acodec !== 'none');
+          
+          if (format && format.url) {
+            directUrl = format.url;
+          }
         }
       } catch (e) {
-        directUrlError = 'ytdl-core fallback failed: ' + (e.message || String(e));
+        directUrlError = 'youtube-dl-exec fallback failed: ' + (e.message || String(e));
         console.error(directUrlError);
       }
     }
