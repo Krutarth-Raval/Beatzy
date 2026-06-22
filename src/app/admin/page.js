@@ -347,7 +347,7 @@ export default function AdminDashboard() {
                         <p style={{ margin: 0, color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', fontWeight: '600', letterSpacing: '1px', textTransform: 'uppercase' }}>System Log</p>
                       </div>
                       <p style={{ margin: 0, color: backendStatus.status === 'Error' ? '#ff7b72' : '#a5d6ff', fontSize: '1.05rem', lineHeight: '1.6', fontFamily: '"Fira Code", "Courier New", monospace' }}>
-                        > {backendStatus.message}
+                        {'>'} {backendStatus.message}
                       </p>
                     </div>
                     
