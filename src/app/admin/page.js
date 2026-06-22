@@ -284,76 +284,50 @@ export default function AdminDashboard() {
               </div>
 
               {loadingBackend && !backendStatus ? (
-                <div style={{ display: 'flex', justifyContent: 'center', padding: '4rem' }}>
-                  <Loader2 className="animate-spin" size={40} color="var(--text-secondary)" />
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem' }}>
+                  <Loader2 className="animate-spin" size={32} color="var(--text-secondary)" />
                 </div>
               ) : backendStatus ? (
                 <div style={{ 
-                  background: 'linear-gradient(145deg, rgba(35,35,35,0.8) 0%, rgba(20,20,20,0.95) 100%)', 
-                  borderRadius: '20px', 
-                  border: `1px solid ${backendStatus.status === 'Online' ? 'rgba(46, 204, 113, 0.3)' : backendStatus.status === 'Timeout' ? 'rgba(243, 156, 18, 0.3)' : 'rgba(231, 76, 60, 0.3)'}`,
-                  boxShadow: `0 10px 40px -10px ${backendStatus.status === 'Online' ? 'rgba(46, 204, 113, 0.2)' : backendStatus.status === 'Timeout' ? 'rgba(243, 156, 18, 0.2)' : 'rgba(231, 76, 60, 0.2)'}`,
+                  backgroundColor: 'var(--bg-input)', 
+                  borderRadius: '16px', 
+                  border: `1px solid ${backendStatus.status === 'Online' ? '#2ecc71' : backendStatus.status === 'Timeout' ? '#f39c12' : '#e74c3c'}`,
                   overflow: 'hidden',
-                  position: 'relative',
-                  backdropFilter: 'blur(10px)'
+                  position: 'relative'
                 }}>
-                  {/* Glowing top border accent */}
                   <div style={{ 
                     height: '4px', 
                     width: '100%', 
-                    background: `linear-gradient(90deg, transparent, ${backendStatus.status === 'Online' ? '#2ecc71' : backendStatus.status === 'Timeout' ? '#f39c12' : '#e74c3c'}, transparent)`,
-                    opacity: 0.8
+                    backgroundColor: backendStatus.status === 'Online' ? '#2ecc71' : backendStatus.status === 'Timeout' ? '#f39c12' : '#e74c3c' 
                   }} />
                   
-                  <div style={{ padding: '32px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '32px' }}>
+                  <div style={{ padding: '24px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
                       <div style={{ 
-                        width: '64px', height: '64px', borderRadius: '50%', 
-                        background: backendStatus.status === 'Online' ? 'linear-gradient(135deg, rgba(46, 204, 113, 0.2), rgba(46, 204, 113, 0.05))' : backendStatus.status === 'Timeout' ? 'linear-gradient(135deg, rgba(243, 156, 18, 0.2), rgba(243, 156, 18, 0.05))' : 'linear-gradient(135deg, rgba(231, 76, 60, 0.2), rgba(231, 76, 60, 0.05))',
+                        width: '56px', height: '56px', borderRadius: '50%', 
+                        backgroundColor: backendStatus.status === 'Online' ? 'rgba(46, 204, 113, 0.1)' : backendStatus.status === 'Timeout' ? 'rgba(243, 156, 18, 0.1)' : 'rgba(231, 76, 60, 0.1)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        color: backendStatus.status === 'Online' ? '#2ecc71' : backendStatus.status === 'Timeout' ? '#f39c12' : '#e74c3c',
-                        border: `1px solid ${backendStatus.status === 'Online' ? 'rgba(46, 204, 113, 0.3)' : backendStatus.status === 'Timeout' ? 'rgba(243, 156, 18, 0.3)' : 'rgba(231, 76, 60, 0.3)'}`,
-                        boxShadow: `inset 0 0 20px ${backendStatus.status === 'Online' ? 'rgba(46, 204, 113, 0.1)' : backendStatus.status === 'Timeout' ? 'rgba(243, 156, 18, 0.1)' : 'rgba(231, 76, 60, 0.1)'}`
+                        color: backendStatus.status === 'Online' ? '#2ecc71' : backendStatus.status === 'Timeout' ? '#f39c12' : '#e74c3c'
                       }}>
-                        {backendStatus.status === 'Online' ? <CheckCircle size={32} /> : backendStatus.status === 'Timeout' ? <Activity size={32} /> : <AlertCircle size={32} />}
+                        {backendStatus.status === 'Online' ? <CheckCircle size={28} /> : backendStatus.status === 'Timeout' ? <Activity size={28} /> : <AlertCircle size={28} />}
                       </div>
                       
                       <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <h3 style={{ fontSize: '1.8rem', fontWeight: '800', margin: '0 0 4px 0', letterSpacing: '-0.5px', color: backendStatus.status === 'Online' ? '#2ecc71' : backendStatus.status === 'Timeout' ? '#f39c12' : '#e74c3c', textShadow: `0 0 20px ${backendStatus.status === 'Online' ? 'rgba(46, 204, 113, 0.4)' : backendStatus.status === 'Timeout' ? 'rgba(243, 156, 18, 0.4)' : 'rgba(231, 76, 60, 0.4)'}` }}>
-                            {backendStatus.status}
-                          </h3>
-                          {backendStatus.status === 'Online' && (
-                            <span className="pulse-dot" style={{ width: '8px', height: '8px', backgroundColor: '#2ecc71', borderRadius: '50%', display: 'inline-block', boxShadow: '0 0 8px #2ecc71' }}></span>
-                          )}
-                        </div>
-                        <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '1.05rem', fontWeight: '500' }}>Response Time: <span style={{ color: 'var(--text-primary)', fontWeight: '700' }}>{backendStatus.latency}</span></p>
+                        <h3 style={{ fontSize: '1.4rem', fontWeight: '700', margin: '0 0 4px 0', color: 'var(--text-primary)' }}>{backendStatus.status}</h3>
+                        <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.95rem' }}>Latency: {backendStatus.latency}</p>
                       </div>
                     </div>
 
-                    <div style={{ 
-                      background: 'linear-gradient(180deg, rgba(15,15,15,0.8) 0%, rgba(10,10,10,0.9) 100%)', 
-                      padding: '20px', 
-                      borderRadius: '16px', 
-                      border: '1px solid rgba(255,255,255,0.05)',
-                      boxShadow: 'inset 0 2px 10px rgba(0,0,0,0.5)'
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                        <div style={{ display: 'flex', gap: '6px' }}>
-                          <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#ff5f56' }} />
-                          <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#ffbd2e' }} />
-                          <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#27c93f' }} />
-                        </div>
-                        <p style={{ margin: 0, color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', fontWeight: '600', letterSpacing: '1px', textTransform: 'uppercase' }}>System Log</p>
-                      </div>
-                      <p style={{ margin: 0, color: backendStatus.status === 'Error' ? '#ff7b72' : '#a5d6ff', fontSize: '1.05rem', lineHeight: '1.6', fontFamily: '"Fira Code", "Courier New", monospace' }}>
+                    <div style={{ backgroundColor: 'var(--bg-main)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                      <p style={{ margin: '0 0 8px 0', color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Message Log</p>
+                      <p style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1rem', lineHeight: '1.5', fontFamily: 'monospace' }}>
                         {'>'} {backendStatus.message}
                       </p>
                     </div>
                     
-                    <div style={{ marginTop: '24px', padding: '16px 20px', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', color: 'var(--text-secondary)', fontSize: '0.85rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Server size={14} /> {backendStatus.url || 'Configured Extractor URL'}</span>
-                      <span style={{ fontWeight: '500', color: 'rgba(255,255,255,0.5)' }}>Last ping: {new Date().toLocaleTimeString()}</span>
+                    <div style={{ marginTop: '16px', color: 'var(--text-secondary)', fontSize: '0.8rem', display: 'flex', justifyContent: 'space-between' }}>
+                      <span>Target: {backendStatus.url || 'Configured Extractor URL'}</span>
+                      <span>Last checked: {new Date().toLocaleTimeString()}</span>
                     </div>
                   </div>
                 </div>
