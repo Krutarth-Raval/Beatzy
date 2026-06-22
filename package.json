@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "backend": "cd extractor-backend && pip install -r requirements.txt && uvicorn main:app --host 127.0.0.1 --port 8000 --reload"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.2",
