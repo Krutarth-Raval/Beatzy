@@ -137,10 +137,11 @@ export default function AudioPlayer() {
           const title = currentTrack.title || currentTrack.name || '';
           const artist = currentTrack.artists || currentTrack.artist || '';
           const q = encodeURIComponent(`${title} ${artist}`);
+          const durationQuery = currentTrack.duration ? `&durationMs=${currentTrack.duration}` : '';
           
           try {
             // Step 1: Rapidly extract the direct URL (without buffering the stream)
-            const extractRes = await fetch(`/api/extract-url?id=${currentTrack.id}&q=${q}`);
+            const extractRes = await fetch(`/api/extract-url?id=${currentTrack.id}&q=${q}${durationQuery}`);
             if (!extractRes.ok) throw new Error('Failed to extract URL');
             const data = await extractRes.json();
             

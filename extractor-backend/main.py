@@ -21,12 +21,14 @@ def read_root():
     return {"status": "online", "message": "Beatzy Extraction Backend is running"}
 
 @app.get("/api/extract-url")
-async def extract_url(id: str = Query(..., description="YouTube video ID"), q: str = Query(None, description="Search Query")):
+async def extract_url(id: str = Query(..., description="YouTube video ID"), q: str = Query(None, description="Search Query"), durationMs: int = Query(None, description="Target duration in ms")):
     """
     Extracts the direct streaming URL for a given YouTube video ID.
     Returns the best available audio-only format (usually m4a or webm).
     """
     import re
+    
+    target_duration = durationMs / 1000 if durationMs else None
     
     # ==========================================
     # EMPIRE OF PROTECTION LAYER 1: Soundcloud (Fastest, No Bot Blocks)
@@ -36,20 +38,20 @@ async def extract_url(id: str = Query(..., description="YouTube video ID"), q: s
         clean_q = re.sub(r'[^\w\s]', ' ', q)
         clean_q = ' '.join(clean_q.split())
         
-        print(f"Attempting Soundcloud for query: {clean_q}")
+        print(f"Attempting Soundcloud for query: {clean_q} (Target Duration: {target_duration}s)")
         try:
             # First, fetch top 5 results WITHOUT extracting audio (extract_flat=True) to avoid DRM crash
             with yt_dlp.YoutubeDL({'format': 'bestaudio/best', 'quiet': True, 'extract_flat': True}) as ydl_flat:
                 search_info = ydl_flat.extract_info(f"scsearch5:{clean_q}", download=False)
                 
                 if 'entries' in search_info and search_info['entries']:
-                    for entry in search_info['entries']:
-                        # Skip short 30-second Go+ previews
-                        duration = entry.get('duration', 0)
-                        if duration and duration < 60:
-                            print(f"Skipping {entry.get('title')} (Preview length: {duration}s)")
-                            continue
-                            
+                    entries = [e for e in search_info['entries'] if e.get('duration', 0) >= 60]
+                    
+                    # Sort by duration difference to find the closest match to the original song!
+                    if target_duration:
+                        entries.sort(key=lambda e: abs(e.get('duration', 0) - target_duration) if e.get('duration') else 999)
+                        
+                    for entry in entries:
                         # Try to extract the full audio stream for this specific result
                         try:
                             with yt_dlp.YoutubeDL({'format': 'bestaudio/best', 'quiet': True}) as ydl:

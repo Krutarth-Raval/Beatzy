@@ -8,6 +8,7 @@ export async function GET(request) {
   const { searchParams } = new URL(request.url);
   let id = searchParams.get('id');
   const q = searchParams.get('q');
+  const durationMs = searchParams.get('durationMs');
 
   if (!id) {
     return NextResponse.json({ error: 'Missing video ID' }, { status: 400 });
@@ -50,7 +51,10 @@ export async function GET(request) {
     const backendUrl = process.env.EXTRACTOR_URL || 'http://127.0.0.1:8000';
     
     try {
-      const res = await fetch(`${backendUrl}/api/extract-url?id=${id}`);
+      let fetchUrl = q ? `${backendUrl}/api/extract-url?id=${id}&q=${encodeURIComponent(q)}` : `${backendUrl}/api/extract-url?id=${id}`;
+      if (durationMs) fetchUrl += `&durationMs=${durationMs}`;
+      
+      const res = await fetch(fetchUrl);
       if (res.ok) {
         const data = await res.json();
         if (data.url) {
