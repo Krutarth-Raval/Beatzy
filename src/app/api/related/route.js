@@ -18,8 +18,22 @@ export async function GET(request) {
   }
 
   try {
+    let ytId = id;
+    
+    // If it's a Spotify ID, we must resolve it to a YouTube ID first
+    if (id.includes('spotify:')) {
+      const q = searchParams.get('q');
+      if (q) {
+        const ytsr = require('youtube-sr').default;
+        const searchResults = await ytsr.search(q, { limit: 1, type: "video" });
+        if (searchResults && searchResults.length > 0) {
+          ytId = searchResults[0].id;
+        }
+      }
+    }
+
     const yt = await getInnertube();
-    const upNext = await yt.music.getUpNext(id);
+    const upNext = await yt.music.getUpNext(ytId);
     
     const tracks = (upNext.contents || []).map(v => {
       // Handle the various ways youtubei.js exposes data depending on the node type
