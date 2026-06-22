@@ -98,7 +98,8 @@ const usePlayerStore = create(
           set({ isFetchingRelated: true, isPlaying: false });
           if (state.audioRef) state.audioRef.pause();
           try {
-            const res = await fetch(`/api/related?id=${currentTrack.id}`);
+            const q = currentTrack.artist ? `${currentTrack.title} ${currentTrack.artist}` : currentTrack.title;
+            const res = await fetch(`/api/related?id=${currentTrack.id}&q=${encodeURIComponent(q)}`);
             if (res.ok) {
               const relatedTracks = await res.json();
               if (relatedTracks && relatedTracks.length > 0) {
@@ -262,7 +263,8 @@ const usePlayerStore = create(
       try {
         const currentTrack = state.currentTrack;
         if (currentTrack && currentTrack.id) {
-          const res = await fetch(`/api/related?id=${currentTrack.id}`);
+          const q = currentTrack.artist ? `${currentTrack.title} ${currentTrack.artist}` : currentTrack.title;
+          const res = await fetch(`/api/related?id=${currentTrack.id}&q=${encodeURIComponent(q)}`);
           if (res.ok) {
             const relatedTracks = await res.json();
             if (relatedTracks && relatedTracks.length > 0) {
