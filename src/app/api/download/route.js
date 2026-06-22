@@ -19,67 +19,9 @@ export async function GET(request) {
 
   try {
     // ==========================================
-    // METHOD 1: PIPED API (Free & Unlimited)
+    // EXTRACT USING DEDICATED PYTHON BACKEND
     // ==========================================
-    console.log('Trying Piped API...');
-    const pipedInstances = [
-      'https://pipedapi.kavin.rocks',
-      'https://pipedapi.tokhmi.xyz',
-      'https://piped-api.garudalinux.org',
-      'https://pipedapi.moomoo.me',
-      'https://pipedapi.syncpundit.io'
-    ];
-
-    try {
-      const fetchPromises = pipedInstances.map(async (instance) => {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
-
-        try {
-          const res = await fetch(`${instance}/streams/${id}`, {
-            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
-            signal: controller.signal
-          });
-          clearTimeout(timeoutId);
-        if (!res.ok) throw new Error(`HTTP error ${res.status}`);
-        const data = await res.json();
-        if (data && data.audioStreams && data.audioStreams.length > 0) {
-          const m4aStreams = data.audioStreams.filter(s => s.mimeType === 'audio/mp4' || s.format === 'M4A');
-          if (m4aStreams.length > 0) {
-            m4aStreams.sort((a, b) => b.bitrate - a.bitrate);
-            return {
-              url: m4aStreams[0].url,
-              title: 'Downloaded Audio',
-              ext: 'm4a'
-            };
-          } else {
-            return {
-              url: data.audioStreams[0].url,
-              title: 'Downloaded Audio',
-              ext: 'webm'
-            };
-          }
-        }
-        throw new Error('No audio streams found');
-        } catch (err) {
-          clearTimeout(timeoutId);
-          throw err;
-        }
-      });
-
-      const fastResult = await Promise.any(fetchPromises);
-      return NextResponse.json(fastResult);
-    } catch (e) {
-      console.log('All Piped instances failed or timed out, falling back directly to yt-dlp...');
-    }
-
-
-
-
-    // ==========================================
-    // METHOD 2: FALLBACK TO DEDICATED PYTHON BACKEND
-    // ==========================================
-    console.log('Using dedicated Python backend fallback...');
+    console.log('Using dedicated Python backend...');
     const backendUrl = process.env.EXTRACTOR_URL || 'http://127.0.0.1:8000';
     let directUrl = null;
     let directUrlError = null;

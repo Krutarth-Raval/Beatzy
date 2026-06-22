@@ -44,86 +44,27 @@ export async function GET(request) {
     let directUrl = null;
     let directUrlError = null;
 
-    const pipedInstances = [
-      'https://pipedapi.kavin.rocks',
-      'https://pipedapi.tokhmi.xyz',
-      'https://piped-api.garudalinux.org',
-      'https://pipedapi.moomoo.me',
-      'https://pipedapi.syncpundit.io'
-    ];
-
-    // 1. Try Piped API instances in parallel for maximum speed
+    // ==========================================
+    // EXTRACT USING DEDICATED PYTHON BACKEND
+    // ==========================================
+    const backendUrl = process.env.EXTRACTOR_URL || 'http://127.0.0.1:8000';
+    
     try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 2500); // 2.5s absolute timeout for Piped
-
-      const pipedPromises = pipedInstances.map(async (instance) => {
-        const res = await fetch(`${instance}/streams/${id}`, {
-          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
-          signal: controller.signal
-        });
-        if (!res.ok) throw new Error('Bad status');
+      const res = await fetch(`${backendUrl}/api/extract-url?id=${id}`);
+      if (res.ok) {
         const data = await res.json();
-        if (data && data.audioStreams && data.audioStreams.length > 0) {
-          const m4aStreams = data.audioStreams.filter(s => s.mimeType === 'audio/mp4' || s.format === 'M4A');
-          if (m4aStreams.length > 0) {
-            m4aStreams.sort((a, b) => b.bitrate - a.bitrate);
-            return m4aStreams[0].url;
-          }
-          return data.audioStreams[0].url;
+        if (data.url) {
+          directUrl = data.url;
+          console.log('Successfully extracted using dedicated backend');
         }
-        throw new Error('No audio streams');
-      });
-
-      directUrl = await Promise.any(pipedPromises);
-      clearTimeout(timeout);
-    } catch (e) {
-      // All piped instances failed or timed out, proceed to fallbacks
-    }
-
-    // 2. Try RapidAPI if Piped fails
-    if (!directUrl && process.env.RAPIDAPI_KEY) {
-      try {
-        const rapidRes = await fetch(`https://youtube-mp36.p.rapidapi.com/dl?id=${id}`, {
-          method: 'GET',
-          headers: {
-            'X-RapidAPI-Key': process.env.RAPIDAPI_KEY,
-            'X-RapidAPI-Host': 'youtube-mp36.p.rapidapi.com'
-          }
-        });
-        const rapidData = await rapidRes.json();
-        if (rapidData && (rapidData.link || rapidData.url)) {
-          directUrl = rapidData.link || rapidData.url;
-        }
-      } catch (e) {
-        console.warn('Rapid API failed', e);
-      }
-    }
-
-    // ==========================================
-    // METHOD 2: FALLBACK TO DEDICATED PYTHON BACKEND
-    // ==========================================
-    if (!directUrl) {
-      console.log('Using dedicated Python backend fallback...');
-      const backendUrl = process.env.EXTRACTOR_URL || 'http://127.0.0.1:8000';
-      
-      try {
-        const res = await fetch(`${backendUrl}/api/extract-url?id=${id}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.url) {
-            directUrl = data.url;
-            console.log('Successfully extracted using dedicated backend');
-          }
-        } else {
-          const errorData = await res.json();
-          directUrlError = 'Dedicated backend failed: ' + (errorData.detail || res.statusText);
-          console.error(directUrlError);
-        }
-      } catch (e) {
-        directUrlError = 'Dedicated backend error: ' + (e.message || String(e));
+      } else {
+        const errorData = await res.json();
+        directUrlError = 'Dedicated backend failed: ' + (errorData.detail || res.statusText);
         console.error(directUrlError);
       }
+    } catch (e) {
+      directUrlError = 'Dedicated backend error: ' + (e.message || String(e));
+      console.error(directUrlError);
     }
 
     if (!directUrl) {
