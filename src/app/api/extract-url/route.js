@@ -8,7 +8,17 @@ export async function GET(request) {
   const { searchParams } = new URL(request.url);
   let id = searchParams.get('id');
   const q = searchParams.get('q');
-  const durationMs = searchParams.get('durationMs');
+  let durationMs = searchParams.get('durationMs');
+
+  // Handle formats like "2:41" or "1:02:14" and convert them to ms for the backend
+  if (durationMs && typeof durationMs === 'string' && durationMs.includes(':')) {
+    const parts = durationMs.split(':').map(Number).reverse();
+    let totalSeconds = 0;
+    if (parts[0]) totalSeconds += parts[0]; // seconds
+    if (parts[1]) totalSeconds += parts[1] * 60; // minutes
+    if (parts[2]) totalSeconds += parts[2] * 3600; // hours
+    durationMs = (totalSeconds * 1000).toString();
+  }
 
   if (!id) {
     return NextResponse.json({ error: 'Missing video ID' }, { status: 400 });

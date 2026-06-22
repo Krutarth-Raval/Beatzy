@@ -74,24 +74,48 @@ export async function POST(request) {
 
       let name = 'Unknown Title';
       let artist = 'Unknown Artist';
+      let durationMs = 0;
 
       // Parse New UI (lockupViewModel)
       if (lockup.rendererContext?.accessibilityContext?.label) {
-        name = lockup.rendererContext.accessibilityContext.label;
-        // Clean up the accessibility string which usually has "Artist - Song Title duration"
-        name = name.replace(/ \d+ minutes?,? \d+ seconds?/, '').trim();
+        let label = lockup.rendererContext.accessibilityContext.label;
+        name = label;
+        
+        // Extract duration from accessibility string (e.g. "3 minutes, 41 seconds")
+        const minMatch = label.match(/(\d+)\s+minutes?/);
+        const secMatch = label.match(/(\d+)\s+seconds?/);
+        const hrMatch = label.match(/(\d+)\s+hours?/);
+        let totalSeconds = 0;
+        if (hrMatch) totalSeconds += parseInt(hrMatch[1]) * 3600;
+        if (minMatch) totalSeconds += parseInt(minMatch[1]) * 60;
+        if (secMatch) totalSeconds += parseInt(secMatch[1]);
+        if (totalSeconds > 0) durationMs = totalSeconds * 1000;
+
+        // Clean up the accessibility string
+        name = name.replace(/ \d+ hours?,? \d+ minutes?,? \d+ seconds?/, '').replace(/ \d+ minutes?,? \d+ seconds?/, '').trim();
       } 
       // Parse Legacy UI (playlistVideoRenderer)
       else if (lockup.title?.runs?.[0]?.text) {
         name = lockup.title.runs[0].text;
         artist = lockup.shortBylineText?.runs?.[0]?.text || 'Unknown Artist';
+        
+        // Extract duration from lengthText
+        if (lockup.lengthText?.simpleText) {
+           const timeParts = lockup.lengthText.simpleText.split(':').map(Number).reverse();
+           let totalSeconds = 0;
+           if (timeParts[0]) totalSeconds += timeParts[0]; // seconds
+           if (timeParts[1]) totalSeconds += timeParts[1] * 60; // minutes
+           if (timeParts[2]) totalSeconds += timeParts[2] * 3600; // hours
+           durationMs = totalSeconds * 1000;
+        }
       }
 
       formattedTracks.push({
         id,
         name,
         artists: artist,
-        thumbnail: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`
+        thumbnail: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
+        duration: durationMs || null
       });
     }
 
