@@ -2,6 +2,8 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 import yt_dlp
 import os
+import httpx
+import asyncio
 
 app = FastAPI(title="Beatzy Extraction API")
 
@@ -19,7 +21,7 @@ def read_root():
     return {"status": "online", "message": "Beatzy Extraction Backend is running"}
 
 @app.get("/api/extract-url")
-def extract_url(id: str = Query(..., description="YouTube video ID")):
+async def extract_url(id: str = Query(..., description="YouTube video ID")):
     """
     Extracts the direct streaming URL for a given YouTube video ID.
     Returns the best available audio-only format (usually m4a or webm).
@@ -43,34 +45,58 @@ def extract_url(id: str = Query(..., description="YouTube video ID")):
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
             
-            # Find the best audio format
             formats = info.get('formats', [])
-            audio_formats = [
-                f for f in formats 
-                if f.get('acodec') != 'none' and f.get('vcodec') == 'none'
-            ]
-            
-            # Sort by highest bitrate or just pick the best one provided by yt-dlp
+            audio_formats = [f for f in formats if f.get('acodec') != 'none' and f.get('vcodec') == 'none']
             if not audio_formats:
-                # Fallback to any format with audio if no audio-only is found
                 audio_formats = [f for f in formats if f.get('acodec') != 'none']
             
-            if not audio_formats:
-                raise HTTPException(status_code=404, detail="No playable audio formats found")
-            
-            # Prefer m4a if available, otherwise take the first
-            m4a_formats = [f for f in audio_formats if f.get('ext') == 'm4a']
-            best_format = m4a_formats[0] if m4a_formats else audio_formats[-1]
-            
-            return {
-                "url": best_format.get('url'),
-                "title": info.get('title'),
-                "thumbnail": info.get('thumbnail')
-            }
+            if audio_formats:
+                m4a_formats = [f for f in audio_formats if f.get('ext') == 'm4a']
+                best_format = m4a_formats[0] if m4a_formats else audio_formats[-1]
+                return {
+                    "url": best_format.get('url'),
+                    "title": info.get('title'),
+                    "thumbnail": info.get('thumbnail')
+                }
             
     except Exception as e:
-        print(f"Extraction Error for {id}: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"yt-dlp Extraction Failed for {id}: {str(e)}. Falling back to Piped API Protection...")
+        
+    # ==========================================
+    # EMPIRE OF PROTECTION: Piped API Fallback
+    # ==========================================
+    piped_instances = [
+        "https://pipedapi.kavin.rocks",
+        "https://pipedapi.tokhmi.xyz",
+        "https://pipedapi.syncpundit.io",
+        "https://piped-api.garudalinux.org"
+    ]
+    
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        for instance in piped_instances:
+            try:
+                res = await client.get(f"{instance}/streams/{id}")
+                if res.status_code == 200:
+                    data = res.json()
+                    audio_streams = data.get("audioStreams", [])
+                    if audio_streams:
+                        m4a_streams = [s for s in audio_streams if s.get("mimeType") == "audio/mp4" or s.get("format") == "M4A"]
+                        if m4a_streams:
+                            m4a_streams.sort(key=lambda x: x.get("bitrate", 0), reverse=True)
+                            best_url = m4a_streams[0]["url"]
+                        else:
+                            best_url = audio_streams[0]["url"]
+                            
+                        return {
+                            "url": best_url,
+                            "title": data.get("title", "Audio"),
+                            "thumbnail": data.get("thumbnailUrl")
+                        }
+            except Exception as ex:
+                print(f"Piped instance {instance} failed: {ex}")
+                continue
+                
+    raise HTTPException(status_code=500, detail="All extraction methods and fallback protections failed.")
 
 if __name__ == "__main__":
     import uvicorn
