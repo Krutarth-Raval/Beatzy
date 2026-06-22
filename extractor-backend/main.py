@@ -40,6 +40,13 @@ async def extract_url(id: str = Query(..., description="YouTube video ID")):
         }
     }
 
+    # Add cookies if the file exists
+    cookie_path = os.path.join(os.path.dirname(__file__), "www.youtube.com_cookies.txt")
+    if os.path.exists(cookie_path):
+        ydl_opts['cookiefile'] = cookie_path
+    elif os.path.exists("www.youtube.com_cookies.txt"):
+        ydl_opts['cookiefile'] = "www.youtube.com_cookies.txt"
+
     try:
         url = f"https://www.youtube.com/watch?v={id}"
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
