@@ -582,3 +582,14 @@ button {
 .animate-spin {
   animation: spin 3s linear infinite;
 }
+
+@keyframes pulse-glow {
+  0% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.2); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.pulse-dot {
+  animation: pulse-glow 2s infinite ease-in-out;
+}
+
