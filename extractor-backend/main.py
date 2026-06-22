@@ -21,7 +21,7 @@ def read_root():
     return {"status": "online", "message": "Beatzy Extraction Backend is running"}
 
 @app.get("/api/extract-url")
-async def extract_url(id: str = Query(..., description="YouTube video ID")):
+async def extract_url(id: str = Query(..., description="YouTube video ID"), q: str = Query(None, description="Search Query")):
     """
     Extracts the direct streaming URL for a given YouTube video ID.
     Returns the best available audio-only format (usually m4a or webm).
@@ -135,6 +135,24 @@ async def extract_url(id: str = Query(..., description="YouTube video ID")):
             except Exception as ex:
                 print(f"Cobalt instance {instance} failed: {ex}")
                 continue
+
+    # ==========================================
+    # EMPIRE OF PROTECTION LAYER 4: Soundcloud
+    # ==========================================
+    if q:
+        print(f"Falling back to Soundcloud for query: {q}")
+        try:
+            with yt_dlp.YoutubeDL({'format': 'bestaudio/best', 'quiet': True}) as ydl:
+                info = ydl.extract_info(f"scsearch1:{q}", download=False)
+                if 'entries' in info and len(info['entries']) > 0:
+                    entry = info['entries'][0]
+                    return {
+                        "url": entry.get('url'),
+                        "title": entry.get('title'),
+                        "thumbnail": entry.get('thumbnail')
+                    }
+        except Exception as ex:
+            print(f"Soundcloud fallback failed: {ex}")
 
     raise HTTPException(status_code=500, detail="All extraction methods and fallback protections failed.")
 
