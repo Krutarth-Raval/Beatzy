@@ -33,7 +33,7 @@ export default function TrackThumbnail({ track, size = 40, showBackground = true
     if (!initialThumb && isSpotify && track?.id) {
       const id = track.id.replace('spotify:track:', '');
       const oembedUrl = `https://open.spotify.com/oembed?url=spotify:track:${id}`;
-      fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(oembedUrl)}`)
+      fetch(`/api/proxy-audio?url=${encodeURIComponent(oembedUrl)}`)
         .then(res => res.json())
         .then(data => {
           if (data.thumbnail_url) setThumb(data.thumbnail_url);
