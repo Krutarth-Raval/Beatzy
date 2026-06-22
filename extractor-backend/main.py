@@ -32,6 +32,10 @@ def extract_url(id: str = Query(..., description="YouTube video ID")):
         'extract_flat': False,
         'simulate': True,
         'youtube_include_dash_manifest': False,
+        # Empire of Protection: Bypass YouTube's Bot Detection by spoofing mobile clients
+        'extractor_args': {
+            'youtube': {'player_client': ['android', 'ios']}
+        }
     }
 
     try:
