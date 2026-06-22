@@ -96,6 +96,39 @@ async def extract_url(id: str = Query(..., description="YouTube video ID")):
                 print(f"Piped instance {instance} failed: {ex}")
                 continue
                 
+        # ==========================================
+        # EMPIRE OF PROTECTION LAYER 3: Cobalt API
+        # ==========================================
+        cobalt_instances = [
+            "https://api.cobalt.tools",
+            "https://co.wuk.sh",
+            "https://cobalt.qwyre.com"
+        ]
+        
+        for instance in cobalt_instances:
+            try:
+                headers = {
+                    "Accept": "application/json",
+                    "Content-Type": "application/json",
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+                }
+                payload = {
+                    "url": f"https://www.youtube.com/watch?v={id}",
+                    "isAudioOnly": True
+                }
+                res = await client.post(instance, json=payload, headers=headers)
+                if res.status_code == 200:
+                    data = res.json()
+                    if data.get("status") in ["stream", "redirect", "success"] and data.get("url"):
+                        return {
+                            "url": data.get("url"),
+                            "title": "Audio Stream",
+                            "thumbnail": None
+                        }
+            except Exception as ex:
+                print(f"Cobalt instance {instance} failed: {ex}")
+                continue
+
     raise HTTPException(status_code=500, detail="All extraction methods and fallback protections failed.")
 
 if __name__ == "__main__":
