@@ -26,6 +26,33 @@ async def extract_url(id: str = Query(..., description="YouTube video ID"), q: s
     Extracts the direct streaming URL for a given YouTube video ID.
     Returns the best available audio-only format (usually m4a or webm).
     """
+    import re
+    
+    # ==========================================
+    # EMPIRE OF PROTECTION LAYER 1: Soundcloud (Fastest, No Bot Blocks)
+    # ==========================================
+    if q:
+        # Clean query to remove weird characters like | [] () that break Soundcloud search
+        clean_q = re.sub(r'[^\w\s]', ' ', q)
+        clean_q = ' '.join(clean_q.split())
+        
+        print(f"Attempting Soundcloud for query: {clean_q}")
+        try:
+            with yt_dlp.YoutubeDL({'format': 'bestaudio/best', 'quiet': True}) as ydl:
+                info = ydl.extract_info(f"scsearch1:{clean_q}", download=False)
+                if 'entries' in info and len(info['entries']) > 0:
+                    entry = info['entries'][0]
+                    return {
+                        "url": entry.get('url'),
+                        "title": entry.get('title'),
+                        "thumbnail": entry.get('thumbnail')
+                    }
+        except Exception as ex:
+            print(f"Soundcloud fallback failed: {ex}")
+            
+    # ==========================================
+    # EMPIRE OF PROTECTION LAYER 2: yt-dlp (Direct YouTube)
+    # ==========================================
     ydl_opts = {
         'format': 'bestaudio/best',
         'quiet': True,
@@ -34,18 +61,10 @@ async def extract_url(id: str = Query(..., description="YouTube video ID"), q: s
         'extract_flat': False,
         'simulate': True,
         'youtube_include_dash_manifest': False,
-        # Empire of Protection: Bypass YouTube's Bot Detection by spoofing mobile clients
         'extractor_args': {
             'youtube': {'player_client': ['android', 'ios']}
         }
     }
-
-    # Add cookies if the file exists
-    cookie_path = os.path.join(os.path.dirname(__file__), "www.youtube.com_cookies.txt")
-    if os.path.exists(cookie_path):
-        ydl_opts['cookiefile'] = cookie_path
-    elif os.path.exists("www.youtube.com_cookies.txt"):
-        ydl_opts['cookiefile'] = "www.youtube.com_cookies.txt"
 
     try:
         url = f"https://www.youtube.com/watch?v={id}"
@@ -67,25 +86,9 @@ async def extract_url(id: str = Query(..., description="YouTube video ID"), q: s
                 }
             
     except Exception as e:
-        print(f"yt-dlp Extraction Failed for {id}: {str(e)}. Falling back to Soundcloud...")
+        print(f"yt-dlp Extraction Failed for {id}: {str(e)}.")
         
-    # ==========================================
-    # EMPIRE OF PROTECTION LAYER 2: Soundcloud
-    # ==========================================
-    if q:
-        print(f"Falling back to Soundcloud for query: {q}")
-        try:
-            with yt_dlp.YoutubeDL({'format': 'bestaudio/best', 'quiet': True}) as ydl:
-                info = ydl.extract_info(f"scsearch1:{q}", download=False)
-                if 'entries' in info and len(info['entries']) > 0:
-                    entry = info['entries'][0]
-                    return {
-                        "url": entry.get('url'),
-                        "title": entry.get('title'),
-                        "thumbnail": entry.get('thumbnail')
-                    }
-        except Exception as ex:
-            print(f"Soundcloud fallback failed: {ex}")
+
         
     # ==========================================
     # EMPIRE OF PROTECTION LAYER 3: Piped API Fallback
