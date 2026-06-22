@@ -67,10 +67,28 @@ async def extract_url(id: str = Query(..., description="YouTube video ID"), q: s
                 }
             
     except Exception as e:
-        print(f"yt-dlp Extraction Failed for {id}: {str(e)}. Falling back to Piped API Protection...")
+        print(f"yt-dlp Extraction Failed for {id}: {str(e)}. Falling back to Soundcloud...")
         
     # ==========================================
-    # EMPIRE OF PROTECTION: Piped API Fallback
+    # EMPIRE OF PROTECTION LAYER 2: Soundcloud
+    # ==========================================
+    if q:
+        print(f"Falling back to Soundcloud for query: {q}")
+        try:
+            with yt_dlp.YoutubeDL({'format': 'bestaudio/best', 'quiet': True}) as ydl:
+                info = ydl.extract_info(f"scsearch1:{q}", download=False)
+                if 'entries' in info and len(info['entries']) > 0:
+                    entry = info['entries'][0]
+                    return {
+                        "url": entry.get('url'),
+                        "title": entry.get('title'),
+                        "thumbnail": entry.get('thumbnail')
+                    }
+        except Exception as ex:
+            print(f"Soundcloud fallback failed: {ex}")
+        
+    # ==========================================
+    # EMPIRE OF PROTECTION LAYER 3: Piped API Fallback
     # ==========================================
     piped_instances = [
         "https://pipedapi.kavin.rocks",
@@ -79,7 +97,7 @@ async def extract_url(id: str = Query(..., description="YouTube video ID"), q: s
         "https://piped-api.garudalinux.org"
     ]
     
-    async with httpx.AsyncClient(timeout=10.0) as client:
+    async with httpx.AsyncClient(timeout=3.0) as client:
         for instance in piped_instances:
             try:
                 res = await client.get(f"{instance}/streams/{id}")
@@ -103,27 +121,31 @@ async def extract_url(id: str = Query(..., description="YouTube video ID"), q: s
                 print(f"Piped instance {instance} failed: {ex}")
                 continue
                 
-        # ==========================================
-        # EMPIRE OF PROTECTION LAYER 3: Cobalt API
-        # ==========================================
-        cobalt_instances = [
-            "https://api.cobalt.tools",
-            "https://co.wuk.sh",
-            "https://cobalt.qwyre.com"
-        ]
-        
+    # ==========================================
+    # EMPIRE OF PROTECTION LAYER 4: Cobalt API Fallback
+    # ==========================================
+    cobalt_instances = [
+        "https://co.wuk.sh",
+        "https://cobalt.qwyre.com",
+        "https://api.cobalt.tools",
+        "https://api.cobalt.lol"
+    ]
+    
+    headers = {
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+    }
+    
+    payload = {
+        "url": f"https://www.youtube.com/watch?v={id}",
+        "isAudioOnly": True,
+        "aFormat": "mp3"
+    }
+    
+    async with httpx.AsyncClient(timeout=3.0) as client:
         for instance in cobalt_instances:
             try:
-                headers = {
-                    "Accept": "application/json",
-                    "Content-Type": "application/json",
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
-                }
-                payload = {
-                    "url": f"https://www.youtube.com/watch?v={id}",
-                    "isAudioOnly": True
-                }
-                res = await client.post(instance, json=payload, headers=headers)
+                res = await client.post(f"{instance}/api/json", json=payload, headers=headers)
                 if res.status_code == 200:
                     data = res.json()
                     if data.get("status") in ["stream", "redirect", "success"] and data.get("url"):
@@ -136,23 +158,7 @@ async def extract_url(id: str = Query(..., description="YouTube video ID"), q: s
                 print(f"Cobalt instance {instance} failed: {ex}")
                 continue
 
-    # ==========================================
-    # EMPIRE OF PROTECTION LAYER 4: Soundcloud
-    # ==========================================
-    if q:
-        print(f"Falling back to Soundcloud for query: {q}")
-        try:
-            with yt_dlp.YoutubeDL({'format': 'bestaudio/best', 'quiet': True}) as ydl:
-                info = ydl.extract_info(f"scsearch1:{q}", download=False)
-                if 'entries' in info and len(info['entries']) > 0:
-                    entry = info['entries'][0]
-                    return {
-                        "url": entry.get('url'),
-                        "title": entry.get('title'),
-                        "thumbnail": entry.get('thumbnail')
-                    }
-        except Exception as ex:
-            print(f"Soundcloud fallback failed: {ex}")
+
 
     raise HTTPException(status_code=500, detail="All extraction methods and fallback protections failed.")
 
