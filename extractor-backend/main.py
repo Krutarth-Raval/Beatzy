@@ -38,15 +38,31 @@ async def extract_url(id: str = Query(..., description="YouTube video ID"), q: s
         
         print(f"Attempting Soundcloud for query: {clean_q}")
         try:
-            with yt_dlp.YoutubeDL({'format': 'bestaudio/best', 'quiet': True}) as ydl:
-                info = ydl.extract_info(f"scsearch1:{clean_q}", download=False)
-                if 'entries' in info and len(info['entries']) > 0:
-                    entry = info['entries'][0]
-                    return {
-                        "url": entry.get('url'),
-                        "title": entry.get('title'),
-                        "thumbnail": entry.get('thumbnail')
-                    }
+            # First, fetch top 5 results WITHOUT extracting audio (extract_flat=True) to avoid DRM crash
+            with yt_dlp.YoutubeDL({'format': 'bestaudio/best', 'quiet': True, 'extract_flat': True}) as ydl_flat:
+                search_info = ydl_flat.extract_info(f"scsearch5:{clean_q}", download=False)
+                
+                if 'entries' in search_info and search_info['entries']:
+                    for entry in search_info['entries']:
+                        # Skip short 30-second Go+ previews
+                        duration = entry.get('duration', 0)
+                        if duration and duration < 60:
+                            print(f"Skipping {entry.get('title')} (Preview length: {duration}s)")
+                            continue
+                            
+                        # Try to extract the full audio stream for this specific result
+                        try:
+                            with yt_dlp.YoutubeDL({'format': 'bestaudio/best', 'quiet': True}) as ydl:
+                                info = ydl.extract_info(entry.get('url'), download=False)
+                                return {
+                                    "url": info.get('url'),
+                                    "title": info.get('title'),
+                                    "thumbnail": info.get('thumbnail')
+                                }
+                        except Exception as e:
+                            print(f"Failed to extract {entry.get('title')}: {e}")
+                            continue # If DRM protected, move to the next search result!
+                            
         except Exception as ex:
             print(f"Soundcloud fallback failed: {ex}")
             
