@@ -1,43 +1,108 @@
 import { NextResponse } from 'next/server';
 
-export const maxDuration = 60; // Increase timeout to 60 seconds for yt-dlp
-
+export const maxDuration = 60;
 export const runtime = 'nodejs';
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   let id = searchParams.get('id');
   const q = searchParams.get('q');
-  let durationMs = searchParams.get('durationMs');
-
-  // Handle formats like "2:41" or "1:02:14" and convert them to ms for the backend
-  if (durationMs && typeof durationMs === 'string' && durationMs.includes(':')) {
-    const parts = durationMs.split(':').map(Number).reverse();
-    let totalSeconds = 0;
-    if (parts[0]) totalSeconds += parts[0]; // seconds
-    if (parts[1]) totalSeconds += parts[1] * 60; // minutes
-    if (parts[2]) totalSeconds += parts[2] * 3600; // hours
-    durationMs = (totalSeconds * 1000).toString();
-  }
-
+  
   if (!id) {
     return NextResponse.json({ error: 'Missing video ID' }, { status: 400 });
   }
 
-  // If the ID is a Spotify ID, we must resolve it to a YouTube video ID first
+  // Helper to parse ISO 8601 duration string from YouTube API (e.g., PT4M43S)
+  const parseIsoDuration = (duration) => {
+    const match = duration.match(/PT(\d+H)?(\d+M)?(\d+S)?/);
+    if (!match) return 0;
+    return (parseInt(match[1]) || 0) * 3600 + (parseInt(match[2]) || 0) * 60 + (parseInt(match[3]) || 0);
+  };
+
+  // If the ID is a Spotify ID, resolve it to an exact YouTube video ID using the official Data API
   if (id.includes('spotify:') || id.length > 15) {
     if (q) {
       try {
-        const ytsr = require('youtube-sr').default;
-        const searchResults = await ytsr.search(q, { limit: 1, type: "video" });
-        if (searchResults && searchResults.length > 0) {
-          id = searchResults[0].id;
+        const apiKey = process.env.YOUTUBE_API_KEY;
+        
+        let targetDurationSec = null;
+        const durationParam = searchParams.get('durationMs');
+        if (durationParam && durationParam !== 'null' && durationParam !== 'undefined') {
+          if (durationParam.includes(':')) {
+             const parts = durationParam.split(':').reverse();
+             targetDurationSec = (parseInt(parts[0]) || 0) + (parseInt(parts[1]) || 0) * 60 + (parseInt(parts[2]) || 0) * 3600;
+          } else {
+             targetDurationSec = parseInt(durationParam, 10);
+             if (targetDurationSec > 10000) targetDurationSec = Math.floor(targetDurationSec / 1000); // Convert ms to sec
+          }
+        }
+
+        if (apiKey) {
+          // Use official Data API for high accuracy. Fetch top 5 to compare durations.
+          const maxRes = targetDurationSec ? 5 : 1;
+          const qAudio = q.toLowerCase().includes('audio') ? q : `${q} audio`;
+          const ytSearchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(qAudio)}&type=video&videoCategoryId=10&key=${apiKey}&maxResults=${maxRes}`;
+          const res = await fetch(ytSearchUrl);
+          
+          if (res.ok) {
+            const data = await res.json();
+            if (data.items && data.items.length > 0) {
+              
+              if (!targetDurationSec) {
+                // If no duration provided, just use the first result
+                id = data.items[0].id.videoId;
+              } else {
+                // Fetch durations for the top 5 results
+                const videoIds = data.items.map(item => item.id.videoId).join(',');
+                const detailUrl = `https://www.googleapis.com/youtube/v3/videos?part=contentDetails&id=${videoIds}&key=${apiKey}`;
+                const detailRes = await fetch(detailUrl);
+                
+                if (detailRes.ok) {
+                  const detailData = await detailRes.json();
+                  let bestMatchId = data.items[0].id.videoId;
+                  let smallestDiff = Infinity;
+                  
+                  detailData.items.forEach(item => {
+                    const durationSec = parseIsoDuration(item.contentDetails.duration);
+                    const diff = Math.abs(durationSec - targetDurationSec);
+                    // Penalize videos that are wildly off, reward close matches
+                    if (diff < smallestDiff) {
+                      smallestDiff = diff;
+                      bestMatchId = item.id;
+                    }
+                  });
+                  
+                  id = bestMatchId;
+                } else {
+                  id = data.items[0].id.videoId; // fallback
+                }
+              }
+            }
+          } else {
+            console.error('YouTube API Error:', await res.text());
+            throw new Error('Data API failed');
+          }
         } else {
-          // Fallback to yt-search
-          const ytSearch = require('yt-search');
-          const r = await ytSearch(q);
-          if (r && r.videos && r.videos.length > 0) {
-            id = r.videos[0].videoId;
+          // Fallback if no API key is provided
+          const ytsr = require('youtube-sr').default;
+          const searchResults = await ytsr.search(q, { limit: 5, type: "video" });
+          if (searchResults && searchResults.length > 0) {
+            if (!targetDurationSec) {
+              id = searchResults[0].id;
+            } else {
+              let bestMatchId = searchResults[0].id;
+              let smallestDiff = Infinity;
+              searchResults.forEach(item => {
+                // youtube-sr duration is in ms
+                const durationSec = Math.floor(item.duration / 1000);
+                const diff = Math.abs(durationSec - targetDurationSec);
+                if (diff < smallestDiff) {
+                  smallestDiff = diff;
+                  bestMatchId = item.id;
+                }
+              });
+              id = bestMatchId;
+            }
           } else {
             return NextResponse.json({ error: 'Could not find a YouTube equivalent for this Spotify track.' }, { status: 404 });
           }
@@ -51,44 +116,7 @@ export async function GET(request) {
     }
   }
 
-  try {
-    let directUrl = null;
-    let directUrlError = null;
-
-    // ==========================================
-    // EXTRACT USING DEDICATED PYTHON BACKEND
-    // ==========================================
-    const backendUrl = process.env.EXTRACTOR_URL || 'http://127.0.0.1:8000';
-    
-    try {
-      let fetchUrl = q ? `${backendUrl}/api/extract-url?id=${id}&q=${encodeURIComponent(q)}` : `${backendUrl}/api/extract-url?id=${id}`;
-      if (durationMs) fetchUrl += `&durationMs=${durationMs}`;
-      
-      const res = await fetch(fetchUrl);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.url) {
-          directUrl = data.url;
-          console.log('Successfully extracted using dedicated backend');
-        }
-      } else {
-        const errorData = await res.json();
-        directUrlError = 'Dedicated backend failed: ' + (errorData.detail || res.statusText);
-        console.error(directUrlError);
-      }
-    } catch (e) {
-      directUrlError = 'Dedicated backend error: ' + (e.message || String(e));
-      console.error(directUrlError);
-    }
-
-    if (!directUrl) {
-      throw new Error(directUrlError || 'Could not find direct audio stream URL from extractors');
-    }
-
-    // Return the direct URL immediately instead of downloading and streaming it here
-    return NextResponse.json({ url: directUrl });
-  } catch (error) {
-    console.error('Extraction error:', error);
-    return NextResponse.json({ error: error.message || 'Failed to extract URL', stack: error.stack }, { status: 500 });
-  }
+  // We are now using the YouTube IFrame Player API on the frontend, so we no longer
+  // need to extract a direct MP3 URL via the Python backend. We just return the exact video ID!
+  return NextResponse.json({ id: id, type: 'youtube' });
 }

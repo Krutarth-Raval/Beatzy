@@ -8,6 +8,7 @@ import { FastAverageColor } from 'fast-average-color';
 import Image from 'next/image';
 import PlaylistSaveModal from './PlaylistSaveModal';
 import TrackThumbnail from './TrackThumbnail';
+import YouTubePlayer from 'youtube-player';
 
 const ScrollingText = ({ text, style, className }) => {
   const containerRef = useRef(null);
@@ -47,7 +48,8 @@ const ScrollingText = ({ text, style, className }) => {
 
 export default function AudioPlayer() {
   const audioRef = useRef(null);
-  const [audioUrl, setAudioUrl] = useState(null);
+  const ytPlayerRef = useRef(null);
+  const progressIntervalRef = useRef(null);
   const [isBlobLoading, setIsBlobLoading] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
   const loadedTrackIdRef = useRef(null);
@@ -91,14 +93,65 @@ export default function AudioPlayer() {
     updateCurrentTrack
   } = usePlayerStore();
 
-  // Initialize audio ref
+  // Create YouTube Player and Proxy
   useEffect(() => {
-    if (audioRef.current) {
+    if (!ytPlayerRef.current && document.getElementById('youtube-player-container')) {
+      ytPlayerRef.current = YouTubePlayer('youtube-player-container', {
+        playerVars: { autoplay: 1, controls: 0, playsinline: 1, origin: window.location.origin }
+      });
+      
+      audioRef.current = {
+        play: async () => { await ytPlayerRef.current.playVideo(); },
+        pause: () => { ytPlayerRef.current.pauseVideo(); },
+        set currentTime(time) { ytPlayerRef.current.seekTo(time, true); setProgress(time); },
+        get currentTime() { return usePlayerStore.getState().progress; },
+        set volume(vol) { ytPlayerRef.current.setVolume(vol * 100); },
+        get volume() { return usePlayerStore.getState().volume; },
+        set muted(m) { if(m) ytPlayerRef.current.mute(); else ytPlayerRef.current.unMute(); },
+        get muted() { return usePlayerStore.getState().isMuted; },
+        get duration() { return usePlayerStore.getState().duration; }
+      };
+      
       setAudioRef(audioRef.current);
-      audioRef.current.volume = volume;
-      audioRef.current.muted = isMuted;
+
+      ytPlayerRef.current.on('stateChange', (event) => {
+        if (event.data === 1) { // Playing
+          setIsBuffering(false);
+          setIsBlobLoading(false);
+          
+          ytPlayerRef.current.getDuration().then(dur => {
+            if (dur && dur > 0) {
+               setDuration(dur);
+            }
+          });
+          
+          const state = usePlayerStore.getState();
+          ytPlayerRef.current.setVolume(state.volume * 100);
+          if (state.isMuted) ytPlayerRef.current.mute(); else ytPlayerRef.current.unMute();
+
+          if (!progressIntervalRef.current) {
+            progressIntervalRef.current = setInterval(async () => {
+              if (ytPlayerRef.current) {
+                const time = await ytPlayerRef.current.getCurrentTime();
+                setProgress(time);
+              }
+            }, 500);
+          }
+        } else if (event.data === 0) { // Ended
+          window.dispatchEvent(new CustomEvent('yt-player-ended'));
+        } else if (event.data === 3) { // Buffering
+          setIsBuffering(true);
+        }
+      });
     }
-  }, [setAudioRef, currentTrack]);
+
+    return () => {
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
+    };
+  }, [setAudioRef, setDuration, setProgress, currentTrack?.id]);
 
   // Load track audio source
   useEffect(() => {
@@ -106,52 +159,41 @@ export default function AudioPlayer() {
 
     const loadAudio = async () => {
       if (!currentTrack) {
-        setAudioUrl((prevUrl) => {
-          if (prevUrl && prevUrl.startsWith('blob:')) URL.revokeObjectURL(prevUrl);
-          return null;
-        });
+        if (ytPlayerRef.current) ytPlayerRef.current.stopVideo();
         return;
-      }
-
-      // Clear previous audio URL to stop old song immediately
-      setAudioUrl((prevUrl) => {
-        if (prevUrl && prevUrl.startsWith('blob:')) URL.revokeObjectURL(prevUrl);
-        return null;
-      });
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.removeAttribute('src');
-        audioRef.current.load();
       }
 
       setIsBlobLoading(true);
 
       try {
-        if (currentTrack.audioUrl && isActive) {
-          // Fallback if we stream directly in the future
-          setAudioUrl((prevUrl) => {
-            if (prevUrl && prevUrl.startsWith('blob:')) URL.revokeObjectURL(prevUrl);
-            return currentTrack.audioUrl;
-          });
-        } else if (isActive) {
-          const title = currentTrack.title || currentTrack.name || '';
-          const artist = currentTrack.artists || currentTrack.artist || '';
-          const q = encodeURIComponent(`${title} ${artist}`);
-          const durationQuery = currentTrack.duration ? `&durationMs=${currentTrack.duration}` : '';
-          
-          try {
-            // Step 1: Rapidly extract the direct URL (without buffering the stream)
-            const extractRes = await fetch(`/api/extract-url?id=${currentTrack.id}&q=${q}${durationQuery}`);
-            if (!extractRes.ok) throw new Error('Failed to extract URL');
-            const data = await extractRes.json();
-            
-            if (data.url && isActive) {
-               // Step 2: Stream directly from YouTube to the browser to bypass proxy 403 errors!
-               setAudioUrl(data.url);
-            }
-          } catch (e) {
-            console.error("Extraction failed", e);
+        let videoId = currentTrack.id;
+        
+        if (videoId.includes('spotify:') || videoId.length > 15) {
+          const q = encodeURIComponent(`${currentTrack.title || currentTrack.name || ''} ${currentTrack.artists || currentTrack.artist || ''}`);
+          const dur = currentTrack.duration || currentTrack.duration_string || '';
+          const durationQuery = dur ? `&durationMs=${dur}` : '';
+          const res = await fetch(`/api/extract-url?id=${videoId}&q=${q}${durationQuery}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.id) videoId = data.id;
           }
+        }
+        
+        videoId = videoId.replace('youtube-', '');
+
+        if (!isActive) return;
+
+        if (ytPlayerRef.current) {
+           const state = usePlayerStore.getState();
+           const isPlaying = state.isPlaying;
+           const startSeconds = state.progress || 0;
+           
+           if (isPlaying) {
+             ytPlayerRef.current.loadVideoById(videoId, startSeconds);
+           } else {
+             ytPlayerRef.current.cueVideoById(videoId, startSeconds);
+           }
+           loadedTrackIdRef.current = currentTrack.id;
         }
       } catch (err) {
         console.error("Failed to load audio", err);
@@ -273,57 +315,39 @@ export default function AudioPlayer() {
   }, [currentTrack, isPlaying, displayCover, queueName]);
 
   useEffect(() => {
-    if (audioUrl && isPlaying && audioRef.current) {
-      audioRef.current.play().catch(e => console.error("Autoplay prevented:", e));
-    } else if (audioRef.current && !isPlaying) {
-      audioRef.current.pause();
+    if (isPlaying && ytPlayerRef.current) {
+      ytPlayerRef.current.playVideo().catch(e => console.error("Autoplay prevented:", e));
+    } else if (ytPlayerRef.current && !isPlaying) {
+      ytPlayerRef.current.pauseVideo();
     }
-  }, [audioUrl, isPlaying]);
+  }, [isPlaying]);
 
-  const handleTimeUpdate = () => {
-    if (audioRef.current && loadedTrackIdRef.current === currentTrack?.id) {
-      setProgress(audioRef.current.currentTime);
-    }
-  };
-
-  const handleLoadedMetadata = () => {
-    if (audioRef.current) {
-      loadedTrackIdRef.current = currentTrack?.id;
-      const discoveredDuration = audioRef.current.duration;
-      setDuration(discoveredDuration);
-      
-      const storeState = usePlayerStore.getState();
-      audioRef.current.volume = storeState.volume;
-      audioRef.current.muted = storeState.isMuted;
-      
-      if (storeState.progress > 0 && audioRef.current.currentTime === 0) {
-        audioRef.current.currentTime = storeState.progress;
-      }
-      
-      // Auto-heal missing duration in DB in the background
-      if (currentTrack?.id && (!currentTrack.duration || currentTrack.duration === '0') && !currentTrack.duration_string) {
-        const trueSeconds = Math.floor(discoveredDuration);
-        if (trueSeconds > 0) {
-          fetch(`/api/songs/${currentTrack.id}/duration`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ duration: String(trueSeconds) })
-          }).catch(e => console.error('Auto-heal duration failed:', e));
+  useEffect(() => {
+    const onEnded = () => {
+      if (usePlayerStore.getState().repeat === 'one') {
+        if (ytPlayerRef.current) {
+          ytPlayerRef.current.seekTo(0, true);
+          ytPlayerRef.current.playVideo();
         }
+      } else {
+        usePlayerStore.getState().playNext();
       }
-    }
-  };
+    };
+    window.addEventListener('yt-player-ended', onEnded);
+    return () => window.removeEventListener('yt-player-ended', onEnded);
+  }, []);
 
-  const handleEnded = () => {
-    if (repeat === 'one') {
-      if (audioRef.current) {
-        audioRef.current.currentTime = 0;
-        audioRef.current.play();
-      }
-    } else {
-      playNext();
+  // Auto-heal missing duration
+  useEffect(() => {
+    if (currentTrack?.id && duration > 0 && (!currentTrack.duration || currentTrack.duration === '0') && !currentTrack.duration_string) {
+      const trueSeconds = Math.floor(duration);
+      fetch(`/api/songs/${currentTrack.id}/duration`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ duration: String(trueSeconds) })
+      }).catch(e => console.error('Auto-heal duration failed:', e));
     }
-  };
+  }, [duration, currentTrack]);
 
   const formatTime = (timeInSeconds) => {
     if (!timeInSeconds || isNaN(timeInSeconds)) return "0:00";
@@ -420,17 +444,9 @@ export default function AudioPlayer() {
   if (!currentTrack) return null;
 
   const audioTag = (
-    <audio
-      ref={audioRef}
-      src={audioUrl || undefined}
-      onTimeUpdate={handleTimeUpdate}
-      onLoadedMetadata={handleLoadedMetadata}
-      onEnded={handleEnded}
-      onWaiting={() => setIsBuffering(true)}
-      onPlaying={() => setIsBuffering(false)}
-      onCanPlay={() => setIsBuffering(false)}
-      onLoadStart={() => setIsBuffering(true)}
-    />
+    <div style={{ display: 'none' }}>
+      <div id="youtube-player-container"></div>
+    </div>
   );
 
   if (isMobileExpanded) {
@@ -849,16 +865,7 @@ export default function AudioPlayer() {
                     borderRadius: '8px', cursor: 'pointer', transition: 'background-color 0.2s'
                   }}>
                     <div style={{ width: '40px', height: '40px', borderRadius: '6px', overflow: 'hidden', flexShrink: 0, backgroundColor: 'var(--bg-main)', position: 'relative' }}>
-                      {(track.coverArt || track.thumbnail) && (() => {
-                        const rawThumb = track.coverArt || track.thumbnail;
-                        const cover = rawThumb.includes('i.ytimg.com') ? rawThumb.split('?')[0] : rawThumb.replace(/=w\d+-h\d+.*/, '=w200-h200-l90-rj');
-                        return (
-                          <>
-                            <div className="skeleton-bg" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, transition: 'opacity 0.3s' }}></div>
-                            <img src={cover} style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'relative', zIndex: 1, opacity: 0, transition: 'opacity 0.3s ease' }} alt="cover" onLoad={(e) => { e.currentTarget.style.opacity = 1; if (e.currentTarget.previousSibling) e.currentTarget.previousSibling.style.opacity = 0; }} onError={(e) => { if (!e.target.dataset.error) { e.target.dataset.error = true; e.target.src = `https://i.ytimg.com/vi/${track.id}/mqdefault.jpg`; } else { if (e.currentTarget.previousSibling) e.currentTarget.previousSibling.style.opacity = 0; } }} />
-                          </>
-                        );
-                      })()}
+                      <TrackThumbnail track={track} size={40} showBackground={false} />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ margin: 0, fontWeight: '600', fontSize: '0.9rem', color: isPlayingQueue ? 'var(--primary-color)' : 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{track.title}</p>

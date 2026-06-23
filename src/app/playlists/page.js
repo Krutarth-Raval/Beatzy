@@ -18,11 +18,16 @@ const PlaylistCoverDynamic = ({ coverArt, songs, isSidebar = false }) => {
   const [thumb, setThumb] = useState(coverArt);
 
   useEffect(() => {
-    if (!thumb && songs && songs.length > 0) {
+    if (coverArt) {
+      setThumb(coverArt);
+      return;
+    }
+
+    if (songs && songs.length > 0) {
       const firstSong = songs[0].song || songs[0]; // handle both nested and flat tracks
       if (firstSong) {
         const isSpotify = firstSong.id?.includes('spotify:');
-        const initial = firstSong.thumbnail || firstSong.coverArt || firstSong.thumbnails?.[0]?.url || firstSong.thumbnail?.[0]?.url || (!isSpotify ? `https://i.ytimg.com/vi/${firstSong.id}/hqdefault.jpg` : '');
+        const initial = firstSong.thumbnail || firstSong.coverArt || firstSong.thumbnails?.[0]?.url || firstSong.thumbnail?.[0]?.url || (!isSpotify && firstSong.id ? `https://i.ytimg.com/vi/${firstSong.id.replace('youtube-', '')}/hqdefault.jpg` : '');
         if (initial) {
           setThumb(initial);
         } else if (isSpotify) {
@@ -31,14 +36,20 @@ const PlaylistCoverDynamic = ({ coverArt, songs, isSidebar = false }) => {
           fetch(`/api/proxy-audio?url=${encodeURIComponent(oembedUrl)}`)
             .then(res => res.json())
             .then(data => { if (data.thumbnail_url) setThumb(data.thumbnail_url); })
-            .catch(() => {});
+            .catch(() => { });
+        } else {
+          setThumb(null);
         }
+      } else {
+        setThumb(null);
       }
+    } else {
+      setThumb(null);
     }
-  }, [coverArt, songs, thumb]);
+  }, [coverArt, songs?.[0]?.id]);
 
   if (thumb) return <img src={thumb.split('?')[0]} alt="Cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.style.display = 'none'; }} />;
-  return <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: isSidebar ? '1rem' : '3rem' }}>🎵</div>;
+  return <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: isSidebar ? '1rem' : '3rem', backgroundColor: 'var(--bg-hover)' }}>🎵</div>;
 };
 
 export default function PlaylistsPage() {
@@ -77,6 +88,7 @@ export default function PlaylistsPage() {
   const { playTrack, currentTrack, isPlaying, togglePlay, shuffle, toggleShuffle } = usePlayerStore();
   const fileInputRef = useRef(null);
   const selectedPlaylistRef = useRef(selectedPlaylist);
+  const scrollRef = useRef(null);
 
   useEffect(() => {
     selectedPlaylistRef.current = selectedPlaylist;
@@ -93,7 +105,7 @@ export default function PlaylistsPage() {
 
     const handlePlaylistUpdate = (e) => {
       const detail = e?.detail || {};
-      
+
       // Optimistic update for right section if we added to the current playlist
       if (detail.track && detail.playlistId && selectedPlaylistRef.current?.id === detail.playlistId) {
         setTracks(prev => {
@@ -101,7 +113,7 @@ export default function PlaylistsPage() {
           return [...prev, { ...detail.track, addedAt: new Date().toISOString() }];
         });
       }
-      
+
       // Silent reload for the left section
       loadPlaylists(true);
     };
@@ -128,7 +140,7 @@ export default function PlaylistsPage() {
     if (!isSilent) setLoading(true);
     try {
       let cloudP = [];
-      
+
       try {
         if (!session?.user) {
           setLoading(false);
@@ -145,7 +157,7 @@ export default function PlaylistsPage() {
       } catch (e) {
         console.error('Failed to load cloud playlists', e);
       }
-      
+
       const p = [...cloudP];
       setPlaylists(p);
 
@@ -166,7 +178,7 @@ export default function PlaylistsPage() {
               loadPlaylistDetails(publicPlaylist);
               return;
             }
-          } catch(e) { console.error('Failed to load public playlist directly', e); }
+          } catch (e) { console.error('Failed to load public playlist directly', e); }
         }
       }
 
@@ -204,6 +216,10 @@ export default function PlaylistsPage() {
   };
 
   const loadPlaylistDetails = async (playlist) => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = 0;
+      document.documentElement.style.setProperty('--scroll', 0);
+    }
     setSelectedPlaylist(playlist);
     setLoadingTracks(true);
     setIsEditing(false);
@@ -238,7 +254,7 @@ export default function PlaylistsPage() {
     try {
       const res = await fetch(`/api/playlists/${playlistToDelete}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Failed to delete playlist');
-      
+
       if (selectedPlaylist?.id === playlistToDelete) {
         setSelectedPlaylist(null);
         setTracks([]);
@@ -324,16 +340,16 @@ export default function PlaylistsPage() {
     try {
       if (selectedPlaylist.isOwner) {
         const newVisibility = !selectedPlaylist.isPublic;
-        
+
         // Optimistic UI update
         setSelectedPlaylist(prev => ({ ...prev, isPublic: newVisibility }));
-        
+
         const res = await fetch(`/api/playlists/${selectedPlaylist.id}/visibility`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ isPublic: newVisibility })
         });
-        
+
         if (!res.ok) {
           // Revert optimistic update on failure
           setSelectedPlaylist(prev => ({ ...prev, isPublic: !newVisibility }));
@@ -438,7 +454,8 @@ export default function PlaylistsPage() {
   };
 
   const handleSaveName = async (newName) => {
-    if (!newName.trim() || newName.trim() === selectedPlaylist.name) {
+    const finalName = typeof newName === 'string' ? newName : editNameValue;
+    if (!finalName || typeof finalName !== 'string' || !finalName.trim() || finalName.trim() === selectedPlaylist?.name) {
       setIsEditingName(false);
       return;
     }
@@ -447,7 +464,7 @@ export default function PlaylistsPage() {
       const res = await fetch(`/api/playlists/${selectedPlaylist.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newName.trim() })
+        body: JSON.stringify({ name: finalName.trim() })
       });
       if (res.ok) {
         const updated = await res.json();
@@ -500,7 +517,7 @@ export default function PlaylistsPage() {
 
   const saveAllChanges = async () => {
     if (!selectedPlaylist) return;
-    
+
     setIsSavingPlaylist(true);
     try {
       if (selectedPlaylist.isOwner && pendingChanges.deletes.length > 0) {
@@ -536,11 +553,11 @@ export default function PlaylistsPage() {
   const formatDurationMs = (ms, trackId = '') => {
     if (ms == null) return '';
     if (typeof ms === 'string' && ms.includes(':')) return ms;
-    
+
     let totalSeconds = 0;
     const parsed = typeof ms === 'number' ? ms : parseInt(ms);
     if (isNaN(parsed)) return '';
-    
+
     // Heuristic: if duration is over 20,000 it's definitely in milliseconds
     if (trackId?.includes('spotify:') || parsed > 20000) {
       totalSeconds = Math.floor(parsed / 1000);
@@ -591,6 +608,15 @@ export default function PlaylistsPage() {
 
   const sortedTracks = getSortedTracks();
 
+  let bgImageUrl = selectedPlaylist?.coverArt || '';
+  if (!bgImageUrl && tracks && tracks.length > 0) {
+    const firstTrack = tracks[0];
+    bgImageUrl = firstTrack.coverArt || firstTrack.thumbnail || '';
+    if (!bgImageUrl && firstTrack.id && !firstTrack.id.includes('spotify:')) {
+      bgImageUrl = `https://i.ytimg.com/vi/${firstTrack.id.replace('youtube-', '')}/hqdefault.jpg`;
+    }
+  }
+
   return (
     <div style={{ backgroundColor: 'var(--bg-main)', height: '100dvh', overflow: 'hidden', color: 'var(--text-primary)', display: 'flex', flexDirection: 'column' }}>
       <style dangerouslySetInnerHTML={{
@@ -598,12 +624,40 @@ export default function PlaylistsPage() {
         @media (min-width: 769px) {
           .show-on-mobile { display: none !important; }
         }
+        @media (max-width: 768px) {
+          .playlist-header-mobile {
+            flex-direction: row !important;
+            align-items: center !important;
+            gap: 16px !important;
+            text-align: left;
+          }
+          .playlist-image-container {
+            width: 140px !important;
+            height: 140px !important;
+            margin: 0 !important;
+            transform: scale(calc(max(0.5, 1 - var(--scroll, 0) / 300)));
+            transform-origin: bottom left;
+            margin-bottom: calc(var(--scroll, 0) * -0.5px);
+            z-index: 10;
+          }
+          .playlist-header-mobile h1 {
+            font-size: 1.6rem !important;
+            justify-content: flex-start;
+          }
+          .playlist-info-row {
+            justify-content: flex-start !important;
+          }
+          .playlist-actions-mobile {
+            width: 100%;
+          }
+          .hide-on-mobile { display: none !important; }
+        }
       `}} />
       <div className="playlist-page-container" style={{ flex: 1, minHeight: 0, padding: '24px', maxWidth: '1200px', margin: '0 auto', display: 'flex', gap: '32px', width: '100%' }}>
 
         {/* Playlists Sidebar */}
         <div className={`hide-scrollbar playlist-sidebar-mobile ${selectedPlaylist ? 'hidden-on-mobile' : ''}`} style={{ width: '300px', flexShrink: 0, borderRight: '1px solid var(--border-color)', paddingRight: '24px', display: 'flex', flexDirection: 'column', overflowY: 'auto', paddingBottom: '120px' }}>
-          
+
           {/* Logo */}
           <div style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
             <img src="/white.png" width={32} height={32} className="logo-img animate-spin" style={{ animationDuration: '4s' }} alt="Beatzy Logo" />
@@ -651,12 +705,12 @@ export default function PlaylistsPage() {
                   </div>
                   <span style={{ fontWeight: '600', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</span>
                   <button
-                    onClick={(e) => { 
-                      e.stopPropagation(); 
+                    onClick={(e) => {
+                      e.stopPropagation();
                       if (p.isOwner === false) {
                         handleSavePublicPlaylistDirect(p.id);
                       } else {
-                        promptDeletePlaylist(e, p.id); 
+                        promptDeletePlaylist(e, p.id);
                       }
                     }}
                     style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', opacity: 0.5 }}
@@ -676,7 +730,7 @@ export default function PlaylistsPage() {
               </div>
               <h3 style={{ margin: 0, marginBottom: '8px', fontSize: '1.1rem', fontWeight: '600' }}>No Playlists Yet</h3>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '24px', lineHeight: '1.4' }}>Create your first playlist or search the community.</p>
-              <button 
+              <button
                 onClick={handleCreatePlaylist}
                 style={{ padding: '10px 20px', borderRadius: '24px', backgroundColor: 'var(--text-primary)', color: 'var(--bg-main)', border: 'none', fontWeight: '700', cursor: 'pointer', transition: 'transform 0.2s' }}
                 onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
@@ -703,17 +757,20 @@ export default function PlaylistsPage() {
               {/* Header */}
               <div style={{ position: 'relative', paddingBottom: '150px', marginBottom: '-130px', flexShrink: 0 }}>
                 {/* Blurred Background Overlay */}
-                <div className="show-on-mobile" style={{
+                <div style={{
                   position: 'absolute',
-                  top: '-24px', left: '-24px', right: '-24px', bottom: 0,
-                  backgroundImage: selectedPlaylist?.coverArt ? `url(${selectedPlaylist.coverArt})` : 'none',
+                  top: '-50px', left: '50%', width: '100vw', height: '600px',
+                  backgroundImage: bgImageUrl ? `url(${bgImageUrl})` : 'none',
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
-                  filter: 'blur(40px) brightness(0.6)',
-                  opacity: 0.8,
-                  zIndex: -1,
-                  WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 20%, rgba(0,0,0,0) 100%)',
-                  maskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 20%, rgba(0,0,0,0) 100%)'
+                  filter: 'blur(80px) brightness(0.3) saturate(1.5)',
+                  opacity: 0.6,
+                  zIndex: 0,
+                  pointerEvents: 'none',
+                  transform: 'translateX(-50%) scale(1.2)',
+                  transformOrigin: 'top center',
+                  WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 100%)',
+                  maskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 100%)'
                 }} />
 
                 {/* Mobile Header Navbar */}
@@ -728,7 +785,7 @@ export default function PlaylistsPage() {
                         <span style={{ color: 'var(--text-primary)', fontWeight: '700', fontSize: '1.2rem', letterSpacing: '0.5px' }}>Beatzy Playlist</span>
                       </div>
                     </div>
-                    
+
                     {/* Settings Button on Mobile Header */}
                     <div style={{ position: 'relative' }}>
                       <button onClick={() => setShowSettingsMenu(!showSettingsMenu)} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', padding: '4px' }}>
@@ -767,14 +824,15 @@ export default function PlaylistsPage() {
                     ) : selectedPlaylist.isCloud && selectedPlaylist.isOwner === false ? (() => {
                       const isSaved = playlists.some(p => p.id === selectedPlaylist.id && !p.isOwner);
                       return (
-                      <>
-                        <button onClick={handleSavePublicPlaylist} disabled={isSavingPlaylist} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: 'none', border: 'none', color: isSaved ? 'var(--primary-color)' : 'var(--text-primary)', cursor: 'pointer', borderRadius: '8px', textAlign: 'left', opacity: isSavingPlaylist ? 0.5 : 1 }} onMouseOver={e => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'} onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-                          {isSavingPlaylist ? <Loader2 className="animate-spin" size={18} /> : (isSaved ? <BookmarkMinus size={18} /> : <BookmarkPlus size={18} />)}
-                          <span>{isSaved ? 'Remove from Library' : 'Save to Library'}</span>
-                        </button>
-                        <div style={{ height: '1px', backgroundColor: 'var(--border-color)', margin: '4px 0' }} />
-                      </>
-                    )})() : null}
+                        <>
+                          <button onClick={handleSavePublicPlaylist} disabled={isSavingPlaylist} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: 'none', border: 'none', color: isSaved ? 'var(--primary-color)' : 'var(--text-primary)', cursor: 'pointer', borderRadius: '8px', textAlign: 'left', opacity: isSavingPlaylist ? 0.5 : 1 }} onMouseOver={e => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'} onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                            {isSavingPlaylist ? <Loader2 className="animate-spin" size={18} /> : (isSaved ? <BookmarkMinus size={18} /> : <BookmarkPlus size={18} />)}
+                            <span>{isSaved ? 'Remove from Library' : 'Save to Library'}</span>
+                          </button>
+                          <div style={{ height: '1px', backgroundColor: 'var(--border-color)', margin: '4px 0' }} />
+                        </>
+                      )
+                    })() : null}
 
                     <button onClick={handleShare} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', borderRadius: '8px', textAlign: 'left' }} onMouseOver={e => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'} onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}>
                       <Share2 size={18} />
@@ -783,13 +841,13 @@ export default function PlaylistsPage() {
                   </div>
                 )}
 
-                <div className="playlist-header-mobile" style={{ display: 'flex', alignItems: 'flex-end', gap: '24px', position: 'relative', zIndex: 1 }}>
+                <div className="playlist-header-mobile" style={{ display: 'flex', alignItems: 'center', gap: '24px', position: 'relative', zIndex: 1 }}>
 
                   {/* Playlist Image with Edit overlay */}
                   <div
                     className="playlist-image-container"
-                    onClick={() => { if(selectedPlaylist.isOwner !== false) fileInputRef.current?.click(); }}
-                    style={{ flexShrink: 0, width: '200px', height: '200px', borderRadius: '16px', backgroundColor: 'var(--bg-input)', overflow: 'hidden', boxShadow: '0 10px 30px rgba(0,0,0,0.3)', position: 'relative', cursor: selectedPlaylist.isOwner !== false ? 'pointer' : 'default', group: 'hover' }}
+                    onClick={() => { if (selectedPlaylist.isOwner !== false) fileInputRef.current?.click(); }}
+                    style={{ flexShrink: 0, width: '250px', height: '250px', borderRadius: '16px', backgroundColor: 'var(--bg-input)', overflow: 'hidden', boxShadow: '0 10px 30px rgba(0,0,0,0.3)', position: 'relative', cursor: selectedPlaylist.isOwner !== false ? 'pointer' : 'default', group: 'hover' }}
                   >
                     <PlaylistCoverDynamic coverArt={selectedPlaylist.coverArt} songs={tracks} />
                     {selectedPlaylist.isOwner !== false && (
@@ -803,30 +861,44 @@ export default function PlaylistsPage() {
                     )}
                   </div>
 
-                  <div style={{ flex: 1, minWidth: 0 }}>
+                  <div className="playlist-info-container" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', position: 'relative', zIndex: 20 }}>
 
                     {/* Playlist Name Display */}
                     <h1
-                      onClick={() => { if(selectedPlaylist.isOwner !== false) { setEditNameValue(selectedPlaylist.name); setIsEditingName(true); } }}
+                      onClick={() => { if (selectedPlaylist.isOwner !== false) { setEditNameValue(selectedPlaylist.name); setIsEditingName(true); } }}
                       style={{ fontSize: 'clamp(1.6rem, 6vw, 3rem)', fontWeight: '800', margin: 0, marginBottom: '16px', lineHeight: '1.1', cursor: selectedPlaylist.isOwner !== false ? 'pointer' : 'default', display: 'flex', alignItems: 'center', gap: '12px', wordBreak: 'break-word' }}
                       title={selectedPlaylist.isOwner !== false ? "Click to rename" : ""}
                     >
                       {selectedPlaylist.name}
                     </h1>
 
-                    <div style={{ color: 'var(--text-primary)', opacity: 0.8, fontWeight: '500', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <div className="playlist-info-row" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {/* User Row */}
                       {selectedPlaylist.user?.name && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <div style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--bg-main)', fontSize: '0.7rem', fontWeight: 'bold', flexShrink: 0 }}>
-                              {selectedPlaylist.user.name.charAt(0).toUpperCase()}
-                            </div>
-                            <span style={{ whiteSpace: 'nowrap' }}>{selectedPlaylist.user.name}</span>
-                          </span>
-                          <span className="hide-on-mobile">•</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)', fontWeight: '600' }}>
+                          <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--bg-main)', fontSize: '0.85rem', fontWeight: 'bold', flexShrink: 0 }}>
+                            {selectedPlaylist.user.name.charAt(0).toUpperCase()}
+                          </div>
+                          <span style={{ fontSize: 'clamp(0.9rem, 1.2vw, 1.1rem)' }}>{selectedPlaylist.user.name}</span>
                         </div>
                       )}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap' }}>
+
+                      {/* Stats Row */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: 'clamp(0.85rem, 1.2vw, 1rem)', color: 'var(--text-secondary)', fontWeight: '500' }}>
+                        {(selectedPlaylist.isPublic || selectedPlaylist.isOwner === false) ? (
+                          <>
+                            <span title="Public Playlist" style={{ display: 'flex', alignItems: 'center' }}>
+                              <Globe size={16} />
+                            </span>
+                            <span>{selectedPlaylist.savedCount || 0} save{selectedPlaylist.savedCount !== 1 ? 's' : ''}</span>
+                            <span>•</span>
+                          </>
+                        ) : (
+                          <span title="Private Playlist" style={{ display: 'flex', alignItems: 'center' }}>
+                            <Lock size={16} />
+                          </span>
+                        )}
+
                         <span>{tracks.length} track{tracks.length !== 1 ? 's' : ''}</span>
                         <span>•</span>
                         <span>{formatTotalDuration()}</span>
@@ -834,86 +906,97 @@ export default function PlaylistsPage() {
                     </div>
 
                     {/* Buttons Row */}
-                    <div className="playlist-actions-mobile" style={{ marginTop: '24px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-                      <button
-                        onClick={() => {
-                          toggleShuffle();
-                          if (shuffle === 'off' && tracks.length > 0) {
-                            const shuffled = [...tracks].sort(() => Math.random() - 0.5);
-                            playTrack(shuffled[0], shuffled, selectedPlaylist?.name);
-                          }
-                        }}
-                        disabled={tracks.length === 0}
-                        title={`Shuffle: ${shuffle}`}
-                        style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: shuffle === 'smart' ? 'var(--primary-color)' : shuffle === 'on' ? 'var(--text-primary)' : 'var(--bg-hover)', color: shuffle !== 'off' ? 'var(--bg-main)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: tracks.length === 0 ? 'not-allowed' : 'pointer', opacity: tracks.length === 0 ? 0.5 : 1, transition: 'all 0.2s' }}
-                      >
-                        {shuffle === 'smart' ? <Sparkles size={20} /> : <Shuffle size={20} />}
-                      </button>
-                      <button
-                        onClick={handlePlayPlaylist}
-                        disabled={tracks.length === 0}
-                        style={{ width: '56px', height: '56px', borderRadius: '50%', backgroundColor: 'var(--primary-color)', color: 'var(--bg-main)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: tracks.length === 0 ? 'not-allowed' : 'pointer', opacity: tracks.length === 0 ? 0.5 : 1 }}
-                      >
-                        {currentTrack && tracks.some(t => t.id === currentTrack.id) && isPlaying ? <Pause size={28} fill="currentColor" /> : <Play size={28} fill="currentColor" style={{ marginLeft: '4px' }} />}
-                      </button>
-                      {selectedPlaylist.isOwner !== false && (
+                    <div className="playlist-actions-mobile" style={{ marginTop: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', width: '100%', boxSizing: 'border-box' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                         <button
-                          onClick={async () => {
-                            if (isEditing && hasUnsavedChanges) {
-                              await saveAllChanges();
+                          onClick={() => {
+                            toggleShuffle();
+                            if (shuffle === 'off' && tracks.length > 0) {
+                              const shuffled = [...tracks].sort(() => Math.random() - 0.5);
+                              playTrack(shuffled[0], shuffled, selectedPlaylist?.name);
                             }
-                            setIsEditing(!isEditing);
                           }}
-                          disabled={isSavingPlaylist}
-                          style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: isEditing ? 'var(--primary-color)' : 'var(--bg-hover)', color: isEditing ? 'var(--bg-main)' : 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: isSavingPlaylist ? 'default' : 'pointer', transition: 'all 0.2s', opacity: isSavingPlaylist ? 0.7 : 1 }}
-                          title={isEditing ? "Finish Editing" : "Edit Playlist"}
+                          disabled={tracks.length === 0}
+                          title={`Shuffle: ${shuffle}`}
+                          style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: shuffle === 'smart' ? 'var(--primary-color)' : shuffle === 'on' ? 'var(--text-primary)' : 'var(--bg-hover)', color: shuffle !== 'off' ? 'var(--bg-main)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: tracks.length === 0 ? 'not-allowed' : 'pointer', opacity: tracks.length === 0 ? 0.5 : 1, transition: 'all 0.2s', flexShrink: 0 }}
                         >
-                          {isEditing ? (isSavingPlaylist ? <Loader2 size={20} className="animate-spin" /> : <Check size={20} />) : <Edit2 size={20} />}
+                          {shuffle === 'smart' ? <Sparkles size={20} /> : <Shuffle size={20} />}
                         </button>
-                      )}
-
-                      {selectedPlaylist.isCloud && selectedPlaylist.isOwner === false && (() => {
-                        const isSaved = playlists.some(p => p.id === selectedPlaylist.id && !p.isOwner);
-                        return (
+                        <button
+                          onClick={handlePlayPlaylist}
+                          disabled={tracks.length === 0}
+                          style={{ width: '56px', height: '56px', borderRadius: '50%', backgroundColor: 'var(--primary-color)', color: 'var(--bg-main)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: tracks.length === 0 ? 'not-allowed' : 'pointer', opacity: tracks.length === 0 ? 0.5 : 1, flexShrink: 0 }}
+                        >
+                          {currentTrack && tracks.some(t => t.id === currentTrack.id) && isPlaying ? <Pause size={28} fill="currentColor" /> : <Play size={28} fill="currentColor" style={{ marginLeft: '4px' }} />}
+                        </button>
+                        {selectedPlaylist.isOwner !== false && (
                           <button
-                            onClick={handleSavePublicPlaylist}
+                            onClick={async () => {
+                              if (isEditing && hasUnsavedChanges) {
+                                await saveAllChanges();
+                              }
+                              setIsEditing(!isEditing);
+                            }}
                             disabled={isSavingPlaylist}
-                            style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: 'var(--bg-hover)', color: isSaved ? 'var(--primary-color)' : 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', transition: 'all 0.2s', opacity: isSavingPlaylist ? 0.5 : 1 }}
-                            title={isSaved ? "Remove from Library" : "Save to Library"}
+                            style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: isEditing ? 'var(--primary-color)' : 'var(--bg-hover)', color: isEditing ? 'var(--bg-main)' : 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: isSavingPlaylist ? 'default' : 'pointer', transition: 'all 0.2s', opacity: isSavingPlaylist ? 0.7 : 1, flexShrink: 0 }}
+                            title={isEditing ? "Finish Editing" : "Edit Playlist"}
                           >
-                            {isSavingPlaylist ? <Loader2 className="animate-spin" size={20} /> : (isSaved ? <BookmarkMinus size={20} /> : <BookmarkPlus size={20} />)}
+                            {isEditing ? (isSavingPlaylist ? <Loader2 size={20} className="animate-spin" /> : <Check size={20} />) : <Edit2 size={20} />}
                           </button>
-                        );
-                      })()}
+                        )}
+
+                        {selectedPlaylist.isCloud && selectedPlaylist.isOwner === false && (() => {
+                          const isSaved = playlists.some(p => p.id === selectedPlaylist.id && !p.isOwner);
+                          return (
+                            <button
+                              onClick={handleSavePublicPlaylist}
+                              disabled={isSavingPlaylist}
+                              style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: 'var(--bg-hover)', color: isSaved ? 'var(--primary-color)' : 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', transition: 'all 0.2s', opacity: isSavingPlaylist ? 0.5 : 1, flexShrink: 0 }}
+                              title={isSaved ? "Remove from Library" : "Save to Library"}
+                            >
+                              {isSavingPlaylist ? <Loader2 className="animate-spin" size={20} /> : (isSaved ? <BookmarkMinus size={20} /> : <BookmarkPlus size={20} />)}
+                            </button>
+                          );
+                        })()}
+                      </div>
+
                     </div>
                   </div>
                 </div>
+              </div>
 
-                {/* Toolbar */}
-                <div className="playlist-toolbar-mobile" style={{ display: 'flex', alignItems: 'center', width: '100%', marginBottom: '0px', position: 'relative', zIndex: 10, flexShrink: 0 }}>
-                  <div style={{ position: 'relative', marginLeft: 'auto' }}>
+              {/* Sort controls above track list */}
+              {!loadingTracks && (
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px', paddingRight: '8px', position: 'relative', zIndex: 10 }}>
+                  <div style={{ position: 'relative' }}>
                     <button
                       onClick={() => setShowSortDropdown(!showSortDropdown)}
-                      style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'none', border: 'none', color: 'var(--text-primary)', opacity: 0.8, cursor: 'pointer', fontWeight: '600' }}
+                      style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'none', border: 'none', color: 'var(--text-primary)', opacity: 0.8, cursor: 'pointer', fontWeight: '600', whiteSpace: 'nowrap' }}
                     >
                       Sort: {sortMode} <ChevronDown size={16} />
                     </button>
                     {showSortDropdown && (
-                      <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '8px', backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '8px', zIndex: 10, minWidth: '150px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
-                        {['Manual', 'Old to New', 'New to Old'].map(mode => (
-                          <button
-                            key={mode}
-                            onClick={() => { setSortMode(mode); setShowSortDropdown(false); }}
-                            style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 12px', background: sortMode === mode ? 'var(--bg-hover)' : 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', borderRadius: '4px' }}
-                          >
-                            {mode}
-                          </button>
-                        ))}
-                      </div>
+                      <>
+                        <div
+                          onClick={(e) => { e.stopPropagation(); setShowSortDropdown(false); }}
+                          style={{ position: 'fixed', inset: 0, zIndex: 9 }}
+                        />
+                        <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '8px', backgroundColor: 'rgba(30,30,30,0.85)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '8px', zIndex: 10, minWidth: '150px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}>
+                          {['Manual', 'Old to New', 'New to Old'].map(mode => (
+                            <button
+                              key={mode}
+                              onClick={() => { setSortMode(mode); setShowSortDropdown(false); }}
+                              style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 12px', background: sortMode === mode ? 'var(--bg-hover)' : 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', borderRadius: '4px', whiteSpace: 'nowrap' }}
+                            >
+                              {mode}
+                            </button>
+                          ))}
+                        </div>
+                      </>
                     )}
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Track List */}
               {loadingTracks ? (
@@ -921,7 +1004,7 @@ export default function PlaylistsPage() {
                   <img src="/white.png" width={40} height={40} className="logo-img animate-spin" alt="Loading Tracks" style={{ opacity: 0.6 }} />
                 </div>
               ) : (
-                <div className="hide-scrollbar" style={{ flex: 1, minHeight: 0, overflowY: 'auto', paddingBottom: '160px', display: 'flex', flexDirection: 'column', gap: '8px', position: 'relative', zIndex: 1 }}>
+                <div ref={scrollRef} onScroll={(e) => document.documentElement.style.setProperty('--scroll', e.target.scrollTop)} className="hide-scrollbar" style={{ flex: 1, minHeight: 0, overflowY: 'auto', paddingBottom: '160px', display: 'flex', flexDirection: 'column', gap: '8px', position: 'relative', zIndex: 1 }}>
                   {sortedTracks.length > 0 ? sortedTracks.map((track, index) => {
                     const isCurrentlyPlaying = currentTrack?.id === track.id;
                     const isDragged = draggedItemIndex === index;
@@ -1246,12 +1329,12 @@ export default function PlaylistsPage() {
                     <span style={{ fontSize: '0.9rem', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName}</span>
                     <div className="history-item-actions">
                       <button
-                        onClick={(e) => { 
-                          e.stopPropagation(); 
+                        onClick={(e) => {
+                          e.stopPropagation();
                           if (p.isOwner === false) {
                             handleSavePublicPlaylistDirect(p.id);
                           } else {
-                            promptDeletePlaylist(e, p.id); 
+                            promptDeletePlaylist(e, p.id);
                           }
                         }}
                         style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
@@ -1305,7 +1388,7 @@ export default function PlaylistsPage() {
             </button>
 
             <h3 style={{ fontSize: '1.2rem', marginBottom: '16px', fontWeight: '700', color: 'var(--text-primary)' }}>Rename Playlist</h3>
-            
+
             <form onSubmit={(e) => { e.preventDefault(); handleSaveName(editNameValue); }} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
                 <input
@@ -1334,17 +1417,17 @@ export default function PlaylistsPage() {
                 </div>
               </div>
 
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 disabled={!editNameValue.trim()}
-                style={{ 
-                  width: '100%', 
-                  padding: '12px', 
-                  backgroundColor: editNameValue.trim() ? 'var(--text-primary)' : 'var(--border-color)', 
-                  color: editNameValue.trim() ? 'var(--bg-main)' : 'var(--text-secondary)', 
-                  borderRadius: '8px', 
-                  border: 'none', 
-                  fontWeight: '600', 
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  backgroundColor: editNameValue.trim() ? 'var(--text-primary)' : 'var(--border-color)',
+                  color: editNameValue.trim() ? 'var(--bg-main)' : 'var(--text-secondary)',
+                  borderRadius: '8px',
+                  border: 'none',
+                  fontWeight: '600',
                   cursor: editNameValue.trim() ? 'pointer' : 'not-allowed',
                   transition: 'all 0.2s'
                 }}

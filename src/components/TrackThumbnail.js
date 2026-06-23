@@ -50,7 +50,11 @@ export default function TrackThumbnail({ track, size = 40, showBackground = true
     );
   }
 
-  const cover = thumb.includes('i.ytimg.com') ? thumb.split('?')[0] : thumb.replace(/=w\d+-h\d+.*/, '=w200-h200-l90-rj');
+  let cover = thumb.includes('i.ytimg.com') ? thumb.split('?')[0] : thumb.replace(/=w\d+-h\d+.*/, '=w1200-h1200-l90-rj');
+  if (cover.includes('i.ytimg.com')) {
+    cover = cover.replace(/\/(default|mqdefault|hqdefault|sddefault)(\.[a-z]+)$/i, '/maxresdefault$2');
+  }
+
   return (
     <>
       {showBackground && <div className="skeleton-bg" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, transition: 'opacity 0.3s' }}></div>}
@@ -63,13 +67,27 @@ export default function TrackThumbnail({ track, size = 40, showBackground = true
           if (showBackground && e.currentTarget.previousSibling) e.currentTarget.previousSibling.style.opacity = 0; 
         }} 
         onError={(e) => { 
-          if (!e.target.dataset.error) { 
-            e.target.dataset.error = true; 
+          if (e.target.dataset.error === "2") {
+            if (showBackground && e.currentTarget.previousSibling) e.currentTarget.previousSibling.style.opacity = 0; 
+            e.currentTarget.style.opacity = 0;
+            return;
+          }
+          if (e.target.dataset.error === "1") { 
+            e.target.dataset.error = "2"; 
             if (realYtId) e.target.src = `https://i.ytimg.com/vi/${realYtId}/mqdefault.jpg`; 
             else if (!isSpotify && track?.id) e.target.src = `https://i.ytimg.com/vi/${track.id.replace('youtube-', '')}/mqdefault.jpg`; 
             else e.currentTarget.style.opacity = 0; 
           } else { 
-            if (showBackground) e.currentTarget.previousSibling.style.opacity = 0; 
+            e.target.dataset.error = "1";
+            if (cover.includes('googleusercontent')) {
+              e.target.src = cover.split('=')[0]; // fallback to raw image
+            } else if (realYtId) {
+              e.target.src = `https://i.ytimg.com/vi/${realYtId}/hqdefault.jpg`; 
+            } else if (!isSpotify && track?.id) {
+              e.target.src = `https://i.ytimg.com/vi/${track.id.replace('youtube-', '')}/hqdefault.jpg`; 
+            } else {
+              e.currentTarget.style.opacity = 0;
+            }
           } 
         }} 
         {...props}

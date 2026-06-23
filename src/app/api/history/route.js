@@ -58,13 +58,13 @@ export async function POST(request) {
       }
     });
 
-    // Keep history under 50 items per user
+    // Keep history under 500 items per user
     const totalCount = await prisma.history.count({ where: { userId: session.user.id } });
-    if (totalCount > 50) {
+    if (totalCount > 500) {
       const oldest = await prisma.history.findMany({
         where: { userId: session.user.id },
         orderBy: { createdAt: 'asc' },
-        take: totalCount - 50,
+        take: totalCount - 500,
       });
       await prisma.history.deleteMany({
         where: { id: { in: oldest.map(h => h.id) } }

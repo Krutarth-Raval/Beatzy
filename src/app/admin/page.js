@@ -12,7 +12,7 @@ export default function AdminDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('backend'); // 'backend', 'users' or 'updates'
+  const [activeTab, setActiveTab] = useState('users'); // 'users' or 'updates'
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedUser, setSelectedUser] = useState(null);
 
@@ -24,9 +24,6 @@ export default function AdminDashboard() {
 
   const [newUpdate, setNewUpdate] = useState({ icon: '', title: '', description: '' });
   const [savingUpdate, setSavingUpdate] = useState(false);
-
-  const [backendStatus, setBackendStatus] = useState(null);
-  const [loadingBackend, setLoadingBackend] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated' || (session && session.user.role !== 'ADMIN')) {
@@ -40,25 +37,9 @@ export default function AdminDashboard() {
         fetchUsers();
       } else if (activeTab === 'updates') {
         fetchUpdates();
-      } else if (activeTab === 'backend') {
-        fetchBackendStatus();
       }
     }
   }, [activeTab, session]);
-
-  const fetchBackendStatus = async () => {
-    setLoadingBackend(true);
-    try {
-      const res = await fetch('/api/admin/backend-status');
-      const data = await res.json();
-      setBackendStatus(data);
-    } catch (err) {
-      console.error(err);
-      setBackendStatus({ status: 'Error', latency: 'N/A', message: 'Failed to fetch status from Next.js API.' });
-    } finally {
-      setLoadingBackend(false);
-    }
-  };
 
   const fetchUsers = async () => {
     setLoadingUsers(true);
@@ -169,18 +150,6 @@ export default function AdminDashboard() {
         </div>
 
         <div className="history-list" style={{ marginTop: '1rem' }}>
-          <div
-            onClick={() => { setActiveTab('backend'); setSidebarOpen(false); }}
-            className="history-item"
-            style={{
-              backgroundColor: activeTab === 'backend' ? 'var(--bg-hover)' : 'transparent',
-              marginBottom: '4px',
-              cursor: 'pointer'
-            }}
-          >
-            <Server size={18} style={{ flexShrink: 0, opacity: activeTab === 'backend' ? 1 : 0.7 }} />
-            <span style={{ fontSize: '0.95rem', flex: 1, fontWeight: activeTab === 'backend' ? '600' : '400' }}>Backend Status</span>
-          </div>
 
           <div
             onClick={() => { setActiveTab('users'); setSidebarOpen(false); }}
@@ -247,93 +216,13 @@ export default function AdminDashboard() {
             </button>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <span style={{ color: 'var(--text-primary)', fontWeight: '700', fontSize: '1.2rem', letterSpacing: '0.5px' }}>
-                {activeTab === 'backend' ? 'System Status' : activeTab === 'users' ? 'User Management' : 'Updates Management'}
+                {activeTab === 'users' ? 'User Management' : 'Updates Management'}
               </span>
             </div>
           </div>
         </div>
 
         <div className="content-scroll" style={{ padding: '24px' }}>
-
-          {activeTab === 'backend' && (
-            <div className="animate-fade-in" style={{ maxWidth: '800px', margin: '0 auto' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                <div>
-                  <h2 style={{ fontSize: '1.5rem', fontWeight: '700', margin: '0 0 4px 0', color: 'var(--text-primary)' }}>Render Extraction Backend</h2>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: 0 }}>Monitor the health and latency of the Python extraction server.</p>
-                </div>
-                <button 
-                  onClick={fetchBackendStatus}
-                  disabled={loadingBackend}
-                  style={{
-                    backgroundColor: 'var(--bg-input)',
-                    color: 'var(--text-primary)',
-                    border: '1px solid var(--border-color)',
-                    padding: '8px 16px',
-                    borderRadius: '8px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    cursor: loadingBackend ? 'not-allowed' : 'pointer',
-                    fontWeight: '600'
-                  }}
-                >
-                  <RefreshCw size={16} className={loadingBackend ? "animate-spin" : ""} />
-                  Ping Now
-                </button>
-              </div>
-
-              {loadingBackend && !backendStatus ? (
-                <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem' }}>
-                  <Loader2 className="animate-spin" size={32} color="var(--text-secondary)" />
-                </div>
-              ) : backendStatus ? (
-                <div style={{ 
-                  backgroundColor: 'var(--bg-input)', 
-                  borderRadius: '16px', 
-                  border: `1px solid ${backendStatus.status === 'Online' ? '#2ecc71' : backendStatus.status === 'Timeout' ? '#f39c12' : '#e74c3c'}`,
-                  overflow: 'hidden',
-                  position: 'relative'
-                }}>
-                  <div style={{ 
-                    height: '4px', 
-                    width: '100%', 
-                    backgroundColor: backendStatus.status === 'Online' ? '#2ecc71' : backendStatus.status === 'Timeout' ? '#f39c12' : '#e74c3c' 
-                  }} />
-                  
-                  <div style={{ padding: '24px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
-                      <div style={{ 
-                        width: '56px', height: '56px', borderRadius: '50%', 
-                        backgroundColor: backendStatus.status === 'Online' ? 'rgba(46, 204, 113, 0.1)' : backendStatus.status === 'Timeout' ? 'rgba(243, 156, 18, 0.1)' : 'rgba(231, 76, 60, 0.1)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        color: backendStatus.status === 'Online' ? '#2ecc71' : backendStatus.status === 'Timeout' ? '#f39c12' : '#e74c3c'
-                      }}>
-                        {backendStatus.status === 'Online' ? <CheckCircle size={28} /> : backendStatus.status === 'Timeout' ? <Activity size={28} /> : <AlertCircle size={28} />}
-                      </div>
-                      
-                      <div>
-                        <h3 style={{ fontSize: '1.4rem', fontWeight: '700', margin: '0 0 4px 0', color: 'var(--text-primary)' }}>{backendStatus.status}</h3>
-                        <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.95rem' }}>Latency: {backendStatus.latency}</p>
-                      </div>
-                    </div>
-
-                    <div style={{ backgroundColor: 'var(--bg-main)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-                      <p style={{ margin: '0 0 8px 0', color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Message Log</p>
-                      <p style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1rem', lineHeight: '1.5', fontFamily: 'monospace' }}>
-                        {'>'} {backendStatus.message}
-                      </p>
-                    </div>
-                    
-                    <div style={{ marginTop: '16px', color: 'var(--text-secondary)', fontSize: '0.8rem', display: 'flex', justifyContent: 'space-between' }}>
-                      <span>Target: {backendStatus.url || 'Configured Extractor URL'}</span>
-                      <span>Last checked: {new Date().toLocaleTimeString()}</span>
-                    </div>
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          )}
           
           {activeTab === 'users' && (
             <div className="animate-fade-in" style={{ maxWidth: '1000px', margin: '0 auto' }}>

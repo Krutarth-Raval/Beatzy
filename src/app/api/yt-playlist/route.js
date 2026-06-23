@@ -79,7 +79,20 @@ export async function POST(request) {
       // Parse New UI (lockupViewModel)
       if (lockup.rendererContext?.accessibilityContext?.label) {
         let label = lockup.rendererContext.accessibilityContext.label;
-        name = label;
+        
+        // Extract artist: anything between " by " and the duration
+        const artistMatch = label.match(/ by (.*?) \d+ (minutes?|seconds?|hours?)/);
+        if (artistMatch) {
+            artist = artistMatch[1];
+            // Name is everything before " by <artist>"
+            const namePart = label.split(` by ${artist}`)[0];
+            if (namePart) name = namePart.trim();
+            else name = label;
+        } else {
+            name = label;
+            // Clean up the accessibility string
+            name = name.replace(/ \d+ hours?,? \d+ minutes?,? \d+ seconds?/, '').replace(/ \d+ minutes?,? \d+ seconds?/, '').replace(/ - play video$/, '').trim();
+        }
         
         // Extract duration from accessibility string (e.g. "3 minutes, 41 seconds")
         const minMatch = label.match(/(\d+)\s+minutes?/);
@@ -90,9 +103,6 @@ export async function POST(request) {
         if (minMatch) totalSeconds += parseInt(minMatch[1]) * 60;
         if (secMatch) totalSeconds += parseInt(secMatch[1]);
         if (totalSeconds > 0) durationMs = totalSeconds * 1000;
-
-        // Clean up the accessibility string
-        name = name.replace(/ \d+ hours?,? \d+ minutes?,? \d+ seconds?/, '').replace(/ \d+ minutes?,? \d+ seconds?/, '').trim();
       } 
       // Parse Legacy UI (playlistVideoRenderer)
       else if (lockup.title?.runs?.[0]?.text) {
