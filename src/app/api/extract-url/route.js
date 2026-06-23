@@ -37,53 +37,63 @@ export async function GET(request) {
           }
         }
 
+        let apiSucceeded = false;
+
         if (apiKey) {
-          // Use official Data API for high accuracy. Fetch top 5 to compare durations.
-          const maxRes = targetDurationSec ? 5 : 1;
-          const qAudio = q.toLowerCase().includes('audio') ? q : `${q} audio`;
-          const ytSearchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(qAudio)}&type=video&videoCategoryId=10&key=${apiKey}&maxResults=${maxRes}`;
-          const res = await fetch(ytSearchUrl);
-          
-          if (res.ok) {
-            const data = await res.json();
-            if (data.items && data.items.length > 0) {
-              
-              if (!targetDurationSec) {
-                // If no duration provided, just use the first result
-                id = data.items[0].id.videoId;
-              } else {
-                // Fetch durations for the top 5 results
-                const videoIds = data.items.map(item => item.id.videoId).join(',');
-                const detailUrl = `https://www.googleapis.com/youtube/v3/videos?part=contentDetails&id=${videoIds}&key=${apiKey}`;
-                const detailRes = await fetch(detailUrl);
+          try {
+            // Use official Data API for high accuracy. Fetch top 5 to compare durations.
+            const maxRes = targetDurationSec ? 5 : 1;
+            const qAudio = q.toLowerCase().includes('audio') ? q : `${q} audio`;
+            const ytSearchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(qAudio)}&type=video&videoCategoryId=10&key=${apiKey}&maxResults=${maxRes}`;
+            const res = await fetch(ytSearchUrl);
+            
+            if (res.ok) {
+              const data = await res.json();
+              if (data.items && data.items.length > 0) {
                 
-                if (detailRes.ok) {
-                  const detailData = await detailRes.json();
-                  let bestMatchId = data.items[0].id.videoId;
-                  let smallestDiff = Infinity;
-                  
-                  detailData.items.forEach(item => {
-                    const durationSec = parseIsoDuration(item.contentDetails.duration);
-                    const diff = Math.abs(durationSec - targetDurationSec);
-                    // Penalize videos that are wildly off, reward close matches
-                    if (diff < smallestDiff) {
-                      smallestDiff = diff;
-                      bestMatchId = item.id;
-                    }
-                  });
-                  
-                  id = bestMatchId;
+                if (!targetDurationSec) {
+                  // If no duration provided, just use the first result
+                  id = data.items[0].id.videoId;
                 } else {
-                  id = data.items[0].id.videoId; // fallback
+                  // Fetch durations for the top 5 results
+                  const videoIds = data.items.map(item => item.id.videoId).join(',');
+                  const detailUrl = `https://www.googleapis.com/youtube/v3/videos?part=contentDetails&id=${videoIds}&key=${apiKey}`;
+                  const detailRes = await fetch(detailUrl);
+                  
+                  if (detailRes.ok) {
+                    const detailData = await detailRes.json();
+                    let bestMatchId = data.items[0].id.videoId;
+                    let smallestDiff = Infinity;
+                    
+                    detailData.items.forEach(item => {
+                      const durationSec = parseIsoDuration(item.contentDetails.duration);
+                      const diff = Math.abs(durationSec - targetDurationSec);
+                      // Penalize videos that are wildly off, reward close matches
+                      if (diff < smallestDiff) {
+                        smallestDiff = diff;
+                        bestMatchId = item.id;
+                      }
+                    });
+                    
+                    id = bestMatchId;
+                  } else {
+                    id = data.items[0].id.videoId; // fallback
+                  }
                 }
+                apiSucceeded = true;
               }
+            } else {
+              console.error('YouTube API Error (possibly quota exceeded):', await res.text());
+              // Let apiSucceeded remain false to trigger fallback
             }
-          } else {
-            console.error('YouTube API Error:', await res.text());
-            throw new Error('Data API failed');
+          } catch (err) {
+            console.error('YouTube API Fetch Error:', err);
+            // Let apiSucceeded remain false to trigger fallback
           }
-        } else {
-          // Fallback if no API key is provided
+        }
+        
+        if (!apiSucceeded) {
+          // Fallback if no API key is provided or if official API quota is exceeded
           const ytsr = require('youtube-sr').default;
           const searchResults = await ytsr.search(q, { limit: 5, type: "video" });
           if (searchResults && searchResults.length > 0) {
