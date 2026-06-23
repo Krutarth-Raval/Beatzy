@@ -627,17 +627,14 @@ export default function PlaylistsPage() {
         @media (max-width: 768px) {
           .playlist-header-mobile {
             flex-direction: row !important;
-            align-items: center !important;
+            align-items: flex-start !important;
             gap: 16px !important;
             text-align: left;
           }
           .playlist-image-container {
-            width: 140px !important;
-            height: 140px !important;
+            width: 160px !important;
+            height: 160px !important;
             margin: 0 !important;
-            transform: scale(calc(max(0.5, 1 - var(--scroll, 0) / 300)));
-            transform-origin: bottom left;
-            margin-bottom: calc(var(--scroll, 0) * -0.5px);
             z-index: 10;
           }
           .playlist-header-mobile h1 {
@@ -841,7 +838,7 @@ export default function PlaylistsPage() {
                   </div>
                 )}
 
-                <div className="playlist-header-mobile" style={{ display: 'flex', alignItems: 'center', gap: '24px', position: 'relative', zIndex: 1 }}>
+                <div className="playlist-header-mobile" style={{ display: 'flex', alignItems: 'flex-start', gap: '24px', position: 'relative', zIndex: 1 }}>
 
                   {/* Playlist Image with Edit overlay */}
                   <div
@@ -884,14 +881,13 @@ export default function PlaylistsPage() {
                       )}
 
                       {/* Stats Row */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: 'clamp(0.85rem, 1.2vw, 1rem)', color: 'var(--text-secondary)', fontWeight: '500' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: 'clamp(0.85rem, 1.2vw, 1rem)', color: 'var(--text-secondary)', fontWeight: '500', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {(selectedPlaylist.isPublic || selectedPlaylist.isOwner === false) ? (
                           <>
-                            <span title="Public Playlist" style={{ display: 'flex', alignItems: 'center' }}>
-                              <Globe size={16} />
+                            <span title="Public Playlist" style={{ display: 'flex', alignItems: 'center', whiteSpace: 'nowrap' }}>
+                              <Globe size={16} style={{ marginRight: '6px' }} />
+                              {selectedPlaylist.savedCount || 0} save{selectedPlaylist.savedCount !== 1 ? 's' : ''}
                             </span>
-                            <span>{selectedPlaylist.savedCount || 0} save{selectedPlaylist.savedCount !== 1 ? 's' : ''}</span>
-                            <span>•</span>
                           </>
                         ) : (
                           <span title="Private Playlist" style={{ display: 'flex', alignItems: 'center' }}>
@@ -899,9 +895,8 @@ export default function PlaylistsPage() {
                           </span>
                         )}
 
-                        <span>{tracks.length} track{tracks.length !== 1 ? 's' : ''}</span>
-                        <span>•</span>
-                        <span>{formatTotalDuration()}</span>
+                        <span className="hide-on-mobile" style={{ whiteSpace: 'nowrap' }}>• {tracks.length} track{tracks.length !== 1 ? 's' : ''}</span>
+                        <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>• {formatTotalDuration()}</span>
                       </div>
                     </div>
 
