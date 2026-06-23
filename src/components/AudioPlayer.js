@@ -165,6 +165,11 @@ export default function AudioPlayer() {
 
       setIsBlobLoading(true);
 
+      // Pause old track immediately while we fetch the new one
+      if (ytPlayerRef.current && loadedTrackIdRef.current !== currentTrack.id) {
+         ytPlayerRef.current.pauseVideo();
+      }
+
       try {
         let videoId = currentTrack.id;
         
@@ -316,11 +321,13 @@ export default function AudioPlayer() {
 
   useEffect(() => {
     if (isPlaying && ytPlayerRef.current) {
-      ytPlayerRef.current.playVideo().catch(e => console.error("Autoplay prevented:", e));
+      if (loadedTrackIdRef.current === currentTrack?.id) {
+        ytPlayerRef.current.playVideo().catch(e => console.error("Autoplay prevented:", e));
+      }
     } else if (ytPlayerRef.current && !isPlaying) {
       ytPlayerRef.current.pauseVideo();
     }
-  }, [isPlaying]);
+  }, [isPlaying, currentTrack?.id]);
 
   useEffect(() => {
     const onEnded = () => {
