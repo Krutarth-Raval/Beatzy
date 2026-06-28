@@ -35,6 +35,7 @@ export async function GET(request, { params }) {
     // Format songs to match frontend expectation
     const formattedPlaylist = {
       ...playlist,
+      savedCount: playlist._count?.savedBy || 0,
       tracks: playlist.songs.map(ps => ({
         ...ps.song,
         addedAt: ps.addedAt,

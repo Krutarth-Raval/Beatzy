@@ -136,7 +136,7 @@ export default function PlaylistsPage() {
     }
   }, [session?.user?.id]);
 
-  const loadPlaylists = async (isSilent = false) => {
+  const loadPlaylists = async (isSilent = false, skipDetailsReload = false) => {
     if (!isSilent) setLoading(true);
     try {
       let cloudP = [];
@@ -150,8 +150,8 @@ export default function PlaylistsPage() {
         if (res.ok) {
           const data = await res.json();
           cloudP = [
-            ...(data.owned || []).map(p => ({ ...p, isCloud: true, isOwner: true, coverArt: p.coverImage })),
-            ...(data.saved || []).map(p => ({ ...p, isCloud: true, isOwner: false, coverArt: p.coverImage }))
+            ...(data.owned || []).map(p => ({ ...p, isCloud: true, isOwner: true, coverArt: p.coverImage, savedCount: p._count?.savedBy || p.savedCount || 0 })),
+            ...(data.saved || []).map(p => ({ ...p, isCloud: true, isOwner: false, coverArt: p.coverImage, savedCount: p._count?.savedBy || p.savedCount || 0 }))
           ];
         }
       } catch (e) {
@@ -167,7 +167,11 @@ export default function PlaylistsPage() {
       if (targetId) {
         const target = p.find(x => x.id === parseInt(targetId) || x.id === targetId);
         if (target) {
-          loadPlaylistDetails(target);
+          if (!skipDetailsReload) {
+            loadPlaylistDetails(target);
+          } else {
+            setSelectedPlaylist(prev => ({ ...prev, ...target, coverArt: target.coverImage }));
+          }
           return;
         } else {
           try {
@@ -183,7 +187,7 @@ export default function PlaylistsPage() {
       }
 
       if (p.length > 0 && !selectedPlaylist) {
-        loadPlaylistDetails(p[0]);
+        if (!skipDetailsReload) loadPlaylistDetails(p[0]);
       } else if (selectedPlaylist) {
         const updated = p.find(x => x.id === selectedPlaylist.id);
         if (updated) setSelectedPlaylist(updated);
@@ -234,7 +238,7 @@ export default function PlaylistsPage() {
       if (res.ok) {
         const data = await res.json();
         setTracks(data.tracks || []);
-        setSelectedPlaylist({ ...playlist, ...data, coverArt: data.coverImage, isCloud: true, isOwner: playlist.isOwner });
+        setSelectedPlaylist({ ...playlist, ...data, coverArt: data.coverImage, isCloud: true, isOwner: playlist.isOwner, savedCount: data._count?.savedBy || data.savedCount || playlist._count?.savedBy || 0 });
       }
     } catch (e) {
       console.error(e);
@@ -500,17 +504,17 @@ export default function PlaylistsPage() {
     setDraggedItemIndex(null);
   };
 
-  const handleMoveTrack = (e, trackId, targetPlaylistId) => {
+  const handleMoveTrack = (e, track, targetPlaylistId) => {
     e.stopPropagation();
-    setPendingChanges(prev => ({ ...prev, moves: [...prev.moves, { trackId, targetPlaylistId }] }));
-    setTracks(tracks.filter(t => t.id !== trackId));
+    setPendingChanges(prev => ({ ...prev, moves: [...prev.moves, { track, targetPlaylistId }] }));
+    setTracks(tracks.filter(t => t.id !== track.id));
     setHasUnsavedChanges(true);
     setShowMoveDropdown(null);
   };
 
-  const handleCopyTrack = (e, trackId, targetPlaylistId) => {
+  const handleCopyTrack = (e, track, targetPlaylistId) => {
     e.stopPropagation();
-    setPendingChanges(prev => ({ ...prev, copies: [...prev.copies, { trackId, targetPlaylistId }] }));
+    setPendingChanges(prev => ({ ...prev, copies: [...prev.copies, { track, targetPlaylistId }] }));
     setHasUnsavedChanges(true);
     setShowCopyDropdown(null);
   };
@@ -528,9 +532,55 @@ export default function PlaylistsPage() {
         });
       }
 
+      // Process copies
+      if (pendingChanges.copies.length > 0) {
+        const copiesByTarget = {};
+        pendingChanges.copies.forEach(({ track, targetPlaylistId }) => {
+          if (!copiesByTarget[targetPlaylistId]) copiesByTarget[targetPlaylistId] = [];
+          copiesByTarget[targetPlaylistId].push(track);
+        });
+        
+        for (const [targetPlaylistId, tracks] of Object.entries(copiesByTarget)) {
+          await fetch(`/api/playlists/${targetPlaylistId}/songs/bulk`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tracks })
+          });
+        }
+      }
+
+      // Process moves
+      if (pendingChanges.moves.length > 0) {
+        // Step 1: Add to target playlists
+        const movesByTarget = {};
+        const movedTrackIds = [];
+        pendingChanges.moves.forEach(({ track, targetPlaylistId }) => {
+          if (!movesByTarget[targetPlaylistId]) movesByTarget[targetPlaylistId] = [];
+          movesByTarget[targetPlaylistId].push(track);
+          movedTrackIds.push(track.id);
+        });
+        
+        for (const [targetPlaylistId, tracks] of Object.entries(movesByTarget)) {
+          await fetch(`/api/playlists/${targetPlaylistId}/songs/bulk`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tracks })
+          });
+        }
+        
+        // Step 2: Remove from current playlist
+        if (selectedPlaylist.isOwner && movedTrackIds.length > 0) {
+          await fetch(`/api/playlists/${selectedPlaylist.id}/songs/bulk`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ songIds: movedTrackIds })
+          });
+        }
+      }
+
       setPendingChanges({ moves: [], deletes: [], copies: [] });
       setHasUnsavedChanges(false);
-      loadPlaylists();
+      loadPlaylists(true, true);
       showAlert("Success", "Changes saved successfully.");
     } catch (e) {
       console.error(e);
@@ -1060,7 +1110,7 @@ export default function PlaylistsPage() {
                                 {playlists.filter(p => p.id !== selectedPlaylist.id).map(p => (
                                   <button
                                     key={p.id}
-                                    onClick={(e) => handleCopyTrack(e, track.id, p.id)}
+                                    onClick={(e) => handleCopyTrack(e, track, p.id)}
                                     style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px', background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', borderRadius: '4px' }}
                                     onMouseOver={e => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
                                     onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}
@@ -1089,7 +1139,7 @@ export default function PlaylistsPage() {
                                 {playlists.filter(p => p.id !== selectedPlaylist.id).map(p => (
                                   <button
                                     key={p.id}
-                                    onClick={(e) => handleMoveTrack(e, track.id, p.id)}
+                                    onClick={(e) => handleMoveTrack(e, track, p.id)}
                                     style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px', background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', borderRadius: '4px' }}
                                     onMouseOver={e => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
                                     onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}

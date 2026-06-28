@@ -230,12 +230,58 @@ export default function AudioPlayer() {
         }
       }
     };
+    
+    const handleCloudRemove = (e) => {
+      if (e.detail?.trackId === currentTrack?.id) {
+        setIsSaved(false);
+        saveActionRef.current = false;
+        updateCurrentTrack(() => ({ playlistId: null }));
+      }
+    };
+
     window.addEventListener('track-saved-to-cloud', handleCloudSave);
-    return () => window.removeEventListener('track-saved-to-cloud', handleCloudSave);
+    window.addEventListener('track-removed-from-cloud', handleCloudRemove);
+    return () => {
+      window.removeEventListener('track-saved-to-cloud', handleCloudSave);
+      window.removeEventListener('track-removed-from-cloud', handleCloudRemove);
+    };
   }, [currentTrack?.id]);
 
   const handleToggleSave = async (e) => {
     if (e) e.stopPropagation();
+    
+    // If it's already saved (has a playlistId), remove it!
+    if (isSaved && currentTrack?.playlistId) {
+      saveActionRef.current = false;
+      setIsSaved(false);
+      const previousPlaylistId = currentTrack.playlistId;
+      updateCurrentTrack(() => ({ playlistId: null }));
+      
+      try {
+        const ytId = currentTrack.id?.replace('youtube-', '') || currentTrack.id;
+        const res = await fetch(`/api/playlists/${previousPlaylistId}/songs?songId=${encodeURIComponent(ytId)}`, {
+          method: 'DELETE'
+        });
+        
+        if (res.ok) {
+          window.dispatchEvent(new CustomEvent('track-removed-from-cloud', {
+            detail: { trackId: currentTrack.id, playlistId: previousPlaylistId }
+          }));
+          return;
+        } else {
+          // Revert on failure
+          saveActionRef.current = true;
+          setIsSaved(true);
+          updateCurrentTrack(() => ({ playlistId: previousPlaylistId }));
+        }
+      } catch (err) {
+        console.error("Direct remove failed:", err);
+        saveActionRef.current = true;
+        setIsSaved(true);
+        updateCurrentTrack(() => ({ playlistId: previousPlaylistId }));
+      }
+      return; // Skip showing modal
+    }
     
     // If we are playing from a playlist that we own, save directly to it without opening the modal
     if (queuePlaylistId && !isSaved) {
@@ -267,15 +313,17 @@ export default function AudioPlayer() {
           // Revert if failed
           saveActionRef.current = false;
           setIsSaved(false);
+          updateCurrentTrack(() => ({ playlistId: null }));
         }
       } catch (err) {
         console.error("Direct save failed:", err);
         saveActionRef.current = false;
         setIsSaved(false);
+        updateCurrentTrack(() => ({ playlistId: null }));
       }
     }
     
-    // Fallback: If not playing from an owned playlist, or if it's already saved and they want to see the modal to manage it
+    // Fallback: If not playing from an owned playlist, or if direct save failed
     setShowSaveModal(true);
   };
 
@@ -493,7 +541,7 @@ export default function AudioPlayer() {
           zIndex: -1,
         }} />
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: '40px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 'min(20px, 2vh)', flexShrink: 0 }}>
           <button
             onClick={() => setIsMobileExpanded(false)}
             style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer' }}
@@ -512,27 +560,27 @@ export default function AudioPlayer() {
           </button>
         </div>
 
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', width: '100%' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', width: '100%', minHeight: 0 }}>
 
-          <div style={{ textAlign: 'center', width: '100%', marginTop: '10px' }}>
-            <h2 style={{ color: 'var(--text-primary)', margin: 0, fontSize: '1.8rem', fontWeight: '800', width: '100%' }}>
+          <div style={{ textAlign: 'center', width: '100%', flexShrink: 0 }}>
+            <h2 style={{ color: 'var(--text-primary)', margin: 0, fontSize: 'clamp(1.4rem, 5vh, 1.8rem)', fontWeight: '800', width: '100%' }}>
               <ScrollingText text={currentTrack.title} />
             </h2>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem', margin: '8px 0 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <p style={{ color: 'var(--text-secondary)', fontSize: 'clamp(0.9rem, 3vh, 1.1rem)', margin: '4px 0 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {currentTrack?.artists || currentTrack?.artist || 'Unknown Artist'}
             </p>
           </div>
 
-          <div style={{ width: '100%', maxWidth: '350px', aspectRatio: '1/1', margin: '24px auto', borderRadius: '12px', overflow: 'hidden', backgroundColor: 'var(--bg-input)', boxShadow: '0 15px 35px rgba(0,0,0,0.6)' }}>
-            <TrackThumbnail track={currentTrack} showBackground={false} />
+          <div style={{ flex: '1 1 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 0, margin: 'min(24px, 3vh) 0' }}>
+            <div style={{ width: '100%', maxWidth: '35vh', height: '100%', maxHeight: '35vh', aspectRatio: '1/1', borderRadius: '12px', overflow: 'hidden', backgroundColor: 'var(--bg-input)', boxShadow: '0 15px 35px rgba(0,0,0,0.6)' }}>
+              <TrackThumbnail track={currentTrack} showBackground={false} />
+            </div>
           </div>
 
-          <div style={{ flex: 1, minHeight: '5px' }}></div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', paddingBottom: '10px', flexShrink: 0 }}>
 
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', paddingBottom: '10px' }}>
-
-            <div style={{ width: '100%', maxWidth: '350px', display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '30px', position: 'relative' }}>
-              <div style={{ position: 'absolute', right: 0, top: '-45px' }}>
+            <div style={{ width: '100%', maxWidth: '350px', display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: 'min(30px, 4vh)', position: 'relative' }}>
+              <div style={{ position: 'absolute', right: 0, top: '-40px' }}>
                 <button onClick={handleToggleSave} style={{
                   borderRadius: '50%',
                   width: '32px',
@@ -573,7 +621,7 @@ export default function AudioPlayer() {
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', maxWidth: '320px', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', maxWidth: '320px', marginBottom: 'min(20px, 2vh)' }}>
               <button onClick={toggleShuffle} style={{ background: 'none', border: 'none', color: shuffle === 'smart' ? 'var(--primary-color)' : shuffle === 'on' ? 'var(--text-primary)' : 'var(--text-secondary)', cursor: 'pointer' }}>
                 <div style={{ position: 'relative' }}>
                   <Shuffle size={24} />
@@ -586,7 +634,7 @@ export default function AudioPlayer() {
               </button>
 
               <button onClick={togglePlay} disabled={isBlobLoading || isBuffering} style={{
-                width: '80px', height: '80px', borderRadius: '50%', backgroundColor: 'var(--text-primary)', color: 'var(--bg-main)',
+                width: 'min(80px, 10vh)', height: 'min(80px, 10vh)', borderRadius: '50%', backgroundColor: 'var(--text-primary)', color: 'var(--bg-main)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: (isBlobLoading || isBuffering) ? 'not-allowed' : 'pointer',
                 opacity: (isBlobLoading || isBuffering) ? 0.5 : 1, boxShadow: '0 8px 20px rgba(0,0,0,0.3)'
               }}>
