@@ -1,15 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
 export async function GET(request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const { searchParams } = new URL(request.url);
     const query = searchParams.get('q') || '';
     if (!query.trim()) {
@@ -21,10 +14,7 @@ export async function GET(request) {
     // Fetch recent public playlists to apply fuzzy matching in JS
     const allPlaylists = await prisma.playlist.findMany({
       where: {
-        isPublic: true,
-        userId: {
-          not: session.user.id
-        }
+        isPublic: true
       },
       include: {
         user: { select: { name: true, image: true } },

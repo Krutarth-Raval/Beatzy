@@ -343,7 +343,11 @@ function SearchContent() {
   const loadHistoryItem = (item) => {
     setSidebarOpen(false);
     setShowViewAllHistoryModal(false);
-    if (item.type === 'search') {
+    if (item.type === 'playlist') {
+      setMode('playlist');
+      setSearchQuery(item.query);
+      setTimeout(() => triggerPlaylistSearch(item.query, true), 0);
+    } else if (item.type === 'search') {
       setMode('song');
       setSearchQuery(item.query);
       setTimeout(() => triggerSearch(item.query, true), 0);
@@ -356,7 +360,7 @@ function SearchContent() {
 
   const triggerSearch = async (queryToSearch, fromHistory = false) => {
     if (!queryToSearch) return;
-    setLoading(true); setError(''); setResults([]); setAlbumData(null);
+    setLoading(true); setError(''); setResults([]); setAlbumData(null); setPlaylistResults([]);
     try {
       const res = await fetch(`/api/search?q=${encodeURIComponent(queryToSearch)}&type=music`);
 
@@ -375,19 +379,35 @@ function SearchContent() {
         addToHistory({ type: 'search', query: queryToSearch, title: queryToSearch, image });
       }
 
-      // Fetch Beatzy Playlists concurrently or subsequently
-      try {
-        const playlistRes = await fetch(`/api/playlists/search?q=${encodeURIComponent(queryToSearch)}`);
-        if (playlistRes.ok) {
-          const playlistData = await playlistRes.json();
-          setPlaylistResults(playlistData);
-        }
-      } catch (err) {
-        console.error('Failed to fetch playlist results', err);
-      }
-
     } catch (err) {
       showAlert("Search Error", err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const triggerPlaylistSearch = async (queryToSearch, fromHistory = false) => {
+    if (!queryToSearch) return;
+    setLoading(true); setError(''); setResults([]); setAlbumData(null); setPlaylistResults([]);
+    try {
+      const res = await fetch(`/api/playlists/search?q=${encodeURIComponent(queryToSearch)}`);
+
+      let data;
+      try {
+        data = await res.json();
+      } catch (err) {
+        throw new Error('Server returned an invalid response (HTML instead of JSON). This usually means the server crashed.');
+      }
+
+      if (!res.ok) throw new Error(data?.error || 'Failed to search Beatzy playlists');
+
+      setPlaylistResults(data);
+      if (!fromHistory) {
+        const image = data.length > 0 ? data[0].coverImage : null;
+        addToHistory({ type: 'playlist', query: queryToSearch, title: queryToSearch, image });
+      }
+    } catch (err) {
+      showAlert("Playlist Search Error", err.message);
     } finally {
       setLoading(false);
     }
@@ -454,7 +474,7 @@ function SearchContent() {
     if (mode === 'extract') {
       triggerExtract(query);
     } else if (mode === 'playlist') {
-      triggerSearch(query);
+      triggerPlaylistSearch(query);
     } else {
       triggerSearch(query);
     }
@@ -657,9 +677,9 @@ function SearchContent() {
     const file = event.target.files[0];
     if (!file) return;
 
-    setMode('search');
-    setIsAnalyzingImage(true);
-    setSearchQuery('Reading lyrics from image...');
+      setMode('song');
+      setIsAnalyzingImage(true);
+      setSearchQuery('Reading lyrics from image...');
 
     try {
       const { data: { text } } = await Tesseract.recognize(
@@ -996,30 +1016,44 @@ function SearchContent() {
                   </div>
                 ))}
               </div>
-              {playlistResults.length > 0 && (
-                <div style={{ marginTop: '40px', paddingBottom: '20px' }}>
-                  <h2 style={{ fontSize: '1.4rem', fontWeight: '700', marginBottom: '16px', color: 'var(--text-primary)' }}>Beatzy Playlists</h2>
-                  <div className="results-grid">
-                    {playlistResults.map((playlist, i) => (
-                      <div key={`playlist-${playlist.id}-${i}`} className="track-card animate-fade-in-up" style={{ animationDelay: `${i * 0.05}s`, cursor: 'pointer' }} onClick={() => router.push(`/?id=${playlist.id}`)}>
-                        <div style={{ position: 'relative', paddingTop: '100%', backgroundColor: 'var(--bg-input)' }}>
-                          {playlist.coverImage ? (
-                            <img src={playlist.coverImage} alt={playlist.name} loading="lazy" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-                          ) : (
-                            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
-                              <Music size={40} />
-                            </div>
-                          )}
+            </div>
+          )}
+          {playlistResults.length > 0 && (
+            <div className="animate-fade-in" style={{ maxWidth: '800px', margin: '0 auto', width: '100%' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '600' }}>
+                  {mode === 'playlist' ? 'Beatzy Playlist Results' : 'Beatzy Playlists'}
+                </h3>
+                <button onClick={resetState} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-input)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600', transition: 'all 0.2s' }} className="hover-scale" onMouseOver={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--text-secondary)'; }} onMouseOut={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.borderColor = 'var(--border-color)'; }}>
+                  <X size={14} /> New Search
+                </button>
+              </div>
+              <div className="results-grid">
+                {playlistResults.map((playlist, i) => (
+                  <div key={`playlist-${playlist.id}-${i}`} className="track-card animate-fade-in-up" style={{ animationDelay: `${i * 0.05}s`, cursor: 'pointer' }} onClick={() => router.push(`/playlist/${playlist.id}`)}>
+                    <div style={{ position: 'relative', paddingTop: '100%', backgroundColor: 'var(--bg-input)' }}>
+                      {playlist.coverImage ? (
+                        <img src={playlist.coverImage} alt={playlist.name} loading="lazy" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
+                          <Music size={40} />
                         </div>
-                        <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', flex: 1 }}>
-                          <h3 style={{ fontWeight: '600', marginBottom: '4px', fontSize: '1.1rem' }}>{playlist.name}</h3>
-                          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>by {playlist.ownerName}</p>
-                        </div>
-                      </div>
-                    ))}
+                      )}
+                    </div>
+                    <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', flex: 1 }}>
+                      <h3 style={{ fontWeight: '600', marginBottom: '4px', fontSize: '1.1rem' }}>{playlist.name}</h3>
+                      <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                        by {playlist.ownerName || playlist.user?.name || 'Unknown'}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              )}
+                ))}
+              </div>
+            </div>
+          )}
+          {mode === 'playlist' && !loading && searchQuery.trim() && playlistResults.length === 0 && !albumData && results.length === 0 && (
+            <div className="animate-fade-in" style={{ maxWidth: '800px', margin: '0 auto', width: '100%', textAlign: 'center', padding: '32px 16px', color: 'var(--text-secondary)' }}>
+              No Beatzy playlists matched that search.
             </div>
           )}
             </>
