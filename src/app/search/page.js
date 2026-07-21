@@ -64,6 +64,7 @@ function SearchContent() {
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
   const [showClearHistoryModal, setShowClearHistoryModal] = useState(false);
   const [historyItemToDelete, setHistoryItemToDelete] = useState(null);
+  const [showDeleteSingleHistoryModal, setShowDeleteSingleHistoryModal] = useState(false);
   const [showViewAllHistoryModal, setShowViewAllHistoryModal] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const [visibleHistoryCount, setVisibleHistoryCount] = useState(6);
@@ -300,19 +301,30 @@ function SearchContent() {
     }
   };
 
-  const deleteHistoryItem = async (e, id) => {
+  const deleteHistoryItem = async (e, item) => {
     e.stopPropagation();
-    setHistoryItemToDelete(id);
+    setHistoryItemToDelete(item);
     setShowDeleteSingleHistoryModal(true);
   };
 
   const confirmDeleteSingleHistory = async () => {
     if (!historyItemToDelete) return;
-    setHistory(prev => prev.filter(item => item.id !== historyItemToDelete));
+    setHistory(prev => prev.filter(item => {
+      if (historyItemToDelete.id && item.id) {
+        return item.id !== historyItemToDelete.id;
+      }
+
+      return !(
+        item.query === historyItemToDelete.query &&
+        item.type === historyItemToDelete.type &&
+        item.title === historyItemToDelete.title
+      );
+    }));
     setShowDeleteSingleHistoryModal(false);
-    if (session?.user && historyItemToDelete) {
-      fetch(`/api/history?id=${historyItemToDelete}`, { method: 'DELETE' }).catch(console.error);
+    if (session?.user && historyItemToDelete?.id) {
+      fetch(`/api/history?id=${historyItemToDelete.id}`, { method: 'DELETE' }).catch(console.error);
     }
+    setHistoryItemToDelete(null);
   };
 
   const promptClearAllHistory = () => {
@@ -835,7 +847,7 @@ function SearchContent() {
                 </div>
 
                 {/* Recent Activity Mini View */}
-                {!albumData && results.length === 0 && !loading && history.length > 0 && (
+                {!albumData && results.length === 0 && playlistResults.length === 0 && !loading && history.length > 0 && (
                   <div className="animate-fade-in-up" style={{ width: '100%', marginBottom: '24px', animationDelay: '0.2s' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px', alignItems: 'center' }}>
                       <h3 style={{ fontWeight: '600', fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '8px' }}><History size={20} /> Recent Activity</h3>
@@ -848,20 +860,20 @@ function SearchContent() {
                           <div key={item.id || idx} className="hover-scale" style={{ background: 'var(--bg-input)', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', position: 'relative' }}>
                             {/* Mode Icon at top right */}
                             <div style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(0,0,0,0.5)', padding: '6px', borderRadius: '50%', color: '#fff', zIndex: 10, backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              {item.type === 'search' ? <Search size={14} /> : <Zap size={14} />}
+                              {item.type === 'search' ? <Search size={14} /> : item.type === 'playlist' ? <Library size={14} /> : <Zap size={14} />}
                             </div>
                             
                             <div onClick={() => loadHistoryItem(item)} style={{ cursor: 'pointer', flex: 1, display: 'flex', flexDirection: 'column' }}>
                               {/* Image Header */}
                               <div style={{ height: '180px', background: item.image ? `url(${item.image}) center/cover no-repeat` : `linear-gradient(135deg, hsl(${hue}, 70%, 20%), hsl(${(hue + 60) % 360}, 70%, 10%))`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                {!item.image && (item.type === 'search' ? <Search size={64} color="rgba(255,255,255,0.15)" /> : <Zap size={64} color="rgba(255,255,255,0.15)" />)}
+                                {!item.image && (item.type === 'search' ? <Search size={64} color="rgba(255,255,255,0.15)" /> : item.type === 'playlist' ? <Library size={64} color="rgba(255,255,255,0.15)" /> : <Zap size={64} color="rgba(255,255,255,0.15)" />)}
                               </div>
                               {/* Card Body - Clamped Text */}
                               <div style={{ padding: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <span style={{ fontWeight: '600', fontSize: '0.95rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, paddingRight: '8px' }}>
                                   {item.title}
                                 </span>
-                                <button onClick={(e) => { e.stopPropagation(); deleteHistoryItem(e, item.id); }} style={{ background: 'none', border: 'none', padding: '4px', cursor: 'pointer', color: 'var(--text-secondary)' }} className="hover-scale">
+                                <button onClick={(e) => { e.stopPropagation(); deleteHistoryItem(e, item); }} style={{ background: 'none', border: 'none', padding: '4px', cursor: 'pointer', color: 'var(--text-secondary)' }} className="hover-scale">
                                   <X size={16} />
                                 </button>
                               </div>
@@ -1125,6 +1137,21 @@ function SearchContent() {
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
                 <button onClick={() => setShowClearHistoryModal(false)} style={{ padding: '8px 16px', color: 'var(--text-primary)', borderRadius: '8px', border: '1px solid var(--border-color)', fontWeight: '600' }}>Cancel</button>
                 <button onClick={confirmClearAllHistory} style={{ padding: '8px 16px', backgroundColor: '#ff4d4f', color: 'white', borderRadius: '8px', fontWeight: '600' }}>Clear all</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showDeleteSingleHistoryModal && (
+          <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
+            <div className="glass-panel animate-fade-in" style={{ backgroundColor: 'var(--bg-main)', padding: '24px', width: '100%', maxWidth: '400px', borderRadius: '16px' }}>
+              <h2 style={{ fontSize: '1.2rem', marginBottom: '8px', color: 'var(--text-primary)' }}>Remove this recent item?</h2>
+              <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '0.95rem' }}>
+                This will remove only this recent activity entry.
+              </p>
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                <button onClick={() => { setShowDeleteSingleHistoryModal(false); setHistoryItemToDelete(null); }} style={{ padding: '8px 16px', color: 'var(--text-primary)', borderRadius: '8px', border: '1px solid var(--border-color)', fontWeight: '600' }}>Cancel</button>
+                <button onClick={confirmDeleteSingleHistory} style={{ padding: '8px 16px', backgroundColor: '#ff4d4f', color: 'white', borderRadius: '8px', fontWeight: '600' }}>Remove</button>
               </div>
             </div>
           </div>
