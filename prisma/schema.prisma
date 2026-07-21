@@ -47,6 +47,7 @@ model User {
   histories     History[]
   playlists     Playlist[]
   savedPlaylists SavedPlaylist[]
+  playHistories PlayHistory[]
 }
 
 model VerificationToken {
@@ -91,6 +92,7 @@ model Playlist {
 
   songs       PlaylistSong[]
   savedBy     SavedPlaylist[]
+  playHistories PlayHistory[]
 
   @@index([userId])
 }
@@ -104,6 +106,7 @@ model Song {
   createdAt DateTime @default(now())
 
   playlists PlaylistSong[]
+  playHistories PlayHistory[]
 }
 
 model PlaylistSong {
@@ -132,5 +135,23 @@ model SavedPlaylist {
 
   @@unique([userId, playlistId])
   @@index([userId])
+  @@index([playlistId])
+}
+
+model PlayHistory {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  songId     String
+  song       Song     @relation(fields: [songId], references: [id], onDelete: Cascade)
+  
+  playlistId String?
+  playlist   Playlist? @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  
+  playedAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([songId])
   @@index([playlistId])
 }

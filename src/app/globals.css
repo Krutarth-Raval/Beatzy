@@ -413,7 +413,7 @@ button {
   }
   
   .content-scroll {
-    padding: 16px;
+    padding: 16px 8px;
     padding-bottom: 240px;
   }
   
@@ -437,11 +437,15 @@ button {
     cursor: pointer;
   }
 
+  .mobile-limit-2 > *:nth-child(n+3) {
+    display: none !important;
+  }
+
   /* Playlist Page Overrides */
 
   .playlist-page-container {
     flex-direction: column !important;
-    padding: 16px !important;
+    padding: 16px 8px !important;
     gap: 0 !important;
   }
   
@@ -590,11 +594,6 @@ button {
 }
 
 @media (max-width: 768px) {
-  .content-scroll {
-    padding-left: 12px;
-    padding-right: 12px;
-  }
-
   .audio-player-bar-clickable {
     bottom: 65px !important; /* Move above the mobile bottom navbar */
   }

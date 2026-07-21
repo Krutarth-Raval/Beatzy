@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Music } from 'lucide-react';
 
-export default function TrackThumbnail({ track, size = 40, showBackground = true, ...props }) {
+export default function TrackThumbnail({ track, size = 40, showBackground = true, borderRadius, ...props }) {
   let isSpotify = track?.id?.includes('spotify:');
   let realYtId = !isSpotify && track?.id ? track.id.replace('youtube-', '') : null;
 
@@ -61,7 +61,7 @@ export default function TrackThumbnail({ track, size = 40, showBackground = true
       <img 
         src={cover} 
         alt="Cover" 
-        style={{ width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none', position: 'relative', zIndex: 1, opacity: 0, transition: 'opacity 0.3s ease', borderRadius: props.borderRadius || 'inherit' }} 
+        style={{ width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none', position: 'relative', zIndex: 1, opacity: 0, transition: 'opacity 0.3s ease', borderRadius: borderRadius || 'inherit' }} 
         onLoad={(e) => { 
           e.currentTarget.style.opacity = 1; 
           if (showBackground && e.currentTarget.previousSibling) e.currentTarget.previousSibling.style.opacity = 0; 

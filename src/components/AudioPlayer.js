@@ -173,6 +173,17 @@ export default function AudioPlayer() {
         return;
       }
 
+      if (currentTrack.id && currentTrack.id !== loadedTrackIdRef.current) {
+        fetch('/api/track-play', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            track: currentTrack, 
+            playlistId: usePlayerStore.getState().queuePlaylistId 
+          }),
+        }).catch(e => console.error('Failed to track play', e));
+      }
+
       setIsBlobLoading(true);
 
       // Pause old track immediately while we fetch the new one

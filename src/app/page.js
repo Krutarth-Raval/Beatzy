@@ -1,10 +1,12 @@
 'use client';
 
 import React, { useEffect, useState, Suspense } from 'react';
-import { Loader2, Plus, Search } from 'lucide-react';
+import { Loader2, Plus, Search, BarChart2, Music, User as UserIcon, List, Play } from 'lucide-react';
+import usePlayerStore from '@/store/usePlayerStore';
 import CreatePlaylistModal from '@/components/CreatePlaylistModal';
 import PlaylistSearchModal from '@/components/PlaylistSearchModal';
 import PlaylistCard3D from '@/components/PlaylistCard3D';
+import TrackThumbnail from '@/components/TrackThumbnail';
 import { useSession } from 'next-auth/react';
 
 function PlaylistsContent() {
@@ -13,8 +15,11 @@ function PlaylistsContent() {
   const [showCreatePlaylistModal, setShowCreatePlaylistModal] = useState(false);
   const [showPlaylistSearchModal, setShowPlaylistSearchModal] = useState(false);
   const [greeting, setGreeting] = useState('Good Evening');
+  const [stats, setStats] = useState(null);
+  const [loadingStats, setLoadingStats] = useState(true);
 
   const { data: session } = useSession();
+  const { playTrack } = usePlayerStore();
 
   const loadPlaylists = async () => {
     try {
@@ -34,18 +39,34 @@ function PlaylistsContent() {
     }
   };
 
+  const loadStats = async () => {
+    try {
+      const res = await fetch('/api/stats');
+      if (res.ok) {
+        setStats(await res.json());
+      }
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    } finally {
+      setLoadingStats(false);
+    }
+  };
+
   useEffect(() => {
     const hour = new Date().getHours();
     if (hour < 12) setGreeting('Good Morning');
     else if (hour < 18) setGreeting('Good Afternoon');
     else setGreeting('Good Evening');
     
+    
     loadPlaylists();
+    loadStats();
   }, []);
 
   return (
-    <div className="content-scroll" style={{ padding: '24px', paddingBottom: '120px' }}>
+    <div className="content-scroll" style={{ paddingBottom: '120px' }}>
       <div className="page-container">
+
 
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
@@ -112,10 +133,100 @@ function PlaylistsContent() {
           </button>
         </div>
       ) : (
-        <div className="playlist-grid">
+        <div className="playlist-grid mobile-limit-2" style={{ marginBottom: '40px' }}>
           {playlists.map((playlist) => (
             <PlaylistCard3D key={playlist.id} playlist={playlist} />
           ))}
+        </div>
+      )}
+
+      {/* Stats Section */}
+      {session && !loadingStats && stats && (stats.topSongs.length > 0 || stats.topPlaylist) && (
+        <div style={{ marginBottom: '32px' }}>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <BarChart2 size={24} color="var(--text-secondary)" /> This Month
+          </h2>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
+            
+            {/* Left Column for Artists and Playlist */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Top Artists (bento block 1) */}
+              {stats.topArtists && stats.topArtists.length > 0 && (
+                <div style={{ backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)' }}>
+                    <UserIcon size={16} /> <span style={{ fontSize: '0.85rem', fontWeight: '600', textTransform: 'uppercase' }}>Top Artists</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: '8px', height: '100px', paddingTop: '10px' }}>
+                    {/* 2nd Place */}
+                    {stats.topArtists[1] ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '30%', height: '100%', justifyContent: 'flex-end' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '4px', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' }} title={stats.topArtists[1].name}>{stats.topArtists[1].name}</div>
+                        <div style={{ width: '100%', height: '50px', backgroundColor: 'rgba(255, 255, 255, 0.15)', borderTop: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '6px 6px 0 0', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', paddingTop: '8px', color: 'var(--text-primary)', fontWeight: 'bold', textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>2</div>
+                      </div>
+                    ) : <div style={{ width: '30%' }}></div>}
+                    
+                    {/* 1st Place */}
+                    {stats.topArtists[0] && (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '35%', height: '100%', justifyContent: 'flex-end' }}>
+                        <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--primary-color)', marginBottom: '4px', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' }} title={stats.topArtists[0].name}>{stats.topArtists[0].name}</div>
+                        <div style={{ width: '100%', height: '70px', background: 'linear-gradient(180deg, var(--primary-color) 0%, rgba(0,0,0,0.2) 100%)', boxShadow: '0 -4px 12px rgba(0,0,0,0.2)', borderTop: '1px solid rgba(255,255,255,0.3)', borderRadius: '6px 6px 0 0', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', paddingTop: '8px', color: '#fff', fontWeight: 'bold', fontSize: '1.2rem', textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>1</div>
+                      </div>
+                    )}
+                    
+                    {/* 3rd Place */}
+                    {stats.topArtists[2] ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '30%', height: '100%', justifyContent: 'flex-end' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '4px', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' }} title={stats.topArtists[2].name}>{stats.topArtists[2].name}</div>
+                        <div style={{ width: '100%', height: '35px', backgroundColor: 'rgba(255, 255, 255, 0.08)', borderTop: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '6px 6px 0 0', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', paddingTop: '4px', color: 'var(--text-secondary)', fontWeight: 'bold' }}>3</div>
+                      </div>
+                    ) : <div style={{ width: '30%' }}></div>}
+                  </div>
+                </div>
+              )}
+
+              {/* Top Playlist (bento block 2) */}
+              {stats.topPlaylist && (
+                <div style={{ backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)' }}>
+                    <List size={16} /> <span style={{ fontSize: '0.85rem', fontWeight: '600', textTransform: 'uppercase' }}>Top Playlist</span>
+                  </div>
+                  <div style={{ fontSize: '1.2rem', fontWeight: '700', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{stats.topPlaylist.name}</div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{stats.topPlaylist.playCount} plays</div>
+                </div>
+              )}
+            </div>
+
+            {/* Right Column for Songs (bento block 3) */}
+            {stats.topSongs.length > 0 && (
+              <div style={{ backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', height: '100%' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', marginBottom: '12px' }}>
+                  <Music size={16} /> <span style={{ fontSize: '0.85rem', fontWeight: '600', textTransform: 'uppercase' }}>Top Songs</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+                  {stats.topSongs.map((song, idx) => (
+                    <div 
+                      key={song.id} 
+                      onClick={() => playTrack(song, stats.topSongs, 'Top Songs This Month')}
+                      style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px', borderRadius: '8px', cursor: 'pointer', transition: 'background 0.2s' }}
+                      onMouseOver={e => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
+                      onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                    >
+                      <div style={{ width: '24px', textAlign: 'center', color: 'var(--text-secondary)', fontWeight: '700', fontSize: '0.9rem' }}>{idx + 1}</div>
+                      <div style={{ width: '40px', height: '40px', flexShrink: 0, position: 'relative' }}>
+                        <TrackThumbnail track={song} size={40} borderRadius="6px" showBackground={true} />
+                      </div>
+                      <div style={{ flex: 1, overflow: 'hidden' }}>
+                        <div style={{ fontWeight: '600', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: '0.95rem' }}>{song.title}</div>
+                        <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{song.artist}</div>
+                      </div>
+                      <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: '500' }}>{song.playCount} plays</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
 

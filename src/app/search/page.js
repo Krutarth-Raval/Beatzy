@@ -784,7 +784,7 @@ function SearchContent() {
             </div>
           ) : (
             <>
-              <div style={{ maxWidth: '1200px', width: '90%', margin: '0 auto', padding: '20px 0', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <div style={{ maxWidth: '1200px', width: '100%', margin: '0 auto', padding: '20px 0', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
 
                 
                 {/* Centralized Search Input */}
@@ -814,13 +814,13 @@ function SearchContent() {
                 {/* Mode Selector Tabs */}
                 <div className="hide-scrollbar" style={{ display: 'inline-flex', gap: '4px', alignSelf: 'flex-start', background: 'var(--bg-input)', borderRadius: '10px', padding: '3px', marginBottom: '32px', maxWidth: '100%', overflowX: 'auto', border: '1px solid var(--border-color)' }}>
                   <button type="button" onClick={() => setMode('extract')} style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: mode === 'extract' ? 'var(--primary-color)' : 'transparent', color: mode === 'extract' ? 'var(--bg-main)' : 'var(--text-secondary)', fontWeight: '600', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', flexShrink: 0, fontSize: '0.9rem' }}>
-                    <Zap size={14} /> Extract Mode
+                    <Zap size={14} /> <span className={mode === 'extract' ? '' : 'hide-on-mobile'}>Extract Mode</span>
                   </button>
                   <button type="button" onClick={() => setMode('song')} style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: mode === 'song' ? 'var(--primary-color)' : 'transparent', color: mode === 'song' ? 'var(--bg-main)' : 'var(--text-secondary)', fontWeight: '600', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', flexShrink: 0, fontSize: '0.9rem' }}>
-                    <Search size={14} /> Song Search
+                    <Search size={14} /> <span className={mode === 'song' ? '' : 'hide-on-mobile'}>Song Search</span>
                   </button>
                   <button type="button" onClick={() => setMode('playlist')} style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: mode === 'playlist' ? 'var(--primary-color)' : 'transparent', color: mode === 'playlist' ? 'var(--bg-main)' : 'var(--text-secondary)', fontWeight: '600', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', flexShrink: 0, fontSize: '0.9rem' }}>
-                    <Library size={14} /> Playlists
+                    <Library size={14} /> <span className={mode === 'playlist' ? '' : 'hide-on-mobile'}>Playlists</span>
                   </button>
                 </div>
 
