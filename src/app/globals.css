@@ -11,8 +11,23 @@
   --border-color: rgba(255, 255, 255, 0.1);
   --glass-bg: rgba(255, 255, 255, 0.05);
   --glass-border: rgba(255, 255, 255, 0.1);
+  --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.15);
+  --shadow-strong: 0 10px 40px rgba(0, 0, 0, 0.5);
+  --nav-bg: rgba(15, 15, 15, 0.85);
+  --nav-bg-strong: rgba(10, 10, 10, 0.95);
+  --nav-hover-bg: rgba(255, 255, 255, 0.05);
+  --player-bar-bg: rgba(25, 25, 25, 0.9);
+  --player-screen-bg: #050505;
+  --player-screen-gradient: linear-gradient(to bottom, rgba(20, 20, 20, 0.1) 0%, rgba(20, 20, 20, 0.9) 100%);
+  --player-chip-bg: rgba(255, 255, 255, 0.1);
+  --player-overlay-bg: rgba(20, 20, 20, 0.6);
+  --player-overlay-strong-bg: rgba(20, 20, 20, 0.95);
+  --queue-active-bg: rgba(255, 255, 255, 0.08);
+  --overlay-scrim: rgba(0, 0, 0, 0.7);
+  --loading-sheen: rgba(255, 255, 255, 0.6);
 }
 
+:root[data-theme='light'],
 .light-theme {
   --bg-main: #f0f2f5;
   --bg-sidebar: #ffffff;
@@ -24,6 +39,20 @@
   --border-color: rgba(0, 0, 0, 0.1);
   --glass-bg: rgba(0, 0, 0, 0.05);
   --glass-border: rgba(0, 0, 0, 0.1);
+  --shadow-soft: 0 4px 20px rgba(15, 23, 42, 0.08);
+  --shadow-strong: 0 18px 40px rgba(15, 23, 42, 0.16);
+  --nav-bg: rgba(255, 255, 255, 0.82);
+  --nav-bg-strong: rgba(255, 255, 255, 0.94);
+  --nav-hover-bg: rgba(28, 30, 33, 0.06);
+  --player-bar-bg: rgba(255, 255, 255, 0.82);
+  --player-screen-bg: #f3f5f9;
+  --player-screen-gradient: linear-gradient(to bottom, rgba(255, 255, 255, 0.18) 0%, rgba(240, 242, 245, 0.94) 100%);
+  --player-chip-bg: rgba(28, 30, 33, 0.08);
+  --player-overlay-bg: rgba(255, 255, 255, 0.7);
+  --player-overlay-strong-bg: rgba(255, 255, 255, 0.94);
+  --queue-active-bg: rgba(28, 30, 33, 0.08);
+  --overlay-scrim: rgba(15, 23, 42, 0.34);
+  --loading-sheen: rgba(28, 30, 33, 0.2);
 }
 
 .logo-img {
@@ -249,7 +278,7 @@ button {
   background-color: var(--bg-input);
   border: 1px solid var(--border-color);
   border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  box-shadow: var(--shadow-soft);
   display: flex;
   flex-direction: column;
   padding: 8px;
@@ -572,7 +601,7 @@ button {
   bottom: 0;
   left: 0;
   width: 100%;
-  background: rgba(25, 25, 25, 0.9);
+  background: var(--player-bar-bg);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   border-top: 1px solid var(--glass-border);

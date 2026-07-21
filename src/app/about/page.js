@@ -14,15 +14,10 @@ const InstagramIcon = () => (
 );
 
 export default function AboutPage() {
-  const [theme, setTheme] = useState('dark');
   const [updates, setUpdates] = useState([]);
   const [loadingUpdates, setLoadingUpdates] = useState(true);
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem('theme') || 'dark';
-    setTheme(savedTheme);
-    if (savedTheme === 'light') document.body.classList.add('light-theme');
-
     fetch('/api/updates')
       .then(res => res.json())
       .then(data => {

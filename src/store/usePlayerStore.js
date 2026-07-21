@@ -18,11 +18,13 @@ const usePlayerStore = create(
   shuffle: 'off', // 'off', 'on', 'smart'
   repeat: 'off', // 'off', 'all', 'one'
   isFetchingRelated: false,
+  playbackRequested: false,
 
   // Ref to the HTMLAudioElement for direct control
   audioRef: null,
 
   setAudioRef: (ref) => set({ audioRef: ref }),
+  setPlaybackRequested: (playbackRequested) => set({ playbackRequested }),
 
   updateCurrentTrack: (updater) => set((state) => ({ 
     currentTrack: state.currentTrack ? { ...state.currentTrack, ...updater(state.currentTrack) } : null 
@@ -65,6 +67,7 @@ const usePlayerStore = create(
         queueIndex: queueIndex !== -1 ? queueIndex : 0,
         isPlaying: true,
         progress: 0,
+        playbackRequested: true,
       };
     });
   },
@@ -87,7 +90,7 @@ const usePlayerStore = create(
       }
     }
     
-    set({ isPlaying: newIsPlaying });
+    set({ isPlaying: newIsPlaying, playbackRequested: newIsPlaying });
   },
 
   playNext: async () => {
@@ -127,7 +130,8 @@ const usePlayerStore = create(
                     currentTrack: newTracks[0],
                     isPlaying: true,
                     progress: 0,
-                    isFetchingRelated: false
+                    isFetchingRelated: false,
+                    playbackRequested: true
                   });
                   return;
                 }
@@ -167,6 +171,7 @@ const usePlayerStore = create(
           state.audioRef.currentTime = 0;
           state.audioRef.pause();
         }
+        set({ playbackRequested: false });
         return;
       }
     }
@@ -177,7 +182,8 @@ const usePlayerStore = create(
         currentTrack: nextTrack,
         queueIndex: nextIndex,
         isPlaying: true,
-        progress: 0
+        progress: 0,
+        playbackRequested: true
       });
     }
   },
@@ -213,7 +219,8 @@ const usePlayerStore = create(
         currentTrack: prevTrack,
         queueIndex: prevIndex,
         isPlaying: true,
-        progress: 0
+        progress: 0,
+        playbackRequested: true
       });
     }
   },

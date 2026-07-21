@@ -8,8 +8,8 @@ export default function GlobalModal() {
   if (!isOpen) return null;
 
   return (
-    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 9999, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '1rem' }}>
-      <div className="animate-fade-in" onClick={e => e.stopPropagation()} style={{ backgroundColor: 'var(--bg-main)', border: '1px solid var(--border-color)', width: '100%', maxWidth: '400px', padding: '24px', borderRadius: '16px', position: 'relative', boxShadow: '0 10px 40px rgba(0,0,0,0.5)' }}>
+    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'var(--overlay-scrim)', backdropFilter: 'blur(4px)', zIndex: 9999, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '1rem' }}>
+      <div className="animate-fade-in" onClick={e => e.stopPropagation()} style={{ backgroundColor: 'var(--bg-main)', border: '1px solid var(--border-color)', width: '100%', maxWidth: '400px', padding: '24px', borderRadius: '16px', position: 'relative', boxShadow: 'var(--shadow-strong)' }}>
         
         {type === 'alert' && (
           <button onClick={closeModal} style={{ position: 'absolute', top: '16px', right: '16px', color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer' }}>

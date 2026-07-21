@@ -12,6 +12,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import usePlayerStore from '@/store/usePlayerStore';
 import PwaInstallButton from '@/components/PwaInstallButton';
 import useModalStore from '@/store/useModalStore';
+import { useTheme } from '@/components/ThemeProvider';
 
 function SearchContent() {
   const { showAlert } = useModalStore();
@@ -48,7 +49,7 @@ function SearchContent() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [history, setHistory] = useState([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [theme, setTheme] = useState('dark');
+  const { theme, toggleTheme } = useTheme();
   const [isListening, setIsListening] = useState(false);
   const [resetCount, setResetCount] = useState(0);
   const [historyPage, setHistoryPage] = useState(0);
@@ -116,10 +117,6 @@ function SearchContent() {
   }, []);
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem('theme') || 'dark';
-    setTheme(savedTheme);
-    if (savedTheme === 'light') document.body.classList.add('light-theme');
-
     const savedHistoryExpanded = localStorage.getItem('isHistoryExpanded');
     if (savedHistoryExpanded !== null) {
       setIsHistoryExpanded(savedHistoryExpanded === 'true');
@@ -245,17 +242,6 @@ function SearchContent() {
       }
     } catch (err) {
       console.error(err);
-    }
-  };
-
-  const toggleTheme = () => {
-    const newTheme = theme === 'dark' ? 'light' : 'dark';
-    setTheme(newTheme);
-    localStorage.setItem('theme', newTheme);
-    if (newTheme === 'light') {
-      document.body.classList.add('light-theme');
-    } else {
-      document.body.classList.remove('light-theme');
     }
   };
 

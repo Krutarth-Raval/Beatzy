@@ -54,7 +54,7 @@ export default function Navbar() {
             left: 0;
             width: 100%;
             height: 72px;
-            background: rgba(15, 15, 15, 0.85);
+            background: var(--nav-bg);
             backdrop-filter: blur(24px);
             -webkit-backdrop-filter: blur(24px);
             border-bottom: 1px solid var(--border-color);
@@ -62,11 +62,11 @@ export default function Navbar() {
             align-items: center;
             justify-content: space-between;
             padding: 0 32px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            box-shadow: var(--shadow-soft);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           }
           .desktop-navbar.scrolled {
-            background: rgba(10, 10, 10, 0.95);
+            background: var(--nav-bg-strong);
           }
         }
 
@@ -84,7 +84,7 @@ export default function Navbar() {
         }
         .nav-link:hover {
           color: var(--text-primary);
-          background: rgba(255, 255, 255, 0.05);
+          background: var(--nav-hover-bg);
         }
         .nav-link.active {
           background: var(--text-primary);
@@ -106,7 +106,7 @@ export default function Navbar() {
           right: 0;
           width: 100%;
           height: 72px;
-          background: rgba(255, 255, 255, 0.05);
+          background: var(--nav-bg);
           backdrop-filter: blur(24px);
           -webkit-backdrop-filter: blur(24px);
           border-bottom: 1px solid var(--border-color);
@@ -131,7 +131,7 @@ export default function Navbar() {
           right: 0;
           width: 100%;
           height: 72px;
-          background: rgba(20, 20, 20, 0.95);
+          background: var(--nav-bg-strong);
           backdrop-filter: blur(24px);
           -webkit-backdrop-filter: blur(24px);
           border-top: 1px solid var(--border-color);

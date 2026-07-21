@@ -1,11 +1,8 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from 'react';
-import { usePathname } from 'next/navigation';
 import usePlayerStore from '@/store/usePlayerStore';
 import { Play, Pause, SkipForward, SkipBack, Shuffle, Repeat, Repeat1, Volume2, VolumeX, ChevronDown, List, Loader2, Music, Sparkles, Plus, Check } from 'lucide-react';
-import { FastAverageColor } from 'fast-average-color';
-import Image from 'next/image';
 import PlaylistSaveModal from './PlaylistSaveModal';
 import TrackThumbnail from './TrackThumbnail';
 import YouTubePlayer from 'youtube-player';
@@ -70,6 +67,9 @@ export default function AudioPlayer() {
   const lyricsContainerRefMobile = useRef(null);
   const lyricsContainerRefDesktop = useRef(null);
   const scrollTimeoutRef = useRef(null);
+  const autoplayRetryTimeoutRef = useRef(null);
+  const autoplayRetryCountRef = useRef(0);
+  const transientMuteRef = useRef(false);
   const [isSaved, setIsSaved] = useState(false);
   const saveActionRef = useRef(false);
   const lyricsTimerRef = useRef(null);
@@ -88,7 +88,9 @@ export default function AudioPlayer() {
     shuffle,
     repeat,
     isFetchingRelated,
+    playbackRequested,
     setAudioRef,
+    setPlaybackRequested,
     togglePlay,
     playNext,
     playPrevious,
@@ -102,6 +104,48 @@ export default function AudioPlayer() {
     toggleRepeat,
     updateCurrentTrack
   } = usePlayerStore();
+
+  const isAppleBrowser = () => {
+    if (typeof navigator === 'undefined') return false;
+    return /(iPad|iPhone|iPod|Macintosh)/i.test(navigator.userAgent);
+  };
+
+  const clearAutoplayRetry = () => {
+    if (autoplayRetryTimeoutRef.current) {
+      clearTimeout(autoplayRetryTimeoutRef.current);
+      autoplayRetryTimeoutRef.current = null;
+    }
+  };
+
+  const attemptPlayback = async () => {
+    const state = usePlayerStore.getState();
+
+    if (!ytPlayerRef.current || !state.isPlaying || !state.playbackRequested) {
+      return false;
+    }
+
+    try {
+      await ytPlayerRef.current.playVideo();
+      return true;
+    } catch (error) {
+      console.error('Playback retry failed:', error);
+      return false;
+    }
+  };
+
+  const scheduleAutoplayRetry = () => {
+    clearAutoplayRetry();
+
+    if (autoplayRetryCountRef.current >= 6) {
+      return;
+    }
+
+    const retryNumber = autoplayRetryCountRef.current + 1;
+    autoplayRetryCountRef.current = retryNumber;
+    autoplayRetryTimeoutRef.current = setTimeout(() => {
+      attemptPlayback();
+    }, 150 * retryNumber);
+  };
 
   // Create YouTube Player and Proxy
   useEffect(() => {
@@ -128,6 +172,8 @@ export default function AudioPlayer() {
         if (event.data === 1) { // Playing
           setIsBuffering(false);
           setIsBlobLoading(false);
+          clearAutoplayRetry();
+          autoplayRetryCountRef.current = 0;
           
           ytPlayerRef.current.getDuration().then(dur => {
             if (dur && dur > 0) {
@@ -137,7 +183,19 @@ export default function AudioPlayer() {
           
           const state = usePlayerStore.getState();
           ytPlayerRef.current.setVolume(state.volume * 100);
-          if (state.isMuted) ytPlayerRef.current.mute(); else ytPlayerRef.current.unMute();
+          if (state.isMuted) {
+            ytPlayerRef.current.mute();
+          } else if (transientMuteRef.current) {
+            setTimeout(() => {
+              if (ytPlayerRef.current && !usePlayerStore.getState().isMuted) {
+                ytPlayerRef.current.unMute();
+              }
+              transientMuteRef.current = false;
+            }, 120);
+          } else {
+            ytPlayerRef.current.unMute();
+          }
+          setPlaybackRequested(false);
 
           if (!progressIntervalRef.current) {
             progressIntervalRef.current = setInterval(async () => {
@@ -148,14 +206,24 @@ export default function AudioPlayer() {
             }, 500);
           }
         } else if (event.data === 0) { // Ended
+          clearAutoplayRetry();
+          autoplayRetryCountRef.current = 0;
+          transientMuteRef.current = false;
+          setPlaybackRequested(false);
           window.dispatchEvent(new CustomEvent('yt-player-ended'));
         } else if (event.data === 3) { // Buffering
           setIsBuffering(true);
+        } else if (event.data === 5 || event.data === -1) { // Cued / Unstarted
+          const state = usePlayerStore.getState();
+          if (state.isPlaying && state.playbackRequested) {
+            scheduleAutoplayRetry();
+          }
         }
       });
     }
 
     return () => {
+      clearAutoplayRetry();
       if (progressIntervalRef.current) {
         clearInterval(progressIntervalRef.current);
         progressIntervalRef.current = null;
@@ -213,11 +281,19 @@ export default function AudioPlayer() {
            const state = usePlayerStore.getState();
            const isPlaying = state.isPlaying;
            const startSeconds = state.progress || 0;
+           transientMuteRef.current = isPlaying && isAppleBrowser() && !state.isMuted;
            
            if (isPlaying) {
+             autoplayRetryCountRef.current = 0;
+             clearAutoplayRetry();
+             if (transientMuteRef.current) {
+               ytPlayerRef.current.mute();
+             }
              ytPlayerRef.current.loadVideoById(videoId, startSeconds);
+             scheduleAutoplayRetry();
            } else {
              ytPlayerRef.current.cueVideoById(videoId, startSeconds);
+             transientMuteRef.current = false;
            }
            loadedTrackIdRef.current = currentTrack.id;
         }
@@ -540,12 +616,19 @@ export default function AudioPlayer() {
   useEffect(() => {
     if (isPlaying && ytPlayerRef.current) {
       if (loadedTrackIdRef.current === currentTrack?.id) {
-        ytPlayerRef.current.playVideo().catch(e => console.error("Autoplay prevented:", e));
+        attemptPlayback().then((didStart) => {
+          if (!didStart && playbackRequested) {
+            scheduleAutoplayRetry();
+          }
+        });
       }
     } else if (ytPlayerRef.current && !isPlaying) {
+      clearAutoplayRetry();
+      autoplayRetryCountRef.current = 0;
+      transientMuteRef.current = false;
       ytPlayerRef.current.pauseVideo();
     }
-  }, [isPlaying, currentTrack?.id]);
+  }, [isPlaying, currentTrack?.id, playbackRequested]);
 
   useEffect(() => {
     const onEnded = () => {
@@ -664,8 +747,6 @@ export default function AudioPlayer() {
     }
   };
 
-  const pathname = usePathname();
-
   if (!currentTrack) return null;
 
   const audioTag = (
@@ -693,7 +774,7 @@ export default function AudioPlayer() {
         overflowX: 'hidden',
         boxSizing: 'border-box',
         width: '100%',
-        backgroundColor: '#050505',
+        backgroundColor: 'var(--player-screen-bg)',
       }}>
         <div style={{
           position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
@@ -707,7 +788,7 @@ export default function AudioPlayer() {
         <div style={{
           position: 'fixed',
           top: 0, left: 0, right: 0, bottom: 0,
-          background: 'linear-gradient(to bottom, rgba(20,20,20,0.1) 0%, rgba(20,20,20,0.9) 100%)',
+          background: 'var(--player-screen-gradient)',
           zIndex: -1,
         }} />
 
@@ -757,7 +838,7 @@ export default function AudioPlayer() {
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px',
-                    background: 'rgba(255,255,255,0.1)',
+                    background: 'var(--player-chip-bg)',
                     border: 'none',
                     borderRadius: '16px',
                     padding: '0 16px',
@@ -845,7 +926,7 @@ export default function AudioPlayer() {
         {showQueueModal && (
           <div className="animate-fade-in-up" style={{
             position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(20, 20, 20, 0.6)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', zIndex: 3000, display: 'flex', flexDirection: 'column'
+            backgroundColor: 'var(--player-overlay-bg)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', zIndex: 3000, display: 'flex', flexDirection: 'column'
           }}>
             <div style={{ padding: '24px 24px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', backgroundColor: 'transparent' }}>
               <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '700' }}>Up Next</h3>
@@ -866,7 +947,7 @@ export default function AudioPlayer() {
                   return (
                     <div key={`${track.id}-${i}`} onClick={() => playTrack(track, queue, queueName)} style={{
                       display: 'flex', alignItems: 'center', gap: '12px', padding: '12px',
-                      backgroundColor: isPlayingQueue ? 'rgba(255,255,255,0.1)' : 'transparent',
+                      backgroundColor: isPlayingQueue ? 'var(--queue-active-bg)' : 'transparent',
                       borderRadius: '8px', cursor: 'pointer'
                     }}>
                       <div style={{ width: '48px', height: '48px', borderRadius: '4px', overflow: 'hidden', flexShrink: 0, backgroundColor: 'var(--bg-input)', position: 'relative' }}>
@@ -890,7 +971,7 @@ export default function AudioPlayer() {
             style={{
               position: 'absolute', left: 0, right: 0, bottom: 0,
               height: isLyricsDrawerExpanded ? '100%' : '50%',
-              backgroundColor: 'rgba(20, 20, 20, 0.95)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', zIndex: 3000, display: 'flex', flexDirection: 'column',
+              backgroundColor: 'var(--player-overlay-strong-bg)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', zIndex: 3000, display: 'flex', flexDirection: 'column',
               borderTopLeftRadius: '24px', borderTopRightRadius: '24px',
               transition: 'height 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
             }}>
@@ -995,7 +1076,7 @@ export default function AudioPlayer() {
               backgroundColor: 'var(--primary-color)',
               transition: 'width 0.5s linear',
           }} />
-          {(isBlobLoading || isBuffering) && <div className="loading-overlay" style={{ height: '100%', top: 0, transform: 'none', background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.6) 50%, transparent 100%)' }}></div>}
+          {(isBlobLoading || isBuffering) && <div className="loading-overlay" style={{ height: '100%', top: 0, transform: 'none', background: 'linear-gradient(90deg, transparent 0%, var(--loading-sheen) 50%, transparent 100%)' }}></div>}
         </div>
       </div>
 
@@ -1115,8 +1196,8 @@ export default function AudioPlayer() {
       {showQueueModal && window.innerWidth > 768 && (
         <div className="animate-fade-in-up" style={{
           position: 'fixed', bottom: '100px', right: '20px', width: '380px', maxHeight: '60vh',
-          backgroundColor: 'rgba(20, 20, 20, 0.6)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', zIndex: 3000, display: 'flex', flexDirection: 'column',
-          borderRadius: '12px', boxShadow: '0 10px 40px rgba(0,0,0,0.5)', overflow: 'hidden',
+          backgroundColor: 'var(--player-overlay-bg)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', zIndex: 3000, display: 'flex', flexDirection: 'column',
+          borderRadius: '12px', boxShadow: 'var(--shadow-strong)', overflow: 'hidden',
           border: '1px solid var(--border-color)'
         }}>
           <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)' }}>
@@ -1137,7 +1218,7 @@ export default function AudioPlayer() {
                 return (
                   <div key={`desktop-queue-${track.id}-${i}`} onClick={(e) => { e.stopPropagation(); playTrack(track, queue, queueName); }} style={{
                     display: 'flex', alignItems: 'center', gap: '12px', padding: '10px',
-                    backgroundColor: isPlayingQueue ? 'rgba(255,255,255,0.08)' : 'transparent',
+                    backgroundColor: isPlayingQueue ? 'var(--queue-active-bg)' : 'transparent',
                     borderRadius: '8px', cursor: 'pointer', transition: 'background-color 0.2s'
                   }}>
                     <div style={{ width: '40px', height: '40px', borderRadius: '6px', overflow: 'hidden', flexShrink: 0, backgroundColor: 'var(--bg-main)', position: 'relative' }}>
@@ -1160,8 +1241,8 @@ export default function AudioPlayer() {
       {showLyricsModal && window.innerWidth > 768 && (
         <div className="animate-fade-in-up" style={{
           position: 'fixed', bottom: '100px', right: '20px', width: '380px', maxHeight: '60vh', minHeight: '40vh',
-          backgroundColor: 'rgba(20, 20, 20, 0.6)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', zIndex: 3000, display: 'flex', flexDirection: 'column',
-          borderRadius: '12px', boxShadow: '0 10px 40px rgba(0,0,0,0.5)', overflow: 'hidden',
+          backgroundColor: 'var(--player-overlay-bg)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', zIndex: 3000, display: 'flex', flexDirection: 'column',
+          borderRadius: '12px', boxShadow: 'var(--shadow-strong)', overflow: 'hidden',
           border: '1px solid var(--border-color)'
         }}>
           <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)' }}>

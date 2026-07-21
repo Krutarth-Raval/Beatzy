@@ -1,32 +1,17 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { Moon, Sun, Trash2, LogOut, Info, AlertTriangle, ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
+import { useTheme } from '@/components/ThemeProvider';
 
 export default function AccountPage() {
   const { data: session } = useSession();
-  const [theme, setTheme] = useState('dark');
+  const { theme, toggleTheme } = useTheme();
   const [showClearHistoryModal, setShowClearHistoryModal] = useState(false);
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
   const [showSignOutModal, setShowSignOutModal] = useState(false);
-
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme') || 'dark';
-    setTheme(savedTheme);
-  }, []);
-
-  const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
-    setTheme(newTheme);
-    localStorage.setItem('theme', newTheme);
-    if (newTheme === 'light') {
-      document.body.classList.add('light-theme');
-    } else {
-      document.body.classList.remove('light-theme');
-    }
-  };
 
   const handleClearHistory = () => {
     localStorage.removeItem('history');
