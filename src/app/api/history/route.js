@@ -40,21 +40,20 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { type, query, title } = body;
+    const { type, query, title, image } = body;
 
     if (!type || !query || !title) {
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
     }
 
     // Always create a new history entry for manual searches
-
-
     const newHistory = await prisma.history.create({
       data: {
         userId: session.user.id,
         type,
         query,
         title,
+        image: image || null
       }
     });
 

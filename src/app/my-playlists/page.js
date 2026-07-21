@@ -12,7 +12,6 @@ function PlaylistsContent() {
   const [loading, setLoading] = useState(true);
   const [showCreatePlaylistModal, setShowCreatePlaylistModal] = useState(false);
   const [showPlaylistSearchModal, setShowPlaylistSearchModal] = useState(false);
-  const [greeting, setGreeting] = useState('Good Evening');
 
   const { data: session } = useSession();
 
@@ -35,19 +34,12 @@ function PlaylistsContent() {
   };
 
   useEffect(() => {
-    const hour = new Date().getHours();
-    if (hour < 12) setGreeting('Good Morning');
-    else if (hour < 18) setGreeting('Good Afternoon');
-    else setGreeting('Good Evening');
-    
     loadPlaylists();
   }, []);
 
   return (
     <div className="content-scroll" style={{ padding: '24px', paddingBottom: '120px' }}>
       <div className="page-container">
-
-
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <h2 style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--text-primary)' }}>Your Playlists</h2>
         

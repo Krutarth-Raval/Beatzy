@@ -9,8 +9,8 @@
   --text-primary: #ececec;
   --text-secondary: #b4b4b4;
   --border-color: rgba(255, 255, 255, 0.1);
-  --glass-bg: rgba(47, 47, 47, 0.7);
-  --glass-border: rgba(255, 255, 255, 0.05);
+  --glass-bg: rgba(255, 255, 255, 0.05);
+  --glass-border: rgba(255, 255, 255, 0.1);
 }
 
 .light-theme {
@@ -22,8 +22,12 @@
   --text-primary: #1c1e21;
   --text-secondary: #65676b;
   --border-color: rgba(0, 0, 0, 0.1);
-  --glass-bg: rgba(255, 255, 255, 0.8);
-  --glass-border: rgba(0, 0, 0, 0.05);
+  --glass-bg: rgba(0, 0, 0, 0.05);
+  --glass-border: rgba(0, 0, 0, 0.1);
+}
+
+.logo-img {
+  filter: none;
 }
 
 .light-theme .logo-img {
@@ -284,6 +288,12 @@ button {
 }
 
 /* Main Content Area */
+.page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
 .main-area {
   flex: 1;
   display: flex;
@@ -291,6 +301,7 @@ button {
   position: relative;
   height: 100dvh;
   overflow: hidden;
+  padding-top: 104px;
 }
 
 .content-scroll {
@@ -372,6 +383,10 @@ button {
 
 /* Mobile Responsiveness */
 @media (max-width: 768px) {
+  .main-area {
+    padding-top: 72px;
+  }
+  
   .mobile-header {
     display: flex;
   }
@@ -423,6 +438,7 @@ button {
   }
 
   /* Playlist Page Overrides */
+
   .playlist-page-container {
     flex-direction: column !important;
     padding: 16px !important;
@@ -546,7 +562,20 @@ button {
   box-shadow: 0 2px 6px rgba(0,0,0,0.4);
 }
 
-/* Audio Player Bar — responsive layout switching */
+/* Audio Player Bar - responsive layout switching */
+.audio-player-bar-clickable {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: rgba(25, 25, 25, 0.9);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-top: 1px solid var(--glass-border);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  z-index: 1000;
+}
+
 .mobile-mini-bar {
   display: none;
   width: 100%;
@@ -561,6 +590,15 @@ button {
 }
 
 @media (max-width: 768px) {
+  .content-scroll {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .audio-player-bar-clickable {
+    bottom: 65px !important; /* Move above the mobile bottom navbar */
+  }
+
   .mobile-mini-bar {
     display: flex;
     align-items: center;
@@ -593,3 +631,65 @@ button {
   animation: pulse-glow 2s infinite ease-in-out;
 }
 
+
+/* Playlist Grid */
+.playlist-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 24px;
+}
+@media (max-width: 768px) {
+  .playlist-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 16px;
+  }
+}
+
+/* 3D Playlist Cards */
+.card-3d {
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
+  transform-style: preserve-3d;
+  will-change: transform;
+  border-radius: 12px;
+  background-color: transparent;
+}
+
+.card-3d:hover {
+  transform: translateY(-8px) scale(1.03) perspective(1000px) rotateX(4deg) rotateY(-4deg);
+  /* The shadow will emphasize the pop-out */
+}
+
+.card-3d:hover > div:first-child {
+  box-shadow: 15px 15px 35px rgba(0,0,0,0.5), -5px -5px 15px rgba(255, 255, 255, 0.05);
+}
+
+.play-btn-overlay {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background-color: var(--text-primary);
+  color: var(--bg-main);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transform: translateY(15px);
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  z-index: 10;
+}
+
+.card-3d:hover .play-btn-overlay {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (max-width: 768px) {
+  .play-btn-overlay {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

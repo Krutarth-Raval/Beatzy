@@ -21,13 +21,16 @@ export const metadata = {
 import AudioPlayer from '@/components/AudioPlayer';
 import PwaRegistry from '@/components/PwaRegistry';
 import GlobalModal from '@/components/GlobalModal';
+import MainLayout from '@/components/MainLayout';
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body>
         <Providers>
-          {children}
+          <MainLayout>
+            {children}
+          </MainLayout>
           <AudioPlayer />
           <PwaRegistry />
           <GlobalModal />

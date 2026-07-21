@@ -3,6 +3,35 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]/route';
 import { prisma } from '@/lib/prisma';
 
+const processPlaylist = (p) => {
+  let totalSeconds = 0;
+  if (p.songs) {
+    p.songs.forEach(s => {
+      const d = s.song?.duration;
+      if (d) {
+        if (typeof d === 'string' && d.includes(':')) {
+           const parts = d.split(':').map(Number);
+           if (parts.length === 2) totalSeconds += (parts[0] || 0) * 60 + (parts[1] || 0);
+           else if (parts.length === 3) totalSeconds += (parts[0] || 0) * 3600 + (parts[1] || 0) * 60 + (parts[2] || 0);
+        } else {
+           let val = typeof d === 'number' ? d : parseInt(d) || 0;
+           if (s.song?.id?.includes('spotify:') || val > 20000) {
+             totalSeconds += Math.floor(val / 1000);
+           } else {
+             totalSeconds += val;
+           }
+        }
+      }
+    });
+  }
+  return {
+    ...p,
+    totalDurationSeconds: totalSeconds,
+    totalTracks: p._count?.songs || 0,
+    songs: p.songs ? p.songs.slice(0, 1) : []
+  };
+};
+
 export async function GET(request) {
   try {
     const session = await getServerSession(authOptions);
@@ -10,15 +39,13 @@ export async function GET(request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Fetch playlists owned by user, and playlists saved by user
     const ownedPlaylists = await prisma.playlist.findMany({
       where: { userId: session.user.id },
       include: {
         _count: { select: { songs: true, savedBy: true } },
         songs: {
           orderBy: { addedAt: 'asc' },
-          take: 1,
-          select: { song: { select: { id: true, thumbnail: true } } }
+          select: { song: { select: { id: true, duration: true, thumbnail: true } } }
         }
       },
       orderBy: { createdAt: 'asc' }
@@ -33,8 +60,7 @@ export async function GET(request) {
             _count: { select: { songs: true, savedBy: true } },
             songs: {
               orderBy: { addedAt: 'asc' },
-              take: 1,
-              select: { song: { select: { id: true, thumbnail: true } } }
+              select: { song: { select: { id: true, duration: true, thumbnail: true } } }
             }
           }
         }
@@ -43,8 +69,8 @@ export async function GET(request) {
     });
 
     return NextResponse.json({
-      owned: ownedPlaylists,
-      saved: savedPlaylists.map(sp => sp.playlist)
+      owned: ownedPlaylists.map(processPlaylist),
+      saved: savedPlaylists.map(sp => processPlaylist(sp.playlist))
     });
   } catch (error) {
     console.error('Playlists GET Error:', error);

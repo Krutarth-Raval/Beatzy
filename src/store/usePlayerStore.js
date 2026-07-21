@@ -29,6 +29,12 @@ const usePlayerStore = create(
   })),
 
   playTrack: (track, newQueue = null, queueName = null, queuePlaylistId = null) => {
+    // iOS Safari Hack: Trigger a play request synchronously during the user-interaction event loop to unlock audio
+    const currentState = get();
+    if (currentState.audioRef && currentState.audioRef.play) {
+      try { currentState.audioRef.play().catch(() => {}); } catch(e) {}
+    }
+
     set((state) => {
       let queue = newQueue || state.queue;
       let originalQueue = newQueue ? [...newQueue] : (state.originalQueue || [...state.queue]);
@@ -87,6 +93,10 @@ const usePlayerStore = create(
   playNext: async () => {
     const state = get();
     if (state.queue.length === 0) return;
+
+    if (state.audioRef && state.audioRef.play) {
+      try { state.audioRef.play().catch(() => {}); } catch(e) {}
+    }
 
     let nextIndex = state.queueIndex + 1;
 
@@ -175,6 +185,10 @@ const usePlayerStore = create(
   playPrevious: () => {
     const state = get();
     if (state.queue.length === 0) return;
+
+    if (state.audioRef && state.audioRef.play) {
+      try { state.audioRef.play().catch(() => {}); } catch(e) {}
+    }
 
     // If progress > 3 seconds, just restart the song
     if (state.progress > 3 && state.audioRef) {

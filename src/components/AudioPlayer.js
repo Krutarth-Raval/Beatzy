@@ -61,8 +61,18 @@ export default function AudioPlayer() {
   const [isDraggingProgress, setIsDraggingProgress] = useState(false);
   const [showQueueModal, setShowQueueModal] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
+  const [showLyricsModal, setShowLyricsModal] = useState(false);
+  const [lyrics, setLyrics] = useState('');
+  const [syncedLyrics, setSyncedLyrics] = useState(null);
+  const [isLyricsLoading, setIsLyricsLoading] = useState(false);
+  const [isLyricsDrawerExpanded, setIsLyricsDrawerExpanded] = useState(false);
+  const [isUserScrollingLyrics, setIsUserScrollingLyrics] = useState(false);
+  const lyricsContainerRefMobile = useRef(null);
+  const lyricsContainerRefDesktop = useRef(null);
+  const scrollTimeoutRef = useRef(null);
   const [isSaved, setIsSaved] = useState(false);
   const saveActionRef = useRef(false);
+  const lyricsTimerRef = useRef(null);
 
   const {
     currentTrack,
@@ -213,6 +223,155 @@ export default function AudioPlayer() {
       isActive = false;
     };
   }, [currentTrack?.id]);
+
+  // Fetch lyrics when track changes if modal is open, or clean up if closed
+  useEffect(() => {
+    setLyrics('');
+    setSyncedLyrics(null);
+    if (showLyricsModal) {
+      fetchLyrics();
+    }
+  }, [currentTrack?.id]);
+
+  const parseLrc = (lrcString) => {
+    if (!lrcString) return null;
+    const lines = lrcString.split('\n');
+    const parsed = [];
+    const timeRegex = /\[(\d{2}):(\d{2})\.(\d{2,3})\]/;
+    for (const line of lines) {
+      const match = timeRegex.exec(line);
+      if (match) {
+        const minutes = parseInt(match[1], 10);
+        const seconds = parseInt(match[2], 10);
+        const milliseconds = parseInt(match[3], 10);
+        const msMultiplier = match[3].length === 2 ? 10 : 1;
+        const timeInSeconds = minutes * 60 + seconds + (milliseconds * msMultiplier) / 1000;
+        const text = line.replace(timeRegex, '').trim();
+        parsed.push({ time: timeInSeconds, text });
+      }
+    }
+    return parsed.length > 0 ? parsed : null;
+  };
+
+  const fetchLyrics = async () => {
+    if (!currentTrack) return;
+    setIsLyricsLoading(true);
+    try {
+      const artist = currentTrack.artists || currentTrack.artist || '';
+      const title = currentTrack.title || currentTrack.name || '';
+      const res = await fetch(`/api/lyrics?artist=${encodeURIComponent(artist)}&title=${encodeURIComponent(title)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setLyrics(data.lyrics || 'Lyrics not available.');
+        setSyncedLyrics(parseLrc(data.syncedLyrics));
+      } else {
+        setLyrics('Lyrics not available.');
+        setSyncedLyrics(null);
+      }
+    } catch (err) {
+      setLyrics('Lyrics not available.');
+      setSyncedLyrics(null);
+    } finally {
+      setIsLyricsLoading(false);
+    }
+  };
+
+  const handleToggleLyrics = () => {
+    if (!showLyricsModal) {
+      setShowLyricsModal(true);
+      if (!lyrics && !syncedLyrics) fetchLyrics();
+    } else {
+      setShowLyricsModal(false);
+    }
+  };
+
+  const handleLyricsLongPressStart = () => {
+    lyricsTimerRef.current = setTimeout(() => {
+      setIsLyricsDrawerExpanded(prev => !prev);
+    }, 500); // 500ms touch and hold
+  };
+
+  const handleLyricsLongPressEnd = () => {
+    if (lyricsTimerRef.current) {
+      clearTimeout(lyricsTimerRef.current);
+    }
+  };
+
+  const activeLineIndex = syncedLyrics ? syncedLyrics.findIndex((line, index) => {
+    const nextLine = syncedLyrics[index + 1];
+    return progress >= line.time && (!nextLine || progress < nextLine.time);
+  }) : -1;
+
+  useEffect(() => {
+    if (!isUserScrollingLyrics && activeLineIndex !== -1 && showLyricsModal) {
+      const container = window.innerWidth <= 768 ? lyricsContainerRefMobile.current : lyricsContainerRefDesktop.current;
+      if (container) {
+        const activeElement = container.querySelector('.lyric-line-active');
+        if (activeElement) {
+          const containerHalfHeight = container.clientHeight / 2;
+          const elementOffsetTop = activeElement.offsetTop;
+          const elementHalfHeight = activeElement.clientHeight / 2;
+          container.scrollTo({
+            top: elementOffsetTop - containerHalfHeight + elementHalfHeight,
+            behavior: 'smooth'
+          });
+        }
+      }
+    }
+  }, [activeLineIndex, isUserScrollingLyrics, showLyricsModal]);
+
+  const handleLyricsScroll = () => {
+    setIsUserScrollingLyrics(true);
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current);
+    }
+    scrollTimeoutRef.current = setTimeout(() => {
+      setIsUserScrollingLyrics(false);
+    }, 2000);
+  };
+
+  const renderLyricsContent = () => {
+    if (isLyricsLoading) {
+      return (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', minHeight: '200px' }}>
+          <Loader2 size={32} className="animate-spin" color="var(--primary-color)" />
+        </div>
+      );
+    }
+
+    if (syncedLyrics) {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', padding: '24px 0 50vh 0', alignItems: 'center' }}>
+          {syncedLyrics.map((line, i) => (
+            <div 
+              key={i} 
+              className={i === activeLineIndex ? 'lyric-line-active' : ''} 
+              onClick={() => { seek(line.time); setIsUserScrollingLyrics(false); }}
+              style={{
+                fontSize: i === activeLineIndex ? '1.4rem' : '1.1rem',
+                fontWeight: i === activeLineIndex ? '800' : '600',
+                color: i === activeLineIndex ? 'var(--primary-color)' : 'var(--text-secondary)',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                opacity: i === activeLineIndex ? 1 : 0.5,
+                transform: i === activeLineIndex ? 'scale(1.05)' : 'scale(1)',
+                cursor: 'pointer',
+                lineHeight: '1.4',
+                maxWidth: '90%'
+              }}
+            >
+              {line.text || '• • •'}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    return (
+      <div style={{ whiteSpace: 'pre-wrap', lineHeight: '2', fontSize: '1.1rem', color: 'var(--text-secondary)', fontWeight: '500', padding: '20px 0' }}>
+        {lyrics}
+      </div>
+    );
+  };
 
   // Check if saved
   useEffect(() => {
@@ -580,6 +739,26 @@ export default function AudioPlayer() {
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', paddingBottom: '10px', flexShrink: 0 }}>
 
             <div style={{ width: '100%', maxWidth: '350px', display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: 'min(30px, 4vh)', position: 'relative' }}>
+              <div style={{ position: 'absolute', left: 0, top: '-40px' }}>
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleToggleLyrics(); }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    background: 'rgba(255,255,255,0.1)',
+                    border: 'none',
+                    borderRadius: '16px',
+                    padding: '0 16px',
+                    height: '32px',
+                    color: 'var(--text-primary)',
+                    cursor: 'pointer',
+                    fontSize: '0.9rem',
+                    fontWeight: '600'
+                  }}>
+                  <Music size={16} /> Lyrics
+                </button>
+              </div>
               <div style={{ position: 'absolute', right: 0, top: '-40px' }}>
                 <button onClick={handleToggleSave} style={{
                   borderRadius: '50%',
@@ -694,6 +873,41 @@ export default function AudioPlayer() {
             </div>
           </div>
         )}
+
+        {showLyricsModal && (
+          <div className="animate-fade-in-up" 
+            style={{
+              position: 'absolute', left: 0, right: 0, bottom: 0,
+              height: isLyricsDrawerExpanded ? '100%' : '50%',
+              backgroundColor: 'rgba(20, 20, 20, 0.95)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', zIndex: 3000, display: 'flex', flexDirection: 'column',
+              borderTopLeftRadius: '24px', borderTopRightRadius: '24px',
+              transition: 'height 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+            }}>
+            <div 
+              onTouchStart={handleLyricsLongPressStart}
+              onTouchEnd={handleLyricsLongPressEnd}
+              onMouseDown={handleLyricsLongPressStart}
+              onMouseUp={handleLyricsLongPressEnd}
+              onMouseLeave={handleLyricsLongPressEnd}
+              style={{ padding: '16px 24px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', cursor: 'grab' }}>
+              <div style={{ width: '40px', height: '4px', backgroundColor: 'var(--border-color)', borderRadius: '2px', marginBottom: '12px' }} />
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '700' }}>Lyrics</h3>
+                <button onClick={() => setShowLyricsModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', padding: '4px' }}>
+                  <ChevronDown size={24} />
+                </button>
+              </div>
+            </div>
+            <div 
+              ref={lyricsContainerRefMobile}
+              onWheel={handleLyricsScroll}
+              onTouchMove={handleLyricsScroll}
+              className="content-scroll hide-scrollbar" 
+              style={{ position: 'relative', flex: 1, padding: '16px 24px 40px', overflowY: 'auto', textAlign: 'center', scrollBehavior: 'smooth' }}>
+              {renderLyricsContent()}
+            </div>
+          </div>
+        )}
       </div>
       </>
     );
@@ -704,18 +918,11 @@ export default function AudioPlayer() {
       {audioTag}
       <div
       className="audio-player-bar-clickable"
-      onClick={() => { if (window.innerWidth <= 768) setIsMobileExpanded(true); }}
+      onClick={() => { if (typeof window !== 'undefined' && window.innerWidth <= 768) setIsMobileExpanded(true); }}
       style={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        backgroundColor: 'var(--glass-bg)',
-        backdropFilter: 'blur(10px)',
-        borderTop: '1px solid var(--border-color)',
-        display: pathname === '/playlists' ? 'block' : 'none',
+        display: 'block',
         zIndex: 1000,
-        boxShadow: '0 -4px 20px rgba(0,0,0,0.3)',
+        bottom: typeof window !== 'undefined' && window.innerWidth <= 768 ? 'calc(72px + env(safe-area-inset-bottom, 0px))' : '0'
       }}>
 
       {/* ── MOBILE MINI BAR ──────────────────────────────────── */}
@@ -869,6 +1076,9 @@ export default function AudioPlayer() {
             style={{ width: '80px', height: '4px', accentColor: 'var(--text-secondary)', cursor: 'pointer' }}
           />
           <div style={{ width: '1px', height: '24px', backgroundColor: 'var(--border-color)', margin: '0 8px' }}></div>
+          <button onClick={(e) => { e.stopPropagation(); handleToggleLyrics(); }} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px' }}>
+            <Music size={20} />
+          </button>
           <button onClick={(e) => { e.stopPropagation(); setShowQueueModal(!showQueueModal); }} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px' }}>
             <List size={20} />
           </button>
@@ -931,6 +1141,31 @@ export default function AudioPlayer() {
                 );
               });
             })()}
+          </div>
+        </div>
+      )}
+
+      {/* ── DESKTOP LYRICS MODAL ───────────────────────────────── */}
+      {showLyricsModal && window.innerWidth > 768 && (
+        <div className="animate-fade-in-up" style={{
+          position: 'fixed', bottom: '100px', right: '20px', width: '380px', maxHeight: '60vh', minHeight: '40vh',
+          backgroundColor: 'rgba(20, 20, 20, 0.6)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', zIndex: 3000, display: 'flex', flexDirection: 'column',
+          borderRadius: '12px', boxShadow: '0 10px 40px rgba(0,0,0,0.5)', overflow: 'hidden',
+          border: '1px solid var(--border-color)'
+        }}>
+          <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)' }}>
+            <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '700', color: 'var(--text-primary)' }}>Lyrics</h3>
+            <button onClick={(e) => { e.stopPropagation(); setShowLyricsModal(false); }} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px' }}>
+              <ChevronDown size={20} />
+            </button>
+          </div>
+          <div 
+            ref={lyricsContainerRefDesktop}
+            onWheel={handleLyricsScroll}
+            onTouchMove={handleLyricsScroll}
+            className="content-scroll hide-scrollbar" 
+            style={{ position: 'relative', flex: 1, padding: '20px', overflowY: 'auto', textAlign: 'center', scrollBehavior: 'smooth' }}>
+            {renderLyricsContent()}
           </div>
         </div>
       )}
