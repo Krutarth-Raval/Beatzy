@@ -784,13 +784,17 @@ function SearchContent() {
                       onChange={(e) => setSearchQuery(e.target.value)}
                       style={{ flex: 1 }}
                     />
-                    <input type="file" accept="image/*" ref={fileInputRef} style={{ display: 'none' }} onChange={handleImageUpload} />
-                    <button type="button" onClick={() => fileInputRef.current?.click()} disabled={isAnalyzingImage} style={{ background: 'none', border: 'none', color: isAnalyzingImage ? 'var(--text-primary)' : 'var(--text-secondary)', cursor: isAnalyzingImage ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px', transition: 'color 0.2s' }}>
-                      {isAnalyzingImage ? <Loader2 className="animate-spin" size={20} /> : <Camera size={20} />}
-                    </button>
-                    <button type="button" onClick={handleVoiceSearch} style={{ background: 'none', border: 'none', color: isListening ? '#ff4d4f' : 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px', transition: 'color 0.2s', animation: isListening ? 'pulse 1.5s infinite' : 'none' }}>
-                      {isListening ? <X size={20} /> : <Mic size={20} />}
-                    </button>
+                    {mode !== 'extract' && (
+                      <>
+                        <input type="file" accept="image/*" ref={fileInputRef} style={{ display: 'none' }} onChange={handleImageUpload} />
+                        <button type="button" onClick={() => fileInputRef.current?.click()} disabled={isAnalyzingImage} style={{ background: 'none', border: 'none', color: isAnalyzingImage ? 'var(--text-primary)' : 'var(--text-secondary)', cursor: isAnalyzingImage ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px', transition: 'color 0.2s' }}>
+                          {isAnalyzingImage ? <Loader2 className="animate-spin" size={20} /> : <Camera size={20} />}
+                        </button>
+                        <button type="button" onClick={handleVoiceSearch} style={{ background: 'none', border: 'none', color: isListening ? '#ff4d4f' : 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px', transition: 'color 0.2s', animation: isListening ? 'pulse 1.5s infinite' : 'none' }}>
+                          {isListening ? <X size={20} /> : <Mic size={20} />}
+                        </button>
+                      </>
+                    )}
                     <button type="submit" disabled={loading || !searchQuery} style={{ backgroundColor: loading || !searchQuery ? 'var(--border-color)' : 'var(--text-primary)', color: loading || !searchQuery ? 'var(--text-secondary)' : 'var(--bg-main)', padding: '10px 14px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', border: 'none', cursor: loading || !searchQuery ? 'not-allowed' : 'pointer' }}>
                       {loading ? <Loader2 className="animate-spin" size={20} /> : <Search size={20} />}
                     </button>
