@@ -3,13 +3,32 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 
-export default function CreatePlaylistModal({ onClose, onCreate }) {
+export default function CreatePlaylistModal({ onClose, onCreate, onPlaylistCreated }) {
   const [name, setName] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (name.trim()) {
-      onCreate(name.trim());
+    if (name.trim() && !loading) {
+      setLoading(true);
+      try {
+        const res = await fetch('/api/playlists', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: name.trim() })
+        });
+        if (res.ok) {
+          if (onCreate) onCreate(name.trim());
+          if (onPlaylistCreated) onPlaylistCreated();
+          onClose();
+        } else {
+          console.error("Failed to create playlist");
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error(err);
+        setLoading(false);
+      }
     }
   };
 
@@ -52,20 +71,20 @@ export default function CreatePlaylistModal({ onClose, onCreate }) {
 
           <button 
             type="submit" 
-            disabled={!name.trim()}
+            disabled={!name.trim() || loading}
             style={{ 
               width: '100%', 
               padding: '12px', 
-              backgroundColor: name.trim() ? 'var(--text-primary)' : 'var(--border-color)', 
-              color: name.trim() ? 'var(--bg-main)' : 'var(--text-secondary)', 
+              backgroundColor: name.trim() && !loading ? 'var(--text-primary)' : 'var(--border-color)', 
+              color: name.trim() && !loading ? 'var(--bg-main)' : 'var(--text-secondary)', 
               borderRadius: '8px', 
               border: 'none', 
               fontWeight: '600', 
-              cursor: name.trim() ? 'pointer' : 'not-allowed',
+              cursor: name.trim() && !loading ? 'pointer' : 'not-allowed',
               transition: 'all 0.2s'
             }}
           >
-            Create
+            {loading ? 'Creating...' : 'Create'}
           </button>
         </form>
       </div>

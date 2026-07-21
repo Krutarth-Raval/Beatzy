@@ -260,9 +260,9 @@ export default function PlaylistDetailPage() {
       const res = await fetch(`/api/playlists/${playlistToDelete}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Failed to delete playlist');
 
-      if (selectedPlaylist?.id === playlistToDelete) {
-        setSelectedPlaylist(null);
-        setTracks([]);
+      if (selectedPlaylist?.id === playlistToDelete || params?.id === playlistToDelete) {
+        router.push('/my-playlists');
+        return;
       }
       loadPlaylists();
     } catch (e) {
@@ -878,6 +878,11 @@ export default function PlaylistDetailPage() {
                                   <span style={{ fontWeight: '600' }}>{selectedPlaylist.isPublic ? 'Make Private' : 'Make Public'}</span>
                                   {!selectedPlaylist.isCloud && <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Will sync to cloud</span>}
                                 </div>
+                              </button>
+                              <div style={{ height: '1px', backgroundColor: 'var(--border-color)', margin: '4px 0' }} />
+                              <button onClick={() => { setShowSettingsMenu(false); setPlaylistToDelete(selectedPlaylist.id); }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: 'none', border: 'none', color: '#ff4d4f', cursor: 'pointer', borderRadius: '8px', textAlign: 'left' }} onMouseOver={e => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'} onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                                <Trash2 size={18} />
+                                <span style={{ fontWeight: '600' }}>Delete Playlist</span>
                               </button>
                               <div style={{ height: '1px', backgroundColor: 'var(--border-color)', margin: '4px 0' }} />
                             </>
