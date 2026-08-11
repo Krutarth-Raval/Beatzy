@@ -1064,8 +1064,17 @@ export default function AudioPlayer() {
           position: 'fixed', top: 0, left: 0, right: 0, bottom: '80px',
           backgroundColor: 'rgba(20,20,20,0.95)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', zIndex: 2000, display: 'flex', flexDirection: 'column'
         }}>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '30px' }}>
-            <button onClick={(e) => { e.stopPropagation(); setShowLyricsModal(false); }} style={{ background: 'var(--bg-input)', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', width: '44px', height: '44px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background-color 0.2s' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '30px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <div style={{ width: '60px', height: '60px', borderRadius: '8px', overflow: 'hidden', flexShrink: 0, backgroundColor: 'var(--bg-main)', position: 'relative' }}>
+                <TrackThumbnail track={currentTrack} size={60} showBackground={false} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ margin: 0, fontWeight: '700', fontSize: '1.2rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{currentTrack?.title}</p>
+                <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{currentTrack?.artists || currentTrack?.artist || 'Unknown Artist'}</p>
+              </div>
+            </div>
+            <button onClick={(e) => { e.stopPropagation(); setShowLyricsModal(false); }} style={{ background: 'var(--bg-input)', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', width: '44px', height: '44px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background-color 0.2s', flexShrink: 0 }}>
               <X size={24} />
             </button>
           </div>
@@ -1075,7 +1084,7 @@ export default function AudioPlayer() {
                 <Loader2 className="animate-spin" size={32} color="var(--primary-color)" />
               </div>
             ) : (
-              <SyncedLyrics lyricsStr={lyrics} currentTime={isDraggingProgress && dragProgress !== null ? dragProgress : progress} onSeek={seek} />
+              <SyncedLyrics lyricsStr={lyrics} currentTime={isDraggingProgress && dragProgress !== null ? dragProgress : progress} onSeek={seek} isDesktop={true} />
             )}
           </div>
         </div>

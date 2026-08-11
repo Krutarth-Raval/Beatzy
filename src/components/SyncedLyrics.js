@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-const SyncedLyrics = ({ lyricsStr, currentTime, onSeek }) => {
+const SyncedLyrics = ({ lyricsStr, currentTime, onSeek, isDesktop = false }) => {
   const [parsed, setParsed] = useState([]);
   const containerRef = useRef(null);
   
@@ -47,7 +47,7 @@ const SyncedLyrics = ({ lyricsStr, currentTime, onSeek }) => {
   const isPlain = parsed[0]?.time === -1;
   
   return (
-    <div ref={containerRef} className="hide-scrollbar" style={{ width: '100%', boxSizing: 'border-box', height: '100%', overflowY: 'auto', padding: '10vh 40px', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '24px', scrollBehavior: 'smooth' }}>
+    <div ref={containerRef} className="hide-scrollbar" style={{ width: '100%', boxSizing: 'border-box', height: '100%', overflowY: 'auto', padding: isDesktop ? '20vh 10vw' : '10vh 40px', textAlign: isDesktop ? 'center' : 'left', display: 'flex', flexDirection: 'column', gap: isDesktop ? '32px' : '24px', scrollBehavior: 'smooth' }}>
       {parsed.map((line, i) => {
         let isActive = false;
         if (!isPlain) {
@@ -65,12 +65,12 @@ const SyncedLyrics = ({ lyricsStr, currentTime, onSeek }) => {
             }}
             className={isActive ? 'lyrics-active' : ''} 
             style={{ 
-              fontSize: '1.3rem',
+              fontSize: isDesktop ? '2.5rem' : '1.3rem',
               fontWeight: isActive ? '800' : '600',
               color: isActive ? 'var(--primary-color)' : (isPlain ? 'var(--text-primary)' : 'var(--text-secondary)'),
               transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-              transform: isActive ? 'scale(1.15)' : 'scale(1)',
-              transformOrigin: 'left center',
+              transform: isActive ? (isDesktop ? 'scale(1.05)' : 'scale(1.15)') : 'scale(1)',
+              transformOrigin: isDesktop ? 'center center' : 'left center',
               opacity: isActive || isPlain ? 1 : 0.4,
               padding: '4px 0',
               lineHeight: '1.4',
