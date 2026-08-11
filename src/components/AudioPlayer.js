@@ -3,11 +3,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import usePlayerStore from '@/store/usePlayerStore';
-import { Play, Pause, SkipForward, SkipBack, Shuffle, Repeat, Repeat1, Volume2, VolumeX, ChevronDown, List, Loader2, Music, Sparkles, Plus, Check } from 'lucide-react';
+import { Play, Pause, SkipForward, SkipBack, Shuffle, Repeat, Repeat1, Volume2, VolumeX, ChevronDown, List, Loader2, Music, Sparkles, Plus, Check, Mic2, X } from 'lucide-react';
 import { FastAverageColor } from 'fast-average-color';
 import Image from 'next/image';
 import PlaylistSaveModal from './PlaylistSaveModal';
 import TrackThumbnail from './TrackThumbnail';
+import SyncedLyrics from './SyncedLyrics';
 import YouTubePlayer from 'youtube-player';
 
 const ScrollingText = ({ text, style, className }) => {
@@ -60,6 +61,10 @@ export default function AudioPlayer() {
   const [dragProgress, setDragProgress] = useState(null);
   const [isDraggingProgress, setIsDraggingProgress] = useState(false);
   const [showQueueModal, setShowQueueModal] = useState(false);
+  const [showLyricsModal, setShowLyricsModal] = useState(false);
+  const [lyrics, setLyrics] = useState(null);
+  const [isFetchingLyrics, setIsFetchingLyrics] = useState(false);
+  const [currentLine, setCurrentLine] = useState('');
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const saveActionRef = useRef(false);
@@ -337,6 +342,72 @@ export default function AudioPlayer() {
 
   const displayArtist = currentTrack?.artists || currentTrack?.artist || 'Unknown Artist';
 
+  useEffect(() => {
+    if (currentTrack?.id) {
+      setIsFetchingLyrics(true);
+      setLyrics(null);
+      setCurrentLine('');
+      
+      const title = encodeURIComponent(currentTrack.title || '');
+      const artist = encodeURIComponent(displayArtist || '');
+      
+      fetch(`/api/lyrics?title=${title}&artist=${artist}`)
+        .then(res => {
+          if (!res.ok) throw new Error('Lyrics not found');
+          return res.json();
+        })
+        .then(data => {
+          if (data && data.syncedLyrics) {
+            setLyrics(data.syncedLyrics);
+          } else if (data && data.plainLyrics) {
+            setLyrics(data.plainLyrics);
+          } else {
+            setLyrics("No lyrics found");
+          }
+        })
+        .catch(() => setLyrics("Error loading lyrics"))
+        .finally(() => setIsFetchingLyrics(false));
+    }
+  }, [currentTrack?.id, displayArtist]);
+
+  useEffect(() => {
+    if (!lyrics || lyrics === "No lyrics found" || lyrics === "Error loading lyrics") {
+      setCurrentLine(lyrics || "No lyrics available");
+      return;
+    }
+    const lines = lyrics.split('\n');
+    let activeLine = '';
+    const timeReg = /\[(\d{2}):(\d{2})\.(\d{2,3})\]/;
+    const parsed = [];
+    lines.forEach(line => {
+      const match = timeReg.exec(line);
+      if (match) {
+        const min = parseInt(match[1]);
+        const sec = parseInt(match[2]);
+        const ms = parseInt(match[3].padEnd(3, '0'));
+        const time = min * 60 + sec + ms / 1000;
+        const text = line.replace(timeReg, '').trim();
+        if (text) parsed.push({ time, text });
+      }
+    });
+    
+    if (parsed.length === 0) {
+      setCurrentLine(lines[0] || 'Lyrics');
+      return;
+    }
+    
+    const currentTime = isDraggingProgress && dragProgress !== null ? dragProgress : progress;
+    for (let i = 0; i < parsed.length; i++) {
+      const nextTime = parsed[i+1]?.time || Infinity;
+      const adjustedTime = currentTime + 0.3;
+      if (adjustedTime >= parsed[i].time && adjustedTime < nextTime) {
+        activeLine = parsed[i].text;
+        break;
+      }
+    }
+    setCurrentLine(activeLine || '...');
+  }, [lyrics, progress, dragProgress, isDraggingProgress]);
+
   // Handle Media Session API (Lock Screen controls)
   useEffect(() => {
     if ('mediaSession' in navigator && currentTrack) {
@@ -596,6 +667,21 @@ export default function AudioPlayer() {
                 </button>
               </div>
 
+              <div style={{ position: 'absolute', left: 0, top: '-40px' }}>
+                <button onClick={() => setShowLyricsModal(true)} style={{
+                  borderRadius: '50%',
+                  width: '32px',
+                  height: '32px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'var(--text-primary)',
+                  border: 'none', cursor: 'pointer'
+                }}>
+                  <Mic2 size={18} color="var(--bg-main)" />
+                </button>
+              </div>
+
               <div style={{ position: 'relative', width: '100%', display: 'flex', alignItems: 'center' }}>
                 <input
                   type="range"
@@ -649,8 +735,42 @@ export default function AudioPlayer() {
                 {repeat === 'one' ? <Repeat1 size={24} /> : <Repeat size={24} />}
               </button>
             </div>
+
+            {!showLyricsModal && (
+              <div style={{ marginTop: '10px', padding: '0 20px', width: '100%', textAlign: 'center', height: '2.8em', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <p style={{ margin: 0, fontWeight: '700', fontSize: '1rem', color: 'var(--primary-color)', opacity: 0.8, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', wordBreak: 'break-word', whiteSpace: 'normal', lineHeight: '1.4' }}>
+                  {currentLine}
+                </p>
+              </div>
+            )}
+
           </div>
         </div>
+
+        {showLyricsModal && (
+          <div className="animate-fade-in-up" style={{
+            position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: 'rgba(20,20,20,0.98)',
+            backdropFilter: 'blur(20px)',
+            zIndex: 3000,
+            display: 'flex', flexDirection: 'column'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '20px' }}>
+              <button onClick={() => setShowLyricsModal(false)} style={{ background: 'var(--bg-input)', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <X size={24} />
+              </button>
+            </div>
+            <div style={{ flex: 1, overflow: 'hidden' }}>
+              {isFetchingLyrics ? (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                  <Loader2 className="animate-spin" size={32} color="var(--primary-color)" />
+                </div>
+              ) : (
+                <SyncedLyrics lyricsStr={lyrics} currentTime={isDraggingProgress && dragProgress !== null ? dragProgress : progress} onSeek={seek} />
+              )}
+            </div>
+          </div>
+        )}
 
         {showQueueModal && (
           <div className="animate-fade-in-up" style={{

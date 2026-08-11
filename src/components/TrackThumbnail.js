@@ -29,8 +29,24 @@ export default function TrackThumbnail({ track, size = 40, showBackground = true
     setThumb(initialThumb);
   }, [initialThumb, track?.id]);
 
+  const [isVisible, setIsVisible] = useState(false);
+  const containerRef = React.useRef(null);
+
   useEffect(() => {
-    if (!initialThumb && isSpotify && track?.id) {
+    const el = containerRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        setIsVisible(true);
+        observer.disconnect();
+      }
+    }, { rootMargin: '300px' });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (isVisible && !initialThumb && isSpotify && track?.id) {
       const id = track.id.replace('spotify:track:', '');
       const oembedUrl = `https://open.spotify.com/oembed?url=spotify:track:${id}`;
       fetch(`/api/proxy-audio?url=${encodeURIComponent(oembedUrl)}`)
@@ -40,11 +56,11 @@ export default function TrackThumbnail({ track, size = 40, showBackground = true
         })
         .catch(() => {});
     }
-  }, [track?.id, isSpotify, initialThumb]);
+  }, [track?.id, isSpotify, initialThumb, isVisible]);
 
   if (!thumb) {
     return (
-      <div style={{ width: showBackground ? size : '100%', height: showBackground ? size : '100%', borderRadius: '6px', backgroundColor: showBackground ? 'var(--bg-input)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div ref={containerRef} style={{ width: showBackground ? size : '100%', height: showBackground ? size : '100%', borderRadius: '6px', backgroundColor: showBackground ? 'var(--bg-input)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Music size={size * 0.6} color="var(--text-secondary)" />
       </div>
     );
@@ -59,6 +75,7 @@ export default function TrackThumbnail({ track, size = 40, showBackground = true
     <>
       {showBackground && <div className="skeleton-bg" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, transition: 'opacity 0.3s' }}></div>}
       <img 
+        ref={containerRef}
         src={cover} 
         alt="Cover" 
         style={{ width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none', position: 'relative', zIndex: 1, opacity: 0, transition: 'opacity 0.3s ease', borderRadius: props.borderRadius || 'inherit' }} 

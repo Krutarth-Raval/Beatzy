@@ -35,6 +35,7 @@ export async function GET(request) {
     headers.set('Access-Control-Allow-Origin', '*');
     headers.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
     headers.delete('content-encoding'); // Let Next.js handle encoding
+    headers.delete('content-length'); // Let Next.js calculate it or use chunked
     
     // Return the response stream directly back to the client
     return new NextResponse(response.body, {
