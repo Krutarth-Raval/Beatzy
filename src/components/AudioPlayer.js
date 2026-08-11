@@ -755,9 +755,18 @@ export default function AudioPlayer() {
             zIndex: 3000,
             display: 'flex', flexDirection: 'column'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '20px' }}>
-              <button onClick={() => setShowLyricsModal(false)} style={{ background: 'var(--bg-input)', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <X size={24} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0, paddingRight: '12px' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '6px', overflow: 'hidden', flexShrink: 0, backgroundColor: 'var(--bg-main)', position: 'relative' }}>
+                  <TrackThumbnail track={currentTrack} size={40} showBackground={false} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ margin: 0, fontWeight: '700', fontSize: '1rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{currentTrack?.title}</p>
+                  <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{currentTrack?.artists || currentTrack?.artist || 'Unknown Artist'}</p>
+                </div>
+              </div>
+              <button onClick={() => setShowLyricsModal(false)} style={{ background: 'var(--bg-input)', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <X size={20} />
               </button>
             </div>
             <div style={{ flex: 1, overflow: 'hidden' }}>
@@ -1061,8 +1070,8 @@ export default function AudioPlayer() {
       {/* ── DESKTOP LYRICS MODAL ───────────────────────────────── */}
       {showLyricsModal && window.innerWidth > 768 && (
         <div className="animate-fade-in-up" style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: '80px',
-          backgroundColor: 'rgba(20,20,20,0.95)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', zIndex: 2000, display: 'flex', flexDirection: 'column'
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(20,20,20,0.95)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', zIndex: 900, display: 'flex', flexDirection: 'column'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', padding: '30px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
