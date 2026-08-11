@@ -678,7 +678,7 @@ export default function AudioPlayer() {
                   background: 'var(--text-primary)',
                   border: 'none', cursor: 'pointer'
                 }}>
-                  <Mic2 size={18} color="var(--bg-main)" />
+                  <Music size={18} color="var(--bg-main)" />
                 </button>
               </div>
 
@@ -989,6 +989,9 @@ export default function AudioPlayer() {
             style={{ width: '80px', height: '4px', accentColor: 'var(--text-secondary)', cursor: 'pointer' }}
           />
           <div style={{ width: '1px', height: '24px', backgroundColor: 'var(--border-color)', margin: '0 8px' }}></div>
+          <button onClick={(e) => { e.stopPropagation(); setShowLyricsModal(!showLyricsModal); }} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px' }}>
+            <Music size={20} />
+          </button>
           <button onClick={(e) => { e.stopPropagation(); setShowQueueModal(!showQueueModal); }} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px' }}>
             <List size={20} />
           </button>
@@ -1051,6 +1054,29 @@ export default function AudioPlayer() {
                 );
               });
             })()}
+          </div>
+        </div>
+      )}
+
+      {/* ── DESKTOP LYRICS MODAL ───────────────────────────────── */}
+      {showLyricsModal && window.innerWidth > 768 && (
+        <div className="animate-fade-in-up" style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: '80px',
+          backgroundColor: 'rgba(20,20,20,0.95)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', zIndex: 2000, display: 'flex', flexDirection: 'column'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '30px' }}>
+            <button onClick={(e) => { e.stopPropagation(); setShowLyricsModal(false); }} style={{ background: 'var(--bg-input)', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', width: '44px', height: '44px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background-color 0.2s' }}>
+              <X size={24} />
+            </button>
+          </div>
+          <div style={{ position: 'relative', flex: 1, overflow: 'hidden' }}>
+            {isFetchingLyrics ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                <Loader2 className="animate-spin" size={32} color="var(--primary-color)" />
+              </div>
+            ) : (
+              <SyncedLyrics lyricsStr={lyrics} currentTime={isDraggingProgress && dragProgress !== null ? dragProgress : progress} onSeek={seek} />
+            )}
           </div>
         </div>
       )}
