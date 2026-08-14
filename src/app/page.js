@@ -7,6 +7,7 @@ import Tesseract from 'tesseract.js';
 import PlaylistSaveModal from '@/components/PlaylistSaveModal';
 import CreatePlaylistModal from '@/components/CreatePlaylistModal';
 import PlaylistSearchModal from '@/components/PlaylistSearchModal';
+import LandingPage from '@/components/LandingPage';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import usePlayerStore from '@/store/usePlayerStore';
@@ -630,34 +631,7 @@ export default function Home() {
   }
 
   if (!session && isOnline && status !== 'loading') {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '2rem', backgroundColor: '#212121', color: 'var(--text-primary)' }}>
-        <div style={{ padding: '3rem', maxWidth: '500px', width: '100%' }}>
-          <img src="/white.png" width={64} height={64} className="logo-img animate-spin" style={{ marginBottom: '1.5rem' }} alt="Beatzy Logo" />
-          <h1 style={{ fontSize: '2.5rem', marginBottom: '1rem', fontWeight: '700' }}>Beatzy</h1>
-          <p style={{ color: '#ececec', marginBottom: '2.5rem', fontSize: '1.1rem' }}>
-            Extract albums, search songs, and download MP3s effortlessly.
-          </p>
-          <button
-            onClick={() => signIn('google')}
-            style={{
-              backgroundColor: 'var(--text-primary)', color: 'var(--bg-main)',
-              padding: '12px 32px',
-              borderRadius: '8px',
-              fontSize: '1.1rem',
-              fontWeight: '600',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '10px',
-              width: '100%'
-            }}
-          >
-            Continue with Google
-          </button>
-        </div>
-      </div>
-    );
+    return <LandingPage signIn={signIn} />;
   }
 
   return (

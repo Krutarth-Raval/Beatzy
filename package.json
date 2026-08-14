@@ -13,6 +13,7 @@
     "@auth/prisma-adapter": "^2.11.2",
     "@prisma/client": "^5.22.0",
     "fast-average-color": "^9.5.2",
+    "framer-motion": "^13.1.0",
     "idb": "^8.0.3",
     "jsdom": "^29.1.1",
     "lucide-react": "^1.18.0",
